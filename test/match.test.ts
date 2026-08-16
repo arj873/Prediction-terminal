@@ -52,8 +52,8 @@ describe('tokenise', () => {
   });
 
   it('folds month names to numbers so Oct and October agree', () => {
-    assert.deepEqual(tokenise('Fed decision in Oct 2026?'), ['fed', 'decision', '10', '2026']);
-    assert.deepEqual(tokenise('Fed Decision in October?'), ['fed', 'decision', '10']);
+    assert.deepEqual(tokenise('Fed decision in Oct 2026?'), ['fed', 'decision', 'm10', '2026']);
+    assert.deepEqual(tokenise('Fed Decision in October?'), ['fed', 'decision', 'm10']);
   });
 
   it('folds the venues\' synonyms onto one word', () => {
@@ -77,13 +77,17 @@ describe('identityKey', () => {
 });
 
 describe('numbersIn / significantNumbers', () => {
-  it('reads every number, years included', () => {
-    assert.deepEqual(numbersIn('Fed decision in Oct 2026?'), [2026]);
+  it('reads every number, months and years included', () => {
+    // The month counts for an event: October's Fed meeting is not January's.
+    assert.deepEqual(numbersIn('Fed decision in Oct 2026?'), [10, 2026]);
     assert.deepEqual(numbersIn('Cut 25bps'), [25]);
   });
 
-  it('drops the year when comparing series, because a series recurs', () => {
+  it('drops the date when comparing series, because a series recurs', () => {
+    // Neither the month nor the year distinguishes one series from another —
+    // both are properties of whichever event happens to be next.
     assert.deepEqual(significantNumbers('Fed decision in Oct 2026?'), []);
+    assert.deepEqual(significantNumbers('Fed Decision in September?'), []);
     assert.deepEqual(significantNumbers('Big Brother Season 28 · 2nd place'), [28, 2]);
   });
 });
@@ -352,5 +356,30 @@ describe('central banks', () => {
     assert.ok(!tokenise('Who will be charged with a federal crime?').includes('fed'));
     // "Federal Reserve" still reaches `fed`, through `reserve`.
     assert.ok(tokenise('Federal Reserve decision').includes('fed'));
+  });
+});
+
+describe('arbitrary titles', () => {
+  it('does not read a market title through Object.prototype', () => {
+    // "F1 Constructors Champion" tokenises through `constructor`, and a lookup
+    // in an object literal answers that with a function. Every token has to be
+    // a string or the scorer throws on a real, listed market.
+    for (const title of [
+      'F1 Constructors Champion',
+      'Who will be the constructor champion?',
+      'toString valueOf hasOwnProperty prototype',
+    ]) {
+      for (const token of tokenise(title)) {
+        assert.equal(typeof token, 'string', `"${title}" produced a ${typeof token}`);
+      }
+    }
+  });
+
+  it('scores a title containing a prototype key without throwing', () => {
+    const match = scoreSeries(
+      { id: 'KXF1CONSTRUCTORS', title: 'F1 Constructors Champion' },
+      { id: 'f1-constructors-champion', title: 'F1 Constructors Champion' },
+    );
+    assert.equal(match.confidence, 'strong');
   });
 });

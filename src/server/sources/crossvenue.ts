@@ -421,51 +421,82 @@ export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeries
   }
 
   // ---- matched -----------------------------------------------------------
-  const anchors = [...ok].sort((a, b) => b.series.length - a.series.length);
-  const primary = anchors[0];
+  // Every venue against every other, not each against one anchor. Anchoring on
+  // the largest catalogue made any question the anchor does not list invisible:
+  // Polymarket International and Polymarket US both run all 435 House districts
+  // under word-for-word identical titles, and the 46 of them Kalshi does not
+  // list were unreachable — not mis-scored, never compared.
+  const links: {
+    a: IndexedSeries;
+    b: IndexedSeries;
+    match: MatchScore;
+  }[] = [];
 
-  if (primary) {
-    const others = anchors.slice(1);
-    const free = primary.series.filter((s) => !claimed.has(claim(s)));
+  for (let i = 0; i < ok.length; i++) {
+    for (let j = i + 1; j < ok.length; j++) {
+      const left = ok[i]!;
+      const right = ok[j]!;
+      const free = left.series.filter((s) => !claimed.has(claim(s)));
 
-    // Assign each other venue's catalogue against the anchor's in one pass, so
-    // a family of sibling series is resolved as a whole rather than first-come.
-    const assignments = others.map((other) => ({
-      other,
-      pairs: assignPairs(free, other, claimed),
-    }));
-
-    // Busiest anchors first, purely so the board reads in a useful order.
-    const ranked = [...free].sort((a, b) => (b.volume24h ?? -1) - (a.volume24h ?? -1));
-
-    for (const anchor of ranked) {
-      const legs: SeriesLeg[] = [legOf(anchor)];
-      const confidences: MatchConfidence[] = [];
-      const reasons: string[] = [];
-      // A group is worth what its weakest pairing is worth, not its best: two
-      // solid legs and a doubtful third is a doubtful board.
-      let score = 1;
-
-      for (const { other, pairs } of assignments) {
-        const best = pairs.get(anchor);
-        if (!best) continue;
-        legs.push(legOf(best.series));
-        confidences.push(best.match.confidence);
-        reasons.push(`${venueInfo(other.venue).code}: ${best.match.reason}`);
-        score = Math.min(score, best.match.score);
+      for (const [anchor, best] of assignPairs(free, right, claimed)) {
+        links.push({ a: anchor, b: best.series, match: best.match });
       }
-
-      if (legs.length < 2) continue;
-
-      found.push({
-        key: anchor.seriesTicker.toLowerCase(),
-        title: anchor.title,
-        legs: legs.sort(byActivity),
-        confidence: weakest(confidences),
-        reason: reasons.join(' · '),
-        score,
-      });
     }
+  }
+
+  // Strongest links first, so a doubtful pairing can never pre-empt a confident
+  // one when the two would land in the same group.
+  links.sort((x, y) => y.match.score - x.match.score);
+
+  const groups = new Map<IndexedSeries, IndexedSeries[]>();
+  const groupOf = new Map<IndexedSeries, IndexedSeries[]>();
+  const evidence = new Map<IndexedSeries[], MatchScore[]>();
+
+  for (const link of links) {
+    const left = groupOf.get(link.a);
+    const right = groupOf.get(link.b);
+    if (left && left === right) continue;
+
+    const merged = [...(left ?? [link.a]), ...(right ?? [link.b])];
+
+    // One series per venue per group. Two Kalshi series can both link to the
+    // same question at different venues without being the same question, and
+    // merging them would put two prices in one column.
+    const venues = new Set(merged.map((s) => s.venue));
+    if (venues.size !== merged.length) continue;
+
+    for (const member of merged) groupOf.set(member, merged);
+    if (left) groups.delete(left[0]!);
+    if (right) groups.delete(right[0]!);
+    groups.set(merged[0]!, merged);
+
+    evidence.set(merged, [
+      ...(left ? (evidence.get(left) ?? []) : []),
+      ...(right ? (evidence.get(right) ?? []) : []),
+      link.match,
+    ]);
+  }
+
+  for (const members of groups.values()) {
+    if (members.length < 2) continue;
+
+    const matches = evidence.get(members) ?? [];
+    // A group is worth what its weakest pairing is worth, not its best: two
+    // solid legs and a doubtful third is a doubtful board.
+    const score = matches.reduce((worst, m) => Math.min(worst, m.score), 1);
+
+    // The busiest member names the group, since its title is the one with a
+    // live book behind it.
+    const lead = [...members].sort((a, b) => (b.volume24h ?? -1) - (a.volume24h ?? -1))[0]!;
+
+    found.push({
+      key: lead.seriesTicker.toLowerCase(),
+      title: lead.title,
+      legs: members.map(legOf).sort(byActivity),
+      confidence: weakest(matches.map((m) => m.confidence)),
+      reason: matches.map((m) => m.reason).join(' · '),
+      score,
+    });
   }
 
   const series = found

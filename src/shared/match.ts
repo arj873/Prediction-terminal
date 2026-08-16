@@ -33,6 +33,11 @@ const STOPWORDS = new Set([
   'for', 'from', 'get', 'has', 'have', 'how', 'in', 'is', 'it', 'many', 'much', 'of', 'on',
   'or', 'the', 'their', 'there', 'this', 'to', 'up', 'was', 'what', 'when', 'which', 'who',
   'will', 'with', 'market', 'markets', 'outcome', 'contract', 'event',
+  // `city` is in half the place names on the board and distinguishes none of
+  // them: Oklahoma City and Panama City differ by the *other* word.
+  'city',
+  // Clock furniture from Kalshi's dated titles ("on Aug 21, 2026 at 5pm EDT").
+  'am', 'pm', 'et', 'edt', 'est', 'ct', 'cdt', 'cst', 'pt', 'pdt', 'pst', 'utc', 'gmt',
 ]);
 
 /**
@@ -70,6 +75,25 @@ const SYNONYMS: Record<string, string> = {
   eth: 'ethereum',
   sol: 'solana',
   doge: 'dogecoin',
+  hype: 'hyperliquid',
+  zec: 'zcash',
+  // Index and commodity tickers. Kalshi titles by ticker, Polymarket spells the
+  // instrument out and puts the ticker in parentheses.
+  spx: 'sp500',
+  inx: 'sp500',
+  ndx: 'nasdaq100',
+  gc: 'gold',
+  cl: 'wti',
+  // Both venues describe the same quantity with different verbs: Polymarket
+  // asks what a price will *hit*, Kalshi how *high* it will get.
+  hit: 'high',
+  maximum: 'high',
+  minimum: 'low',
+  best: 'top',
+  sptfy: 'spotify',
+  gpu: 'nvidia',
+  rental: 'hourly',
+  wealth: 'networth',
   gop: 'republican',
   republicans: 'republican',
   dem: 'democrat',
@@ -128,13 +152,34 @@ const SYNONYMS: Record<string, string> = {
   elections: 'election',
 };
 
-/** Month names, folded to their number so `Oct` and `October` agree. */
+/**
+ * Month names, folded to a marked number so `Oct` and `October` agree.
+ *
+ * Marked rather than bare, because a month means different things to the two
+ * callers: an *event* in October is not the same event as one in January, but a
+ * *series* whose next event falls in October is the same series as one whose
+ * next event falls in January. The `m` prefix keeps that distinction available
+ * instead of collapsing it into an ordinary number.
+ */
 const MONTHS: Record<string, string> = {
-  jan: '1', january: '1', feb: '2', february: '2', mar: '3', march: '3',
-  apr: '4', april: '4', may: '5', jun: '6', june: '6', jul: '7', july: '7',
-  aug: '8', august: '8', sep: '9', sept: '9', september: '9', oct: '10', october: '10',
-  nov: '11', november: '11', dec: '12', december: '12',
+  jan: 'm1', january: 'm1', feb: 'm2', february: 'm2', mar: 'm3', march: 'm3',
+  apr: 'm4', april: 'm4', may: 'm5', jun: 'm6', june: 'm6', jul: 'm7', july: 'm7',
+  aug: 'm8', august: 'm8', sep: 'm9', sept: 'm9', september: 'm9', oct: 'm10', october: 'm10',
+  nov: 'm11', november: 'm11', dec: 'm12', december: 'm12',
 };
+
+const isMonth = (token: string): boolean => /^m(?:[1-9]|1[0-2])$/.test(token);
+
+/**
+ * The two tables above, as maps.
+ *
+ * A market title is arbitrary text, and looking arbitrary text up in an object
+ * literal reaches the prototype: "F1 Constructors Champion" tokenises through
+ * `constructor`, and `SYNONYMS['constructor']` is a function, not a synonym.
+ * A `Map` has no such inheritance.
+ */
+const SYNONYM_LOOKUP = new Map(Object.entries(SYNONYMS));
+const MONTH_LOOKUP = new Map(Object.entries(MONTHS));
 
 /**
  * Multi-word phrases the venues use for one idea, folded before tokenising.
@@ -157,6 +202,22 @@ const PHRASES: [RegExp, string][] = [
   [/\breserve bank of new zealand\b|\brbnz\b/g, ' bankofnewzealand '],
   [/\breserve bank of australia\b|\brba\b/g, ' bankofaustralia '],
   [/\beuropean central bank\b|\becb\b/g, ' ecb '],
+  // Weather states its direction, and that direction is the whole question. It
+  // needs a token of its own: `high` alone also means "how high will BTC get",
+  // and one word cannot guard both.
+  [/\b(?:highest|high|max|maximum) temperature\b/g, ' hightemp '],
+  [/\b(?:lowest|low|min|minimum) temperature\b/g, ' lowtemp '],
+  [/\bgrand theft auto\b|\bgta\b/g, ' gta '],
+  [/\ball[- ]time high\b/g, ' high '],
+  [/\bnet worth\b|\bhow rich\b/g, ' networth '],
+  [/\bcircuitbreaker\b/g, ' circuit breaker '],
+  [/\bmarketwide\b/g, ' market wide '],
+  [/\bup\/down\b/g, ' up or down '],
+  [/\bs&p 500\b|\bs&p\b/g, ' sp500 '],
+  [/\bnasdaq[- ]?100\b/g, ' nasdaq100 '],
+  // Kalshi's short-interval titles carry a live strike — "· $1,883.54 target" —
+  // which is noise that outweighs every content word in the title.
+  [/·?\s*\$[\d,.]+\s*target\b/g, ' '],
   [/\bno change\b/g, 'nochange'],
   [/\bunchanged\b/g, 'nochange'],
   [/\bmaintains? (?:the )?(?:rate|rates)\b/g, 'nochange'],
@@ -174,7 +235,7 @@ export function normalise(text: string): string {
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9.%$+<>≥≤-]+/g, ' ')
+    .replace(/[^a-z0-9.%$+<>≥≤]+/g, ' ')
     // A unit welded to its number is one token to a string comparison and two
     // to a reader: `25bps` has to meet `25 bps` somewhere. Split before folding
     // phrases, or `bps` in `25bps` is still inside a word when `\bbps\b` looks
@@ -204,7 +265,7 @@ export function tokenise(text: string): string[] {
     const bare = word.replace(/^[-.]+|[-.]+$/g, '');
     if (!bare || STOPWORDS.has(bare)) continue;
 
-    const month = MONTHS[bare];
+    const month = MONTH_LOOKUP.get(bare);
     if (month) {
       out.push(month);
       continue;
@@ -213,10 +274,26 @@ export function tokenise(text: string): string[] {
     const singular =
       bare.length > 3 && bare.endsWith('s') && !bare.endsWith('ss') ? bare.slice(0, -1) : bare;
 
-    out.push(SYNONYMS[bare] ?? SYNONYMS[singular] ?? singular);
+    out.push(SYNONYM_LOOKUP.get(bare) ?? SYNONYM_LOOKUP.get(singular) ?? singular);
   }
 
   return out;
+}
+
+const isNumeric = (token: string): boolean => /^-?\d+(?:\.\d+)?$/.test(token);
+
+/**
+ * A title's terms with its numbers taken out.
+ *
+ * Dates dominate a title's token count and say nothing about what is being
+ * asked: "Highest temperature in Oklahoma City on Aug 16, 2026?" is five parts
+ * date and two parts question, so it scored 0.74 against Panama City. Numbers
+ * are not discarded — {@link weighNumbers} reads them separately, where a
+ * disagreement can be judged on its own terms instead of being averaged into a
+ * bag of words.
+ */
+export function contentTokens(text: string): string[] {
+  return tokenise(text).filter((token) => !isNumeric(token) && !isMonth(token));
 }
 
 /**
@@ -237,11 +314,20 @@ export function identityKey(id: string): string {
     .replace(/(19|20)\d{2}$/, '');
 }
 
-/** Every number in a title, including years and strike levels. */
+/**
+ * Every number in a title, including years and strike levels.
+ *
+ * Read off the *tokenised* form so a month named in words counts as its number:
+ * `Oct 2026` and `October` have to agree on the month, and only tokenising
+ * makes them comparable.
+ */
 export function numbersIn(text: string): number[] {
-  const found = normalise(text).match(/-?\d+(?:\.\d+)?/g) ?? [];
-  return found.map(Number).filter((n) => Number.isFinite(n));
+  return tokenise(text)
+    .filter((token) => isNumeric(token) || isMonth(token))
+    .map((token) => Number(isMonth(token) ? token.slice(1) : token));
 }
+
+const isYear = (n: number): boolean => Number.isInteger(n) && n >= 1900 && n <= 2100;
 
 /**
  * The numbers that distinguish one *series* from another, which is every
@@ -256,16 +342,38 @@ export function numbersIn(text: string): number[] {
  * year has to be excluded.
  */
 export function significantNumbers(text: string): number[] {
-  return numbersIn(text).filter((n) => !(Number.isInteger(n) && n >= 1900 && n <= 2100));
+  return tokenise(text)
+    .filter((token) => isNumeric(token) && !isYear(Number(token)))
+    .map(Number);
 }
 
 /* ---------------------------------------------------------------- scoring */
 
-function dice(a: Set<string>, b: Set<string>): number {
+/**
+ * How much two token sets have in common, allowing for one being terser.
+ *
+ * Dice alone — `2|A∩B| / (|A|+|B|)` — punishes a short title for being short,
+ * and the three venues are wildly asymmetric about length. Kalshi writes
+ * "Bank of Japan rate decision in September" where Polymarket US writes "BoJ
+ * Decision"; Kalshi writes "Emmy Winner: Outstanding Lead Actor in a Comedy
+ * Series" where Polymarket US writes "Lead Actor, Comedy". Both pairs are
+ * *identical questions* that Dice scores in the 0.5s purely on word count, and
+ * that is where the terser side is usually the one carrying the meaning.
+ *
+ * The overlap coefficient — `|A∩B| / min(|A|,|B|)` — has the opposite flaw: it
+ * reads any subset as a perfect match, so "NFL Champion" would score 1.0
+ * against "NFL Champion Rookie of the Year". Blending the two keeps Dice's
+ * scepticism about loose subsets while letting a genuinely terser title compete.
+ */
+function overlap(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
+
   let shared = 0;
   for (const term of a) if (b.has(term)) shared++;
-  return (2 * shared) / (a.size + b.size);
+
+  const coefficient = shared / Math.min(a.size, b.size);
+  const dice = (2 * shared) / (a.size + b.size);
+  return 0.6 * dice + 0.4 * coefficient;
 }
 
 /** What a venue offers the matcher about one series. */
@@ -322,12 +430,52 @@ const QUALIFIERS: readonly string[] = [
   'actor',
   'actress',
   // Temperature markets, which always state their direction.
-  'high',
-  'low',
+  'hightemp',
+  'lowtemp',
 ];
 
+/**
+ * Places and offices, which are the whole question in an election market.
+ *
+ * "South Carolina Senate winner?" and "South Dakota Senate election winner"
+ * share three words out of four; so do "Minnesota Senate winner?" and
+ * "Minnesota Governor winner". A bag of words cannot see that `carolina` and
+ * `dakota` — or `senate` and `governor` — are the entire distinction, and the
+ * board is nine-tenths election markets, so it gets these wrong at scale.
+ *
+ * Only the distinctive word of each state is listed: `carolina` tells North
+ * from South once `north`/`south` are themselves discriminating.
+ */
+const PLACES_AND_OFFICES = new Set([
+  // Distinctive words of US state names.
+  'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado',
+  'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 'idaho', 'illinois',
+  'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana', 'maine', 'maryland',
+  'massachusetts', 'michigan', 'minnesota', 'mississippi', 'missouri', 'montana',
+  'nebraska', 'nevada', 'hampshire', 'jersey', 'mexico', 'york', 'carolina',
+  'dakota', 'ohio', 'oklahoma', 'oregon', 'pennsylvania', 'rhode', 'tennessee',
+  'texas', 'utah', 'vermont', 'virginia', 'washington', 'wisconsin', 'wyoming',
+  // Compass words, which are what separate one Carolina, Dakota or Virginia
+  // from the other.
+  'north', 'south', 'east', 'west',
+  // The office being contested.
+  'senate', 'house', 'governor', 'president', 'mayor', 'parliament', 'congress',
+  'attorney', 'chair', 'nominee', 'primary',
+]);
+
+/**
+ * A token that carves a family into members.
+ *
+ * Central bank identities qualify by construction: every rate book on the board
+ * says "bank", "rate" and "decision", so the bank's own name is the only part
+ * that distinguishes eleven otherwise identical titles.
+ */
+function isQualifier(token: string): boolean {
+  return QUALIFIERS.includes(token) || PLACES_AND_OFFICES.has(token) || token.startsWith('bankof');
+}
+
 /** Applied once per lopsided qualifier, so two of them compound. */
-const QUALIFIER_PENALTY = 0.45;
+const QUALIFIER_PENALTY = 0.35;
 
 /** Where a text score stops being worth showing at all. */
 export const MATCH_FLOOR = 0.34;
@@ -349,13 +497,13 @@ export function confidenceOf(score: number): MatchConfidence {
  * it exactly once.
  */
 function similarity(a: SeriesDescriptor, b: SeriesDescriptor): MatchScore {
-  const left = tokenise(`${a.title} ${a.context ?? ''}`);
-  const right = tokenise(`${b.title} ${b.context ?? ''}`);
+  const left = contentTokens(`${a.title} ${a.context ?? ''}`);
+  const right = contentTokens(`${b.title} ${b.context ?? ''}`);
   const leftSet = new Set(left);
   const rightSet = new Set(right);
 
   const shared = left.filter((t, i) => rightSet.has(t) && left.indexOf(t) === i);
-  let score = dice(leftSet, rightSet);
+  let score = overlap(leftSet, rightSet);
 
   const keyA = identityKey(a.id);
   const keyB = identityKey(b.id);
@@ -368,6 +516,19 @@ function similarity(a: SeriesDescriptor, b: SeriesDescriptor): MatchScore {
 
   if (identical) score = score * 0.6 + 0.4;
   else if (contains) score = score * 0.75 + 0.25;
+
+  // Agreeing only on a qualifier is not agreement. "Highest temperature in
+  // Oklahoma City" and "Highest temperature in Panama City" share nothing but
+  // the word that says which direction the thermometer is read in — the place,
+  // which is the entire question, is the part they differ on.
+  // …but only where there was something else to agree on. A terse label like
+  // "Lead Actor, Comedy" is *made* of qualifiers, and has nothing else to offer.
+  const substance = (tokens: Set<string>): string[] =>
+    [...tokens].filter((term) => !isQualifier(term));
+
+  const bothHaveSubstance = substance(leftSet).length > 0 && substance(rightSet).length > 0;
+  const sharedSubstance = shared.filter((term) => !isQualifier(term));
+  if (bothHaveSubstance && sharedSubstance.length === 0 && !identical && !contains) score *= 0.4;
 
   // Two titles that agree on one common word and nothing else are not a match,
   // however that word scored: "NFL Champion" and "NFL Rookie of the Year".
@@ -386,7 +547,9 @@ function similarity(a: SeriesDescriptor, b: SeriesDescriptor): MatchScore {
 
   // A qualifier on one side and not the other is the whole question, whatever
   // the rest of the words did.
-  const lopsided = QUALIFIERS.filter((q) => leftSet.has(q) !== rightSet.has(q));
+  const lopsided = [...new Set([...leftSet, ...rightSet])].filter(
+    (q) => isQualifier(q) && leftSet.has(q) !== rightSet.has(q),
+  );
   if (lopsided.length > 0) {
     score *= QUALIFIER_PENALTY ** lopsided.length;
     reason += `; only one side says ${lopsided.slice(0, 3).join('/')}`;
@@ -405,31 +568,48 @@ function similarity(a: SeriesDescriptor, b: SeriesDescriptor): MatchScore {
  * may simply be counting something the other does not mention.
  */
 function weighNumbers(base: MatchScore, left: number[], right: number[]): MatchScore {
-  if (left.length === 0 || right.length === 0) return base;
+  // Years and everything else answer different questions, and mixing them lets
+  // one cover for the other: "Big Brother Season 28, 2nd place" and "…3rd
+  // place" agree on the season and differ on the only number that is the
+  // question. Judged together, the 28 hides the 2-against-3.
+  const years = compareNumbers(left.filter(isYear), right.filter(isYear));
+  const rest = compareNumbers(left.filter((n) => !isYear(n)), right.filter((n) => !isYear(n)));
+
+  const factor = years.factor * rest.factor;
+  if (factor === 1) return base;
+
+  const score = Math.min(1, base.score * factor);
+  const notes = [years.note, rest.note].filter(Boolean);
+  return {
+    ...base,
+    score,
+    confidence: confidenceOf(score),
+    reason: notes.length ? `${base.reason}; ${notes.join(', ')}` : base.reason,
+  };
+}
+
+/**
+ * Weigh one class of number against its counterpart.
+ *
+ * A side that states none is silent rather than contradictory — Polymarket
+ * writes "Fed Decision in October" where Kalshi writes "Fed decision in Oct
+ * 2026?", and the missing year is an omission, not a disagreement.
+ */
+function compareNumbers(left: number[], right: number[]): { factor: number; note: string } {
+  if (left.length === 0 || right.length === 0) return { factor: 1, note: '' };
 
   const rightSet = new Set(right);
   const leftSet = new Set(left);
   const onlyLeft = left.filter((n) => !rightSet.has(n));
   const onlyRight = right.filter((n) => !leftSet.has(n));
+
+  if (onlyLeft.length === 0 && onlyRight.length === 0) return { factor: 1.12, note: '' };
+
   const agreed = left.length - onlyLeft.length;
-
-  // Every number on both sides accounted for: this is the same rung.
-  if (agreed > 0 && onlyLeft.length === 0 && onlyRight.length === 0) {
-    const score = Math.min(1, base.score * 0.85 + 0.15);
-    return { ...base, score, confidence: confidenceOf(score) };
-  }
-
-  // Some agree and some do not, which is the shape of the near miss this whole
-  // check exists for: "Big Brother Season 28, 2nd place" and "…3rd place" agree
-  // on the season and differ on the only number that is the question. Treating
-  // a partial hit as a hit is what lets those two through.
-  const score = base.score * (agreed > 0 ? 0.65 : 0.5);
-  return {
-    ...base,
-    score,
-    confidence: confidenceOf(score),
-    reason: `${base.reason}; numbers differ (${onlyLeft.slice(0, 3).join('/') || '—'} vs ${onlyRight.slice(0, 3).join('/') || '—'})`,
-  };
+  const differing = `${onlyLeft.slice(0, 2).join('/') || '—'} vs ${onlyRight.slice(0, 2).join('/') || '—'}`;
+  // Partial agreement is not agreement, but it is not a flat contradiction
+  // either: one side may simply count something the other leaves unsaid.
+  return { factor: agreed > 0 ? 0.6 : 0.4, note: `numbers differ (${differing})` };
 }
 
 /**
