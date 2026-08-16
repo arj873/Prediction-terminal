@@ -266,11 +266,55 @@ non-increasing; then the 50% crossing is read off it.
 A one-sided book is read as `ask / 2`, not as the ask: an offer at 1¢ with no
 bid means the true value is somewhere in `[0, ask]`. Reading those as mids is
 what makes eighty dead wings add up to real probability and drag the crossing.
+`[0, ask]` is the bracket, though, not the estimate — where the wing has
+actually traded inside it, the print is the better reading, and it is used.
 
 **It is checked against reality.** Over a five-day BTC ladder the implied median
 tracks Coinbase spot to a mean absolute error of ~24bp, and the residual is a
 consistently *positive* forward basis rather than noise — which is the thing the
 overlay exists to show. Watch it converge to zero as expiry approaches.
+
+The S&P ladders are the sharper test, because the S&P has an official
+settlement print to score against. Backtesting every settled 4pm ladder across
+23 sessions (`KXINX` range and `KXINXU` above/below — 46 ladders, 1,615 hourly
+points per method, scored against the index itself):
+
+| | median | mean |
+| --- | --- | --- |
+| At the bell, vs the official close | **2.4 index points** (3.2bp) | 6.1 points (8.0bp) |
+| Through the session, vs the index at that instant | **3.5bp**, bias +1.6bp | 7.2bp, bias −4.5bp |
+
+Both rows are the ladder inside its own trading session. Read a day or more
+before it expires the same ladder is listed but barely traded, and the error
+runs to 24bp — which the tail mass says before the number does.
+
+Read at one-minute resolution over five sessions the above/below ladder holds
+1.8bp and the range ladder 2.6bp, and both are tightest between half an hour and
+an hour before the bell (0.9bp and 3.7bp). Neither tightens further into the
+last five minutes — they widen, to 2.4bp and 6.1bp. That is mostly the index and
+not the ladder: a 25-point bucket cannot resolve a closing print finer than its
+own width, and the S&P's final minutes of intraday quotes are not where its
+official closing auction lands. Scored against that official close instead, the
+same bell reading is 2.4 index points.
+
+Three findings are worth carrying into how you read the overlay:
+
+- **The median is the right default.** It beats the mean by 2.5× at settlement,
+  because a Kalshi ladder's wings are exactly where the quotes are worst and the
+  mean is the estimator that has to extrapolate through them.
+- **Tail mass is the number to check.** Sort the same points by it and mean
+  absolute error runs 3.8bp below 0.02, 11bp from 0.05 to 0.10, and 26bp above
+  0.10. The panel reports it so a thin ladder looks thin.
+- **It is a consistency instrument, not a forecast.** Against the naive "the
+  index is where it is now" benchmark, the implied price predicts the 4pm close
+  no better at any horizon from one to six hours out — within ±1.6%, which is
+  what an efficient market should look like. What it does show is the basis and
+  the market's own uncertainty around it.
+
+A ladder implies nothing once it has settled, so the line ends at expiry. Kalshi
+keeps printing candles afterwards; on a settled ladder those price a book where
+every rung is already worth 0 or 1, which put the crossing 211 index points off
+the close before the series was trimmed.
 
 **Kalshi has no single-stock ladders.** Price ladders exist for major crypto,
 the index complex (S&P 500, Nasdaq-100, Dow), gold, oil and two FX pairs.
@@ -374,7 +418,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 243 tests
+npm test             # 247 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
@@ -391,9 +435,11 @@ part of the codebase, because it is the one piece whose output looks plausible
 when it is wrong: a mishandled ladder shape still returns a number near the
 money. `test/implied.test.ts` checks each stage against arithmetic, including
 that an "or above" ladder and the equivalent range ladder price to the same
-level, and `test/implied-series.test.ts` covers the historical assembly — a rung
-that stops printing carries forward, and no rung is ever priced with a candle it
-did not yet have.
+level, and that a contract and its complement price to probabilities summing to
+one whatever shape the book is in — the property that stops a one-sided quoting
+rule from being subtly asymmetric. `test/implied-series.test.ts` covers the
+historical assembly: a rung that stops printing carries forward, no rung is ever
+priced with a candle it did not yet have, and the line stops at expiry.
 
 The entertainment tests lean on the cases where a plausible-looking parser reads
 the wrong number without ever failing: the two header collisions above, a film

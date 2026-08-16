@@ -43,6 +43,42 @@ describe('quoteProbability', () => {
     assert.equal(quoteProbability(0.99, null, null), 0.995);
   });
 
+  it("prefers a dead wing's own print to the midpoint of a wide lone offer", () => {
+    // A maker resting 20c on a bucket that last traded at 1c is quoting their
+    // inventory risk, not a 10% chance. Backtesting the S&P range ladders, this
+    // was the largest single error source: seven such rungs contributed 0.70 of
+    // probability to a ladder that is then normalised to 1.
+    assert.equal(quoteProbability(null, 0.2, 0.01), 0.01);
+    assert.equal(quoteProbability(0.8, null, 0.99), 0.99);
+  });
+
+  it('still caps a print at the bracket the book allows', () => {
+    // A print above the lone offer's midpoint is stale in the direction that
+    // would re-inflate the wing, so the bracket wins.
+    assert.equal(quoteProbability(null, 0.2, 0.5), 0.1);
+    assert.equal(quoteProbability(0.8, null, 0.5), 0.9);
+  });
+
+  it('prices YES and NO consistently', () => {
+    // Kalshi quotes both sides as bids, so a YES ask is an inverted NO bid.
+    // Reading a contract and its complement must give probabilities summing to
+    // 1, whatever the book's shape — otherwise the same ladder implies two
+    // different prices depending on which side it is read from.
+    const cases: [number | null, number | null, number | null][] = [
+      [0.58, 0.6, 0.59],
+      [null, 0.2, 0.01],
+      [null, 0.2, 0.5],
+      [0.8, null, 0.99],
+      [null, null, 0.42],
+    ];
+    const flip = (v: number | null): number | null => (v === null ? null : 1 - v);
+    for (const [bid, ask, last] of cases) {
+      const yes = quoteProbability(bid, ask, last)!;
+      const no = quoteProbability(flip(ask), flip(bid), flip(last))!;
+      assert.ok(Math.abs(yes + no - 1) < 1e-12, `${bid}/${ask}/${last}: ${yes} + ${no}`);
+    }
+  });
+
   it('falls back to the last trade when the book is empty', () => {
     assert.equal(quoteProbability(null, null, 0.42), 0.42);
   });

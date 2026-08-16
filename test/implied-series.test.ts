@@ -125,6 +125,37 @@ describe('buildPoints', () => {
   it('returns nothing for an empty ladder', () => {
     assert.deepEqual(buildPoints([], 'median'), []);
   });
+
+  it('ends the line at expiry, because a settled ladder implies nothing', () => {
+    // Kalshi keeps printing candles after settlement. By then every rung is
+    // worth exactly 0 or 1 and most books have emptied, so the crossing lands
+    // on whichever rung still quotes — on a settled S&P ladder that read 7575
+    // against a 7785.76 close, as the last point of the line and the number the
+    // legend reports.
+    const series = [
+      { market: rung('A', 100), candles: [candle(10, 0.89, 0.91), candle(20, 0.99, 1)] },
+      { market: rung('B', 110), candles: [candle(10, 0.49, 0.51), candle(20, 0, 0.01)] },
+      { market: rung('C', 120), candles: [candle(10, 0.09, 0.11), candle(20, 0, 0.01)] },
+    ];
+
+    assert.deepEqual(
+      buildPoints(series, 'median', 15).map((p) => p.time),
+      [10],
+    );
+    // The bucket closing exactly on the bell is the last real one, not the
+    // first dead one — the book at that instant is the final pre-settlement
+    // book, and it is the most informative point on the whole line.
+    assert.deepEqual(
+      buildPoints(series, 'median', 20).map((p) => p.time),
+      [10, 20],
+    );
+    // Kalshi gives no close time for a handful of legacy events; those keep the
+    // old behaviour rather than losing their series entirely.
+    assert.deepEqual(
+      buildPoints(series, 'median').map((p) => p.time),
+      [10, 20],
+    );
+  });
 });
 
 describe('selectStrikes', () => {

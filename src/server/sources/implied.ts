@@ -235,6 +235,12 @@ function firstCloseTime(markets: Market[]): string {
   return '';
 }
 
+/** An ISO close time as epoch seconds, or `undefined` if Kalshi gave none. */
+function epochSeconds(iso: string): number | undefined {
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : undefined;
+}
+
 /* --------------------------------------------------------------- historical */
 
 /**
@@ -364,13 +370,14 @@ async function computeImpliedSeries(
     return { market, candles: candles?.candles ?? [] };
   });
 
+  const strikeDate = firstCloseTime(markets);
   const contributing = series.filter((s) => s.candles.length > 0);
-  const points = buildPoints(contributing, method);
+  const points = buildPoints(contributing, method, epochSeconds(strikeDate));
 
   return {
     eventTicker: event.eventTicker,
     title: event.title,
-    strikeDate: firstCloseTime(markets),
+    strikeDate,
     method,
     interval,
     contributors: contributing.map((s) => s.market.ticker),
@@ -385,14 +392,23 @@ async function computeImpliedSeries(
  * A pointer per rung walks its candles forward as the timeline advances, so
  * this stays linear in total candles rather than quadratic — a 48-strike ladder
  * over a year of hourly bars is otherwise a few hundred million comparisons.
+ *
+ * `closeTs` ends the line at the ladder's expiry. Kalshi keeps printing candles
+ * after settlement, and a settled ladder is no longer a distribution over where
+ * price *might* land — every rung is worth exactly 0 or 1, most books empty
+ * out, and what survives collapses the crossing onto an arbitrary strike. On a
+ * settled S&P ladder that phantom bucket read 7575 against a 7785.76 close, and
+ * because it is the last point it is both the end of the drawn line and the
+ * number the legend reports. A ladder implies nothing after it settles.
  */
 export function buildPoints(
   series: { market: Market; candles: Candle[] }[],
   method: ImpliedMethod,
+  closeTs?: number,
 ): ImpliedPoint[] {
-  const timeline = [...new Set(series.flatMap((s) => s.candles.map((c) => c.time)))].sort(
-    (a, b) => a - b,
-  );
+  const timeline = [...new Set(series.flatMap((s) => s.candles.map((c) => c.time)))]
+    .filter((time) => closeTs === undefined || time <= closeTs)
+    .sort((a, b) => a - b);
 
   const cursors = series.map(() => ({ index: -1 }));
   const points: ImpliedPoint[] = [];
