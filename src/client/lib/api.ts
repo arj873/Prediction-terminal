@@ -1,0 +1,164 @@
+/**
+ * Typed client for the terminal's own API.
+ *
+ * Every call funnels through {@link request}, which turns a non-2xx response
+ * into an {@link ApiRequestError} carrying the server's `code` and `hint`. The
+ * panels surface that hint verbatim — it is the difference between "request
+ * failed" and "FRED is blocking this IP; set FRED_API_KEY".
+ */
+
+import type {
+  ApiError,
+  BillboardChart,
+  BillboardChartListItem,
+  CandleInterval,
+  CandlesResponse,
+  FredSearchResponse,
+  FredSeriesResponse,
+  KalshiEvent,
+  Market,
+  OrderBook,
+  TradesResponse,
+} from '../../shared/types.js';
+
+export class ApiRequestError extends Error {
+  readonly code: string;
+  readonly hint: string | undefined;
+  readonly status: number;
+
+  constructor(message: string, code: string, status: number, hint?: string) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.code = code;
+    this.status = status;
+    this.hint = hint;
+  }
+}
+
+async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { signal, headers: { Accept: 'application/json' } });
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') throw err;
+    throw new ApiRequestError(
+      'Cannot reach the terminal API server',
+      'network_error',
+      0,
+      'Is the API server running? `npm run dev` starts both halves.',
+    );
+  }
+
+  const body: unknown = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const error = (body ?? {}) as Partial<ApiError>;
+    throw new ApiRequestError(
+      error.error ?? `Request failed with HTTP ${res.status}`,
+      error.code ?? 'http_error',
+      res.status,
+      error.hint,
+    );
+  }
+
+  return body as T;
+}
+
+function query(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  }
+  const s = search.toString();
+  return s ? `?${s}` : '';
+}
+
+/* ------------------------------------------------------------------ kalshi */
+
+/** Mirrors the server's `EventSearchHit`. */
+export interface EventSearchHit {
+  event: Omit<KalshiEvent, 'markets'>;
+  markets: Market[];
+  volume24h: number;
+  score: number;
+}
+
+export interface SearchResponse {
+  query: string;
+  hits: EventSearchHit[];
+  scanned: number;
+  snapshotAgeSeconds: number;
+}
+
+export const kalshi = {
+  market: (ticker: string, signal?: AbortSignal): Promise<Market> =>
+    request(`/kalshi/markets/${encodeURIComponent(ticker)}`, signal),
+
+  orderBook: (ticker: string, depth = 12, signal?: AbortSignal): Promise<OrderBook> =>
+    request(`/kalshi/markets/${encodeURIComponent(ticker)}/orderbook${query({ depth })}`, signal),
+
+  trades: (ticker: string, limit = 50, signal?: AbortSignal): Promise<TradesResponse> =>
+    request(`/kalshi/markets/${encodeURIComponent(ticker)}/trades${query({ limit })}`, signal),
+
+  candles: (
+    ticker: string,
+    interval: CandleInterval,
+    start?: number,
+    end?: number,
+    signal?: AbortSignal,
+  ): Promise<CandlesResponse> =>
+    request(
+      `/kalshi/markets/${encodeURIComponent(ticker)}/candles${query({ interval, start, end })}`,
+      signal,
+    ),
+
+  event: (eventTicker: string, signal?: AbortSignal): Promise<KalshiEvent> =>
+    request(`/kalshi/events/${encodeURIComponent(eventTicker)}`, signal),
+
+  search: (q: string, limit = 25, signal?: AbortSignal): Promise<SearchResponse> =>
+    request(`/kalshi/search${query({ q, limit })}`, signal),
+
+  top: (
+    sort: string,
+    limit = 25,
+    signal?: AbortSignal,
+  ): Promise<{ sort: string; markets: Market[] }> =>
+    request(`/kalshi/top${query({ sort, limit })}`, signal),
+};
+
+/* -------------------------------------------------------------------- fred */
+
+export const fred = {
+  series: (
+    id: string,
+    start?: string,
+    end?: string,
+    signal?: AbortSignal,
+  ): Promise<FredSeriesResponse> =>
+    request(`/fred/series/${encodeURIComponent(id)}${query({ start, end })}`, signal),
+
+  search: (q: string, limit = 25, signal?: AbortSignal): Promise<FredSearchResponse> =>
+    request(`/fred/search${query({ q, limit })}`, signal),
+};
+
+/* --------------------------------------------------------------- billboard */
+
+export const billboard = {
+  chart: (slug: string, date?: string, signal?: AbortSignal): Promise<BillboardChart> =>
+    request(`/billboard/chart/${encodeURIComponent(slug)}${query({ date })}`, signal),
+
+  charts: (signal?: AbortSignal): Promise<{ charts: BillboardChartListItem[] }> =>
+    request('/billboard/charts', signal),
+};
+
+/* ------------------------------------------------------------------ health */
+
+export interface Health {
+  ok: boolean;
+  uptimeSeconds: number;
+  cache: { hits: number; misses: number; entries: number; evictions: number };
+  fredApiKey: boolean;
+  time: string;
+}
+
+export const health = (signal?: AbortSignal): Promise<Health> => request('/health', signal);
