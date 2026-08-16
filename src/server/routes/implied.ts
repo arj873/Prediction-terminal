@@ -10,11 +10,10 @@ import { Router } from 'express';
 import type { CandleInterval, ImpliedMethod } from '../../shared/types.js';
 import { UpstreamError } from '../lib/http.js';
 import { getCandidates, getImpliedSeries, listUnderlyings } from '../sources/implied.js';
-import { asyncRoute, intParam } from './helpers.js';
+import { VALID_INTERVALS, asyncRoute, intParam } from './helpers.js';
 
 export const impliedRouter: Router = Router();
 
-const VALID_INTERVALS = new Set<number>([1, 60, 1440]);
 
 /** Every symbol with a mapped ladder — powers `HELP IMP` and symbol validation. */
 impliedRouter.get(

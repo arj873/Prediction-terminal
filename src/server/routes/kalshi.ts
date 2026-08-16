@@ -2,11 +2,10 @@ import { Router } from 'express';
 import type { CandleInterval } from '../../shared/types.js';
 import { UpstreamError } from '../lib/http.js';
 import * as kalshi from '../sources/kalshi.js';
-import { asyncRoute, intParam, pathParam } from './helpers.js';
+import { VALID_INTERVALS, asyncRoute, intParam, pathParam } from './helpers.js';
 
 export const kalshiRouter: Router = Router();
 
-const VALID_INTERVALS = new Set<number>([1, 60, 1440]);
 
 kalshiRouter.get(
   '/markets',

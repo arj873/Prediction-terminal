@@ -255,8 +255,18 @@ interface NasdaqHistorical {
 /** Nasdaq requires the right `assetclass`, and answers 400 for a wrong guess. */
 const ASSET_CLASSES = ['stocks', 'etf', 'index'] as const;
 
+/**
+ * The TTL is part of the key.
+ *
+ * `cache.cached` keys on the string alone, so whoever writes an entry fixes its
+ * lifetime for everyone reading it. Two callers ask for the same Nasdaq URL
+ * with different freshness needs — `resolveAssetClass` at TTL.meta (60s) and
+ * `getQuote` at TTL.quote (3s) — and because the quote path calls the resolver
+ * first, the 60s entry was always written first and the quote then served up to
+ * twenty times staler than it asked for.
+ */
 async function nasdaq<T>(path: string, ttlMs: number): Promise<NasdaqEnvelope<T>> {
-  return cache.cached(`nasdaq:${path}`, ttlMs, () =>
+  return cache.cached(`nasdaq:${ttlMs}:${path}`, ttlMs, () =>
     fetchJson<NasdaqEnvelope<T>>(`${NASDAQ_BASE}${path}`, {
       timeoutMs: 15_000,
       retries: 1,

@@ -43,3 +43,24 @@ export function intParam(
   if (!Number.isFinite(value)) return fallback;
   return Math.min(Math.max(Math.trunc(value), min), max);
 }
+
+/**
+ * Read a query parameter as a single trimmed string.
+ *
+ * Express 5 types `req.query[x]` as `string | string[] | ParsedQs`, because a
+ * repeated key arrives as an array. Collapsing to the first value is what every
+ * route wants; the hand-inlined ternaries elsewhere did not handle the array
+ * case at all, so `?q=a&q=b` reached the source layer as `''` and silently lost
+ * the query rather than erroring.
+ */
+export function strParam(raw: unknown, fallback = ''): string {
+  if (Array.isArray(raw)) return typeof raw[0] === 'string' ? raw[0].trim() : fallback;
+  return typeof raw === 'string' ? raw.trim() : fallback;
+}
+
+/** The candle buckets this terminal charts, and why those. */
+export const VALID_INTERVALS: ReadonlySet<number> = new Set([1, 60, 1440]);
+
+export const INTERVAL_HINT =
+  'Intervals are 1 (1m), 60 (1h) and 1440 (1d) minutes — the same buckets ' +
+  'Kalshi uses, so an implied overlay lines up with the price.';

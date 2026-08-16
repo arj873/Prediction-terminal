@@ -11,11 +11,10 @@ import { UpstreamError } from '../lib/http.js';
 import * as crypto from '../sources/crypto.js';
 import { findUnderlying } from '../sources/implied.js';
 import * as stocks from '../sources/stocks.js';
-import { asyncRoute, intParam, pathParam } from './helpers.js';
+import { VALID_INTERVALS, asyncRoute, intParam, pathParam } from './helpers.js';
 
 export const spotRouter: Router = Router();
 
-const VALID_INTERVALS = new Set<number>([1, 60, 1440]);
 
 function assetClass(raw: string): AssetClass {
   const value = raw.toLowerCase();
@@ -102,10 +101,18 @@ spotRouter.get(
       });
     }
 
-    const now = Math.floor(Date.now() / 1000);
+    // Snap the window to a 15-second grid, as the implied route already does.
+    // A panel polling every 15s sends a fresh `end` each time, so an unsnapped
+    // window differs only in its last second — a new cache key on every poll,
+    // and `TTL.candles` never fires. Nothing is lost: no bucket is shorter
+    // than a minute.
+    const GRID = 15;
+    const now = Math.floor(Date.now() / 1000 / GRID) * GRID;
     const defaultSpan = interval === 1 ? 6 * 3600 : interval === 60 ? 30 * 86400 : 365 * 86400;
-    const endTs = intParam(req.query['end'], now, 0, now + 86400);
-    const startTs = intParam(req.query['start'], endTs - defaultSpan, 0, endTs);
+    const endTs =
+      Math.floor(intParam(req.query['end'], now, 0, now + 86400) / GRID) * GRID;
+    const startTs =
+      Math.floor(intParam(req.query['start'], endTs - defaultSpan, 0, endTs) / GRID) * GRID;
 
     if (startTs >= endTs) {
       throw new UpstreamError('Candle window start must be before end', { code: 'bad_request' });

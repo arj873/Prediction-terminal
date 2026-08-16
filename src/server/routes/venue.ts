@@ -13,11 +13,10 @@ import { VENUES, isVenue, normaliseId } from '../../shared/venue.js';
 import { UpstreamError } from '../lib/http.js';
 import type { MoverSort } from '../sources/corpus.js';
 import { sourceFor } from '../sources/venues.js';
-import { asyncRoute, intParam, pathParam } from './helpers.js';
+import { VALID_INTERVALS, asyncRoute, intParam, pathParam } from './helpers.js';
 
 export const venueRouter: Router = Router({ mergeParams: true });
 
-const VALID_INTERVALS = new Set<number>([1, 60, 1440]);
 const SORTS = new Set(['volume', 'gainers', 'losers', 'open_interest', 'liquidity']);
 
 function venueParam(params: Record<string, string | string[]>): Venue {

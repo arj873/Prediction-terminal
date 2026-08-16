@@ -15,15 +15,9 @@ import * as rt from '../sources/rottentomatoes.js';
 import * as steam from '../sources/steam.js';
 import * as streamcharts from '../sources/streamcharts.js';
 import * as tvmaze from '../sources/tvmaze.js';
-import { asyncRoute, intParam } from './helpers.js';
+import { asyncRoute, intParam, strParam } from './helpers.js';
 
 export const entertainmentRouter: Router = Router();
-
-/** Read a query parameter as a single trimmed string. */
-function str(raw: unknown, fallback = ''): string {
-  if (Array.isArray(raw)) return typeof raw[0] === 'string' ? raw[0].trim() : fallback;
-  return typeof raw === 'string' ? raw.trim() : fallback;
-}
 
 /* ------------------------------------------------- kalshi entertainment book */
 
@@ -31,7 +25,7 @@ entertainmentRouter.get(
   '/markets',
   asyncRoute(async (req) =>
     entertainment.browse(
-      entertainment.assertGenre(str(req.query['genre'])),
+      entertainment.assertGenre(strParam(req.query['genre'])),
       intParam(req.query['limit'], 60, 1, 250),
     ),
   ),
@@ -41,12 +35,12 @@ entertainmentRouter.get(
 
 entertainmentRouter.get(
   '/rt/search',
-  asyncRoute(async (req) => rt.search(str(req.query['q']), intParam(req.query['limit'], 20, 1, 50))),
+  asyncRoute(async (req) => rt.search(strParam(req.query['q']), intParam(req.query['limit'], 20, 1, 50))),
 );
 
 entertainmentRouter.get(
   '/rt',
-  asyncRoute(async (req) => rt.getTitle(str(req.query['q']))),
+  asyncRoute(async (req) => rt.getTitle(strParam(req.query['q']))),
 );
 
 /* -------------------------------------------------------------------- netflix */
@@ -55,8 +49,8 @@ entertainmentRouter.get(
   '/netflix',
   asyncRoute(async (req) =>
     netflix.getTop10(
-      netflix.assertCategory(str(req.query['category'], 'tv') || 'tv'),
-      netflix.assertScope(str(req.query['scope'])),
+      netflix.assertCategory(strParam(req.query['category'], 'tv') || 'tv'),
+      netflix.assertScope(strParam(req.query['scope'])),
     ),
   ),
 );
@@ -64,7 +58,7 @@ entertainmentRouter.get(
 /* --------------------------------------------------------- spotify / youtube */
 
 entertainmentRouter.get('/charts', (req, res) => {
-  const source = str(req.query['source']).toLowerCase();
+  const source = strParam(req.query['source']).toLowerCase();
   res.json({
     charts: streamcharts.listCharts(
       source === 'spotify' || source === 'youtube' ? source : undefined,
@@ -76,7 +70,7 @@ entertainmentRouter.get(
   '/spotify',
   asyncRoute(async (req) =>
     streamcharts.getChart(
-      streamcharts.resolveSpotifyChart(str(req.query['scope']), str(req.query['period'])),
+      streamcharts.resolveSpotifyChart(strParam(req.query['scope']), strParam(req.query['period'])),
       intParam(req.query['limit'], 200, 1, 500),
     ),
   ),
@@ -86,7 +80,7 @@ entertainmentRouter.get(
   '/youtube',
   asyncRoute(async (req) =>
     streamcharts.getChart(
-      streamcharts.resolveYouTubeChart(str(req.query['view'])),
+      streamcharts.resolveYouTubeChart(strParam(req.query['view'])),
       intParam(req.query['limit'], 200, 1, 500),
     ),
   ),
@@ -97,7 +91,7 @@ entertainmentRouter.get(
 entertainmentRouter.get(
   '/boxoffice',
   asyncRoute(async (req) => {
-    const date = str(req.query['date']);
+    const date = strParam(req.query['date']);
     return boxoffice.getDaily(date === '' ? undefined : date);
   }),
 );
@@ -107,7 +101,7 @@ entertainmentRouter.get(
 entertainmentRouter.get(
   '/steam',
   asyncRoute(async (req) => {
-    const query = str(req.query['q']);
+    const query = strParam(req.query['q']);
     return query === ''
       ? steam.getTop(intParam(req.query['limit'], 25, 1, 100))
       : steam.getGame(query);
@@ -119,8 +113,8 @@ entertainmentRouter.get(
 entertainmentRouter.get(
   '/tv',
   asyncRoute(async (req) => {
-    const date = str(req.query['date']);
-    const country = str(req.query['country']);
+    const date = strParam(req.query['date']);
+    const country = strParam(req.query['country']);
     return tvmaze.getSchedule(date === '' ? undefined : date, country === '' ? undefined : country);
   }),
 );
