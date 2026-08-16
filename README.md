@@ -1,8 +1,9 @@
 # Prediction Terminal
 
 A Bloomberg-style terminal for [Kalshi](https://kalshi.com) prediction markets,
-live stock and crypto prices, [FRED](https://fred.stlouisfed.org) economic data,
-the [Billboard](https://www.billboard.com/charts/) charts, and the entertainment
+live stock and crypto prices, equity and crypto **options with the Greeks**,
+[FRED](https://fred.stlouisfed.org) economic data, the
+[Billboard](https://www.billboard.com/charts/) charts, and the entertainment
 feeds Kalshi settles against — driven entirely from a command prompt.
 
 ```
@@ -10,6 +11,9 @@ feeds Kalshi settles against — driven entirely from a command prompt.
 > STK NVDA 1d 1y
 > CRY BTC 1h 7d
 > IMP BTC                     # Kalshi's implied BTC price, over the real one
+> OPT AAPL 30d greeks         # option chain, delta/gamma/vega/theta/rho
+> VOL BTC                     # volatility smile and term structure
+> OI SPY                      # open interest by strike, and max pain
 > FRED UNRATE
 > BB hot-100
 > ENT film
@@ -81,6 +85,34 @@ and `GP X line 1y 1d` are the same chart.
 `IMP` is additive: re-issuing it for a symbol already on screen adds overlays to
 that chart rather than opening a second one, and clicking a chip in the picker
 does exactly what naming its event ticker does.
+
+### Options
+
+| Command | Usage | What it does |
+| --- | --- | --- |
+| `OPT` | `OPT <symbol> [expiry] [calls\|puts] [greeks] [strikes]` | The chain: both legs around the strike, with implied vol and the Greeks |
+| `OPD` | `OPD <contract>` | One contract in full — Greeks, breakeven, and price history where a venue publishes it |
+| `VOL` | `VOL <symbol> [expiry]` | Volatility smile across strikes, and the at-the-money term structure |
+| `OI` | `OI <symbol> [expiry]` | Open interest and volume by strike, with max pain |
+
+```
+> OPT AAPL                 # front expiry, both legs
+> OPT NVDA greeks          # delta/gamma/vega/theta instead of the quote columns
+> OPT SPY 30d calls 20     # nearest expiry to 30 days, calls only, 20 strikes deep
+> OPT BTC #3               # the third expiry on the strip
+> OPD BTC-25DEC26-104000-C
+> VOL SPY                  # is the front rich against the back?
+> OI TSLA 30d
+```
+
+Arguments are order-independent after the symbol, like `GP` and `STK`. An expiry
+can be an exact date (`2026-09-18`), a horizon (`30d`, `3m`, `1y` — the nearest
+listed expiry to it), or a position on the strip (`#2`). Every panel carries the
+same expiry chips, and each row of a chain is clickable: click the call side or
+the put side and `OPD` opens that contract.
+
+Both asset classes work the same way. `OPT AAPL` and `OPT BTC` differ only in
+which venue answers.
 
 ### Data sources
 
@@ -159,6 +191,9 @@ browser (Vite + TypeScript, no framework)
                     ├── Yahoo      equities, ETFs and cash indices
                     │   └ Nasdaq   fallback, daily bars only
                     ├── Coinbase   crypto spot
+                    ├── Deribit    crypto option boards (BTC, ETH, SOL, …)
+                    ├── Yahoo v7   equity option chains
+                    │   └ Nasdaq   fallback, paged
                     ├── FRED       scraped from fred.stlouisfed.org
                     ├── Billboard  scraped from billboard.com/charts
                     ├── Netflix    published TSV at netflix.com/tudum/top10
@@ -278,6 +313,139 @@ the index complex (S&P 500, Nasdaq-100, Dow), gold, oil and two FX pairs.
 
 ---
 
+## Options and the Greeks
+
+Two venues, one pipeline. Each source normalises into a single internal *board*
+— every live contract, prices per unit of underlying — and the chain, the
+volatility surface and the open-interest ladder are all derived from that board.
+They are the same numbers seen three ways rather than three pipelines that can
+disagree about what the delta of a contract is.
+
+| | Crypto | Equities, ETFs, indices |
+| --- | --- | --- |
+| Venue | Deribit | OPRA, via Yahoo `v7` → Nasdaq |
+| Underlyings | BTC, ETH, SOL, XRP, AVAX, HYPE, TRX | most US listed names with options |
+| Forward | published per expiry | fitted from put-call parity |
+| Implied vol | the venue's mark IV | solved from the book mid |
+| Price history | yes | none published free |
+| Contract size | 1 (10 on some linear boards) | 100 |
+
+### Why Deribit for crypto
+
+There was no real choice to make, which is worth stating plainly rather than
+dressing up as a survey: **Deribit is where crypto options trade.** It has
+consistently carried the large majority of global open interest in BTC and ETH
+options, and its expiries are the ones desks quote off. A crypto options panel
+sourced from anywhere else would be showing a shadow of the real board.
+
+It also happens to satisfy the same constraints that picked Coinbase for spot:
+no key, no account, no geo-fence, documented rate limits, and it answers from
+datacentre IPs. The whole board arrives in two requests per currency —
+`get_instruments` for the contract definitions and `get_book_summary_by_currency`
+for every quote — rather than one request per contract, which for BTC alone
+would be 818.
+
+**Inverse contracts are quoted in the coin.** `BTC-25DEC26-104000-C` marks at
+`0.0119` — that is 0.0119 *BTC*, about $757. Every price is multiplied by the
+index once, at the source boundary, so nothing downstream has to remember which
+product family it is holding. The panel says so rather than presenting the
+conversion as native data. Linear USDC boards (SOL, XRP, AVAX, HYPE, TRX) are
+already quoted in dollars.
+
+### Why the model is Black-76
+
+A terminal has no business asking its user for a risk-free rate and a dividend
+yield. Both are unobservable, both are stale by the time you have typed them,
+and a Greek computed from a guessed carry is a guessed Greek. So the model
+prices options on the **forward**, and the forward is quoted:
+
+* **Crypto.** Deribit publishes `underlying_price` per expiry. That *is* the
+  forward its own marks are struck against.
+* **Equities.** Put-call parity says `C - P = DF·(F - K)` — linear in the
+  strike. Regressing the near-the-money call-put spread against the strike
+  recovers the discount factor from the slope and the forward from the
+  intercept, using quoted prices alone. No rate input, no dividend calendar.
+
+Given `(spot, forward, discount factor)` the carry is fully determined —
+`r = -ln(DF)/T` and `q = r - ln(F/S)/T` — so the classical Greeks follow without
+anything having been assumed. The panel reports which of `venue`, `parity` or
+`assumed` produced the forward, because a Greek is only as trustworthy as its
+carry and the difference should never be invisible. On AAPL the parity fit
+recovers a dividend yield within a few basis points of the real one, from option
+quotes only.
+
+Greeks are in the units a trader reads them in, which is also what Deribit
+publishes, so the two are directly comparable:
+
+| Greek | Units |
+| --- | --- |
+| delta | per 1 unit of underlying (spot delta, not forward delta) |
+| gamma | delta per 1 unit of underlying |
+| vega | per **1 volatility point** — a move from 40% to 41% |
+| theta | per **calendar day** |
+| rho | per **1 percentage point** of rate |
+
+### A few things worth knowing
+
+**Deribit's `interest_rate` field says zero, and its forward disagrees.** Every
+instrument reports `interest_rate: 0.0` while the ten-month forward sits 3.9%
+above the index — a 4.5% annualised rate. Believing the field left every
+long-dated delta on the board disagreeing with Deribit's own by that amount. The
+forward is the market's statement of the carry, so `DF = S/F` is what gets used,
+and the deltas then reproduce Deribit's published values to five decimals.
+
+**An annualised rate is not identifiable from a short-dated board.** The parity
+regression's slope is a discount factor, so over a one-day expiry it is ~0.999
+and a couple of cents of bid/ask noise annualises to a 30%+ rate. A *negative*
+fitted rate is the same failure in the other direction — a discount factor above
+1, which no USD expiry has — and it is not a small error: the discount factor
+scales every price on the board, and a 1.6% scaling moves at-the-money implied
+volatility by about two points. The fit is gated on the rate it implies; when
+the gate fires, the forward is kept (it is the *intercept*, which stays well
+determined) and only the discount is pinned to a configured rate.
+
+**Only near-the-money strikes are eligible for the parity fit.** Listed equity
+options are American and parity is a European identity, so a deep in-the-money
+put can carry an early-exercise premium that parity reads as a distorted
+forward. That premium is negligible around the money, which is also where the
+books are tightest — one window fixes both problems.
+
+**No vendor's implied volatility is adopted for equities.** Yahoo publishes one,
+against its own undisclosed carry assumptions. Mixing that with a forward fitted
+here would put two disagreeing volatilities on one screen and Greeks matching
+neither. Every equity vol is solved from the book mid against the fitted
+forward, so price, vol and Greeks are one consistent set.
+
+**A one-sided option book is not halved.** A Kalshi contract offered at 1¢ with
+no bid is worth somewhere in `[0, 1¢]`, because its payoff is bounded — that is
+why `implied.ts` reads it as `ask / 2`. An option bid at 4.20 with no offer is
+worth about 4.20. The bounded payoff is what makes the binary case different,
+and options do not have one.
+
+**The cumulative normal is the double-precision one, not the textbook one.**
+Abramowitz & Stegun 7.1.26 is accurate to 1.5e-7 *absolute*, which sounds far
+finer than any tick size and is not: in the wings `N(d1)` and `N(d2)` are
+themselves of order 1e-8, so the price of a far out-of-the-money contract becomes
+mostly approximation error. The wings are exactly where a smile is read.
+
+**Max pain is a positioning read, not a forecast.** The panel says so on screen.
+It reports the whole pain curve rather than only its minimum, because the shape
+is what distinguishes a sharp pin from a flat basin.
+
+**US listed options expire at 16:00 New York, not at UTC midnight.** Yahoo dates
+an expiry at midnight UTC and Nasdaq gives no time at all. Hard-coding 20:00 UTC
+would be an hour wrong for five months of the year, and an hour is not a
+rounding error on an expiry-day chain — it is a third of a 0DTE contract's
+remaining life, and theta and gamma both scale on it.
+
+**Equity option price history is not available for free, and the panel says so.**
+`OPD` on a crypto contract draws a candle chart from Deribit's own history,
+converted from the coin bar-by-bar against the perpetual rather than against
+today's index. `OPD` on an equity contract shows the live quote and states why
+there is no chart, instead of rendering an empty one that reads as a failure.
+
+---
+
 ## Configuration
 
 All optional. Copy `.env.example` to `.env` or export directly.
@@ -293,6 +461,8 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
+| `DERIBIT_API_BASE` | `https://www.deribit.com/api/v2` | Override the crypto options upstream |
+| `OPTIONS_RATE` | `0.04` | Rate used only when no forward can be observed or fitted |
 
 ### About FRED and `FRED_API_KEY`
 
@@ -327,7 +497,13 @@ provider answered in the chart's `SRC` field rather than leaving it invisible:
   Substituting SPY for `^GSPC` would be off by a factor of ten against a
   `KXINX` ladder, so the terminal errors rather than guessing.
 
-Crypto has no such issue: Coinbase answers from anywhere.
+The **option** chain hits this harder. Yahoo's `v7` hosts are blocked from
+shared datacentre addresses more aggressively than `v8/chart` is, so a
+deployment where `STK AAPL` works can still find `OPT AAPL` falling through to
+Nasdaq. Nasdaq answers, but it paginates and publishes no implied volatility —
+which costs nothing here, because the vol is solved from the book either way.
+
+Crypto has no such issue: Coinbase and Deribit both answer from anywhere.
 
 ---
 
@@ -345,6 +521,12 @@ Crypto has no such issue: Coinbase answers from anywhere.
 | `GET /api/spot/:class/:symbol` | Live quote (`:class` is `stock` or `crypto`) |
 | `GET /api/spot/:class/:symbol/candles?interval=&start=&end=` | Candles on Kalshi's 1/60/1440-minute grid |
 | `GET /api/spot/search?q=&class=` | Symbol search, flagged with whether a ladder prices it |
+| `GET /api/options/underlyings` | Symbols with a known option board |
+| `GET /api/options/:symbol/expiries` | The expiry strip, with contracts and open interest |
+| `GET /api/options/:symbol/chain?expiry=` | Both legs at every strike, with implied vol and Greeks |
+| `GET /api/options/:symbol/surface?expiry=` | Volatility smile, at-the-money term structure and 25Δ skew |
+| `GET /api/options/:symbol/positioning?expiry=` | Open interest and volume by strike, with max pain |
+| `GET /api/options/contract/:contract` | One contract, its pair leg, and price history where published |
 | `GET /api/implied/underlyings` | Symbols with a mapped Kalshi ladder |
 | `GET /api/implied/candidates?symbol=` | Ladders pricing a symbol, each with its live implied price |
 | `GET /api/implied/series?event=&interval=&start=&end=&method=` | Implied price through time for one ladder |
@@ -374,7 +556,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 243 tests
+npm test             # 353 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
@@ -385,6 +567,15 @@ Nasdaq and Coinbase normalisers against trimmed real API responses, and
 `test/fred.integration.test.ts` exercises the whole FRED scrape path against a
 local fixture server — which is how that path stays covered on networks where
 the live host refuses to answer.
+
+The option maths in `src/shared/greeks.ts` is checked three ways, because each
+catches what the others cannot: against **arithmetic** (put-call parity,
+intrinsic bounds), against **finite differences** through the economic variables
+`(S, r, q, T, σ)` — which is what pins the units down, since a vega quoted per
+unit rather than per point is off by exactly 100 and nothing else notices — and
+against **Deribit's own published Greeks**, from a captured live response. An
+exchange's risk system is the only external oracle available, and it is a good
+one: it is what caught the `interest_rate: 0.0` problem above.
 
 The implied-price maths in `src/shared/implied.ts` is the most heavily tested
 part of the codebase, because it is the one piece whose output looks plausible
@@ -415,6 +606,14 @@ The implied price is a reading of public quotes, not advice, and it is only as
 good as the ladder underneath it — an expiry with a thin or one-sided book will
 imply a number the panel reports the tail mass for precisely so you can
 distrust it.
+
+The Greeks are a model's opinion, not a measurement. They are Black-76 values
+computed from a forward this terminal observes or fits, and the panel names
+which — read an `assumed` forward with suspicion. Listed equity options are
+American while the model is European, so deep in-the-money contracts carry an
+early-exercise premium it does not price; that is why the parity fit only looks
+near the money, and why the wings of an equity smile deserve more scepticism
+than its middle.
 
 The entertainment feeds show what a market is *likely* to settle against, not
 what it *will*. Kalshi resolves against its own stated settlement sources under

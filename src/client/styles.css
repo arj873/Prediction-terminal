@@ -1234,6 +1234,177 @@ button {
   line-height: 1.2;
 }
 
+/* ------------------------------------------------------------------ options */
+
+/*
+ * The chain is read outward from the strike column, so the strike is the only
+ * centred, bright thing in the table and the two legs are visually distinct
+ * without being coloured — colour on this table already means direction.
+ */
+.option-chain .strike {
+  text-align: center;
+  color: var(--fg-bright);
+  background: var(--bg-header);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  position: sticky;
+}
+
+.option-chain .strike.atm,
+.oi-ladder .strike.atm {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* In-the-money legs get a wash, which is what makes the money line visible
+   without reading a single number. */
+.option-chain .opt-call.itm {
+  background: color-mix(in srgb, var(--up) 8%, transparent);
+}
+.option-chain .opt-put.itm {
+  background: color-mix(in srgb, var(--down) 8%, transparent);
+}
+
+.option-chain td {
+  max-width: none;
+}
+
+/* ---- the Greek grid on OPD ---- */
+
+.greek-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.greek-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--bg);
+}
+
+.greek-label {
+  color: var(--fg-muted);
+  font-size: var(--size-tiny);
+  letter-spacing: 0.08em;
+}
+
+.greek-value {
+  color: var(--fg-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.option-history {
+  min-height: 180px;
+}
+
+/* A command embedded in prose, e.g. the pair-leg cross-reference. */
+.inline-command {
+  color: var(--accent);
+  cursor: pointer;
+}
+.inline-command:hover {
+  text-decoration: underline;
+}
+
+/* ---- the SVG plots on VOL ---- */
+
+/*
+ * `position: relative` is load-bearing, not decoration. `.chart-legend` is
+ * absolutely positioned so it can float over a chart; without a positioned
+ * ancestor here it escapes to the page and lands on top of the ticker tape.
+ */
+.plot-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 150px;
+  border-top: 1px solid var(--border);
+}
+
+.plot-title {
+  padding: 4px 8px 0;
+  color: var(--fg-muted);
+  font-size: var(--size-tiny);
+  letter-spacing: 0.08em;
+  flex: 0 0 auto;
+}
+
+/* These plots are short, so their readout sits in the flow under the title
+   rather than floating over the data the way a price chart's legend does. */
+.plot-section .chart-legend {
+  position: static;
+  padding: 2px 8px;
+  background: none;
+  flex: 0 0 auto;
+}
+
+.plot-host {
+  flex: 1 1 auto;
+  min-height: 120px;
+  position: relative;
+}
+
+.plot {
+  display: block;
+}
+
+/* ---- the open-interest ladder ---- */
+
+.oi-ladder .strike {
+  text-align: center;
+  color: var(--fg-bright);
+}
+
+.oi-ladder .opt-call {
+  color: var(--up);
+}
+.oi-ladder .opt-put {
+  color: var(--down);
+}
+
+.oi-bar-cell {
+  width: 28%;
+  padding: 0 4px !important;
+}
+
+.oi-bar {
+  height: 8px;
+  min-width: 0;
+}
+
+/* The two ladders grow toward the strike column in the middle, so the shape of
+   positioning reads as one picture rather than two unrelated bar charts. */
+.oi-bar-cell.call {
+  direction: rtl;
+}
+.oi-bar.call {
+  background: color-mix(in srgb, var(--up) 55%, transparent);
+  margin-left: auto;
+}
+.oi-bar.put {
+  background: color-mix(in srgb, var(--down) 55%, transparent);
+}
+
+.data-table tr.max-pain {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+
+.data-table tr.max-pain .strike {
+  color: var(--warn);
+}
+
+.field-value.warn {
+  color: var(--warn);
+}
+
 /* ---------------------------------------------------------------- scrollbar */
 
 ::-webkit-scrollbar {

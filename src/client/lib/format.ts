@@ -109,6 +109,37 @@ export function signedPercent(value: number | null | undefined, digits = 2): str
 }
 
 /**
+ * Implied volatility, held internally as a decimal and read as a percentage.
+ *
+ * One decimal place, always: a vol surface is read by comparing rungs to each
+ * other, and a column where `28.4` sits under `31` is harder to scan than one
+ * where it sits under `31.0`.
+ */
+export function volPercent(value: number | null | undefined, digits = 1): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EM_DASH;
+  return `${(value * 100).toFixed(digits)}%`;
+}
+
+/**
+ * A Greek, at a precision that suits its magnitude.
+ *
+ * Delta and gamma live in different worlds — one is bounded by 1, the other is
+ * routinely 0.0003 — so a fixed precision would either round gamma to zero or
+ * print delta with six meaningless digits. Very small non-zero values fall back
+ * to exponent form rather than displaying as `0.000`, because "small" and
+ * "nothing" are different answers.
+ */
+export function greek(value: number | null | undefined, digits = 4): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EM_DASH;
+  if (value === 0) return '0';
+  const abs = Math.abs(value);
+  if (abs >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (abs >= 1) return value.toFixed(Math.min(digits, 2));
+  if (abs < 1e-4) return value.toExponential(1);
+  return value.toFixed(digits);
+}
+
+/**
  * A general-purpose numeric formatter for FRED, whose series range from
  * fractions of a percent to trillions of dollars.
  */

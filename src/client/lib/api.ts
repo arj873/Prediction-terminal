@@ -25,6 +25,12 @@ import type {
   KalshiEvent,
   Market,
   NetflixTop10,
+  OptionChain,
+  OptionExpiry,
+  OptionPositioning,
+  OptionQuoteResponse,
+  OptionSurface,
+  OptionUnderlying,
   OrderBook,
   RtSearchResponse,
   RtTitle,
@@ -169,6 +175,53 @@ export const spot = {
     signal?: AbortSignal,
   ): Promise<{ query: string; results: SpotSearchResult[] }> =>
     request(`/spot/search${query({ q, class: assetClass, limit })}`, signal),
+};
+
+/* ----------------------------------------------------------------- options */
+
+export interface OptionExpiriesResponse {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  spot: number | null;
+  expiries: OptionExpiry[];
+  venue: string;
+  source: string;
+}
+
+export const options = {
+  underlyings: (
+    signal?: AbortSignal,
+  ): Promise<{ underlyings: OptionUnderlying[]; note?: string }> =>
+    request('/options/underlyings', signal),
+
+  expiries: (symbol: string, signal?: AbortSignal): Promise<OptionExpiriesResponse> =>
+    request(`/options/${encodeURIComponent(symbol)}/expiries`, signal),
+
+  chain: (symbol: string, expiry?: string, signal?: AbortSignal): Promise<OptionChain> =>
+    request(`/options/${encodeURIComponent(symbol)}/chain${query({ expiry })}`, signal),
+
+  surface: (symbol: string, expiry?: string, signal?: AbortSignal): Promise<OptionSurface> =>
+    request(`/options/${encodeURIComponent(symbol)}/surface${query({ expiry })}`, signal),
+
+  positioning: (
+    symbol: string,
+    expiry?: string,
+    signal?: AbortSignal,
+  ): Promise<OptionPositioning> =>
+    request(`/options/${encodeURIComponent(symbol)}/positioning${query({ expiry })}`, signal),
+
+  contract: (
+    contract: string,
+    interval: CandleInterval = 60,
+    start?: number,
+    end?: number,
+    signal?: AbortSignal,
+  ): Promise<OptionQuoteResponse> =>
+    request(
+      `/options/contract/${encodeURIComponent(contract)}${query({ interval, start, end })}`,
+      signal,
+    ),
 };
 
 /* ----------------------------------------------------------------- implied */

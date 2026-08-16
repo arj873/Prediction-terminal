@@ -20,6 +20,7 @@ import {
 import {
   guessAssetClass,
   parseChartArgs,
+  parseOptionArgs,
   parseSpotArgs,
 } from '../src/client/terminal/registry.js';
 
@@ -267,5 +268,54 @@ describe('guessAssetClass', () => {
     assert.equal(guessAssetClass('AAPL'), 'stock');
     assert.equal(guessAssetClass('^GSPC'), 'stock');
     assert.equal(guessAssetClass('SPX'), 'stock');
+  });
+});
+
+describe('parseOptionArgs', () => {
+  it('defaults to the front expiry, both legs, and a window of strikes', () => {
+    const result = parseOptionArgs(['aapl']);
+    assert.equal(result.symbol, 'AAPL');
+    assert.equal(result.expiry, undefined);
+    assert.equal(result.view, 'quotes');
+    assert.equal(result.side, 'both');
+    assert.equal(result.strikes, 14);
+  });
+
+  it('is order-independent after the symbol, like GP and STK', () => {
+    const a = parseOptionArgs(['SPY', '30d', 'calls', 'greeks', '20']);
+    const b = parseOptionArgs(['SPY', 'greeks', '20', 'calls', '30d']);
+    assert.deepEqual(a, b);
+    assert.equal(a.expiry, '30d');
+    assert.equal(a.side, 'calls');
+    assert.equal(a.view, 'greeks');
+    assert.equal(a.strikes, 20);
+  });
+
+  it('takes an expiry as a date, a horizon or a position on the strip', () => {
+    assert.equal(parseOptionArgs(['SPY', '2026-09-18']).expiry, '2026-09-18');
+    assert.equal(parseOptionArgs(['SPY', '45d']).expiry, '45d');
+    assert.equal(parseOptionArgs(['SPY', '3M']).expiry, '3m');
+    assert.equal(parseOptionArgs(['SPY', '#2']).expiry, '2');
+  });
+
+  it('reads a bare integer as a strike count, not as an expiry index', () => {
+    // The one genuinely ambiguous token. Narrowing a 400-rung crypto board is
+    // far more often what is wanted, and `#2` is the unambiguous spelling for
+    // the other reading.
+    const result = parseOptionArgs(['BTC', '8']);
+    assert.equal(result.strikes, 8);
+    assert.equal(result.expiry, undefined);
+  });
+
+  it('accepts the short spellings', () => {
+    assert.equal(parseOptionArgs(['SPY', 'g']).view, 'greeks');
+    assert.equal(parseOptionArgs(['SPY', 'c']).side, 'calls');
+    assert.equal(parseOptionArgs(['SPY', 'p']).side, 'puts');
+    assert.equal(parseOptionArgs(['SPY', 'puts', 'both']).side, 'both');
+  });
+
+  it('rejects a missing symbol and an argument it cannot classify', () => {
+    assert.throws(() => parseOptionArgs([]), /Missing <symbol>/);
+    assert.throws(() => parseOptionArgs(['SPY', 'weekly']), /Unrecognised argument "weekly"/);
   });
 });

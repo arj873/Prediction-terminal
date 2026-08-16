@@ -244,6 +244,221 @@ export interface SpotSearchResult {
   hasImplied: boolean;
 }
 
+/* ----------------------------------------------------------------- options */
+
+export type OptionType = 'call' | 'put';
+
+/**
+ * The Greek set, in the units a trader reads them in.
+ *
+ * `null` rather than `0` throughout: a contract with no derivable volatility
+ * has *unknown* sensitivities, and a zero delta is a real and very different
+ * statement. See `shared/greeks.ts` for the units of each.
+ */
+export interface OptionGreeks {
+  /** Per 1 unit of underlying. Spot delta, not forward delta. */
+  delta: number | null;
+  /** Delta per 1 unit of underlying. */
+  gamma: number | null;
+  /** Per 1 volatility point — a move from 40% to 41%. */
+  vega: number | null;
+  /** Per calendar day. */
+  theta: number | null;
+  /** Per 1 percentage point of interest rate. */
+  rho: number | null;
+}
+
+/** Where a contract's volatility number came from. */
+export type IvSource = 'solved' | 'venue';
+
+export interface OptionContract {
+  /** The venue's own instrument id, e.g. `AAPL260918C00300000`, `BTC-25DEC26-104000-C`. */
+  contract: string;
+  type: OptionType;
+  strike: number;
+  /** Expiry instant, unix seconds. */
+  expiry: number;
+  bid: number | null;
+  ask: number | null;
+  /** Book mid, or the venue's mark when the book is one-sided. */
+  mid: number | null;
+  last: number | null;
+  change: number | null;
+  /** The venue's own mark price, where it publishes one. */
+  mark: number | null;
+  volume: number | null;
+  openInterest: number | null;
+  /** Decimal, so `0.42` is 42%. */
+  iv: number | null;
+  ivSource: IvSource | null;
+  greeks: OptionGreeks;
+  /** Model value at {@link iv}. Equals {@link mid} when the vol was solved from it. */
+  theo: number | null;
+  intrinsic: number | null;
+  /** Premium over intrinsic — what actually decays. */
+  extrinsic: number | null;
+  /** Underlying price at which this contract returns its premium at expiry. */
+  breakeven: number | null;
+  inTheMoney: boolean;
+}
+
+/** One expiry on the board, as offered in the picker. */
+export interface OptionExpiry {
+  /** Expiry instant, unix seconds. */
+  expiry: number;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** Act/365. */
+  yearsToExpiry: number;
+  daysToExpiry: number;
+  contracts: number;
+  openInterest: number;
+  volume: number;
+}
+
+/**
+ * How the forward for an expiry was arrived at.
+ *
+ * `parity` and `venue` are observed; `assumed` means nothing in the market
+ * would say, and the number came from a configured rate. The panel shows which,
+ * because a Greek is only as trustworthy as its carry.
+ */
+export type ForwardSource = 'parity' | 'venue' | 'assumed';
+
+export interface OptionChain {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  currency: string;
+  /** Underlying price now. */
+  spot: number | null;
+  /** Forward for this expiry. */
+  forward: number | null;
+  forwardSource: ForwardSource;
+  /** `e^(-rT)` for this expiry. */
+  discountFactor: number | null;
+  /** Continuous rate implied by the discount factor. */
+  rate: number | null;
+  /** Continuous dividend/borrow yield implied by spot against the forward. */
+  carry: number | null;
+  expiry: OptionExpiry;
+  /** Every expiry on the board, for the picker. */
+  expiries: OptionExpiry[];
+  calls: OptionContract[];
+  puts: OptionContract[];
+  /** At-the-money volatility for this expiry, decimal. */
+  atmIv: number | null;
+  /** Contracts per unit of underlying — 100 for US listed equity options, 1 on Deribit. */
+  contractSize: number;
+  /** Exchange the quotes came from. */
+  venue: string;
+  source: string;
+  /** Anything the reader needs to know to read the numbers correctly. */
+  note?: string;
+}
+
+/** One rung of the volatility smile. */
+export interface OptionSmilePoint {
+  strike: number;
+  /** `K/S`. */
+  moneyness: number | null;
+  callIv: number | null;
+  putIv: number | null;
+  /** The rung's headline vol — out-of-the-money side, which is the traded one. */
+  iv: number | null;
+  volume: number;
+  openInterest: number;
+}
+
+/** One expiry on the at-the-money term structure. */
+export interface OptionTermPoint {
+  expiry: number;
+  date: string;
+  daysToExpiry: number;
+  atmIv: number | null;
+  forward: number | null;
+  openInterest: number;
+  volume: number;
+}
+
+export interface OptionSurface {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  spot: number | null;
+  expiry: OptionExpiry;
+  forward: number | null;
+  atmIv: number | null;
+  smile: OptionSmilePoint[];
+  term: OptionTermPoint[];
+  /** 25-delta put vol minus 25-delta call vol — the smile's asymmetry. */
+  skew: number | null;
+  venue: string;
+  source: string;
+  note?: string;
+}
+
+/** Open interest and volume at one strike, both legs. */
+export interface OptionStrikeStat {
+  strike: number;
+  callOpenInterest: number;
+  putOpenInterest: number;
+  callVolume: number;
+  putVolume: number;
+  /** Total writer payout if the underlying settled here. */
+  painPayout: number | null;
+}
+
+export interface OptionPositioning {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  spot: number | null;
+  expiry: OptionExpiry;
+  strikes: OptionStrikeStat[];
+  /** Strike where the least option value pays out — a positioning read, not a forecast. */
+  maxPain: number | null;
+  totalCallOpenInterest: number;
+  totalPutOpenInterest: number;
+  totalCallVolume: number;
+  totalPutVolume: number;
+  putCallOpenInterest: number | null;
+  putCallVolume: number | null;
+  venue: string;
+  source: string;
+  note?: string;
+}
+
+/** A single contract with its chain context — what `OPD` shows. */
+export interface OptionQuoteResponse {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  currency: string;
+  spot: number | null;
+  forward: number | null;
+  forwardSource: ForwardSource;
+  rate: number | null;
+  carry: number | null;
+  contractSize: number;
+  contract: OptionContract;
+  /** The other leg at the same strike and expiry, when the venue lists it. */
+  pair: OptionContract | null;
+  /** Price history, where the venue publishes any. Empty otherwise. */
+  history: SpotCandle[];
+  /** Why {@link history} is empty, when it is. */
+  historyNote?: string;
+  venue: string;
+  source: string;
+}
+
+export interface OptionUnderlying {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  venue: string;
+}
+
 /* ----------------------------------------------------------------- implied */
 
 /** How a strike ladder is collapsed into one number. */

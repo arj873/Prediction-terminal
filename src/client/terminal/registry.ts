@@ -26,6 +26,15 @@ import {
 } from '../panels/mediadata.js';
 import { DepthPanel, QuotePanel, TradesPanel } from '../panels/market.js';
 import { HelpPanel } from '../panels/help.js';
+import {
+  OpenInterestPanel,
+  OptionChainPanel,
+  OptionDetailPanel,
+  VolPanel,
+  type ChainPanelOptions,
+  type ChainSide,
+  type ChainView,
+} from '../panels/options.js';
 import { SpotPanel, type SpotPanelOptions, type SpotStyle } from '../panels/spot.js';
 import type { PanelContext } from '../panels/panel.js';
 import {
@@ -221,6 +230,106 @@ export function guessAssetClass(symbol: string): AssetClass {
   return CRYPTO_SYMBOLS.has(upper) || CRYPTO_SYMBOLS.has(base) ? 'crypto' : 'stock';
 }
 
+/* --------------------------------------------------- option argument parsing */
+
+/**
+ * An expiry, as a person types one.
+ *
+ * Three spellings, because three different questions get asked of a board: an
+ * exact date when the expiry is known, a horizon (`30d`) when what matters is
+ * roughly how far out, and `#2` for "the second one on the strip". The server
+ * resolves all three against the listed expiries — see `resolveExpiry` — so an
+ * unlisted date comes back naming the ones that do exist.
+ */
+function parseExpiryToken(token: string): string | null {
+  if (isIsoDate(token)) return token;
+  const horizon = /^(\d+)([dwmy])$/i.exec(token);
+  if (horizon) return token.toLowerCase();
+  const index = /^#(\d{1,2})$/.exec(token);
+  if (index) return index[1]!;
+  return null;
+}
+
+/**
+ * `OPT <symbol> [expiry] [calls|puts] [greeks] [n]`, order-independent after
+ * the symbol — the same contract `GP` and `STK` make.
+ *
+ * The one genuinely ambiguous token is a bare integer, which could be a strike
+ * count or an expiry index. It is read as the strike count, because narrowing a
+ * 400-rung crypto board is the far more common thing to want; `#2` is the
+ * unambiguous spelling for the other.
+ */
+export function parseOptionArgs(args: string[]): ChainPanelOptions {
+  const symbol = args[0];
+  if (!symbol || !looksLikeSymbol(symbol)) throw new UsageError('Missing <symbol>');
+
+  let expiry: string | undefined;
+  let view: ChainView = 'quotes';
+  let side: ChainSide = 'both';
+  let strikes = 14;
+
+  for (const token of args.slice(1)) {
+    const lower = token.toLowerCase();
+
+    if (lower === 'greeks' || lower === 'greek' || lower === 'g') {
+      view = 'greeks';
+      continue;
+    }
+    if (lower === 'quotes' || lower === 'prices') {
+      view = 'quotes';
+      continue;
+    }
+    if (lower === 'calls' || lower === 'call' || lower === 'c') {
+      side = 'calls';
+      continue;
+    }
+    if (lower === 'puts' || lower === 'put' || lower === 'p') {
+      side = 'puts';
+      continue;
+    }
+    if (lower === 'both' || lower === 'all') {
+      side = 'both';
+      continue;
+    }
+
+    const asExpiry = parseExpiryToken(token);
+    if (asExpiry !== null) {
+      expiry = asExpiry;
+      continue;
+    }
+
+    if (/^\d{1,3}$/.test(token)) {
+      strikes = Math.max(1, Number(token));
+      continue;
+    }
+
+    throw new UsageError(`Unrecognised argument "${token}"`);
+  }
+
+  return {
+    symbol: symbol.toUpperCase(),
+    ...(expiry !== undefined ? { expiry } : {}),
+    view,
+    side,
+    strikes,
+  };
+}
+
+/** `VOL`/`OI` take a symbol and, optionally, one expiry. */
+function parseSymbolAndExpiry(args: string[]): { symbol: string; expiry?: string } {
+  const symbol = args[0];
+  if (!symbol || !looksLikeSymbol(symbol)) throw new UsageError('Missing <symbol>');
+
+  let expiry: string | undefined;
+  for (const token of args.slice(1)) {
+    const asExpiry = parseExpiryToken(token);
+    if (asExpiry === null) throw new UsageError(`Unrecognised argument "${token}"`);
+    expiry = asExpiry;
+  }
+
+  return { symbol: symbol.toUpperCase(), ...(expiry !== undefined ? { expiry } : {}) };
+}
+
 /**
  * Open or re-configure the chart for a symbol.
  *
@@ -404,6 +513,87 @@ export const COMMANDS: Command[] = [
           `Pick a Kalshi expiry under the chart to overlay its implied price on ${options.symbol}.`,
         );
       }
+    },
+  },
+  {
+    verb: 'OPT',
+    aliases: ['OPTIONS', 'CHAIN'],
+    group: 'markets',
+    summary: 'Option chain with Greeks, for stocks and crypto',
+    usage: 'OPT <symbol> [YYYY-MM-DD|30d|#2] [calls|puts] [greeks] [strikes]',
+    examples: [
+      'OPT AAPL',
+      'OPT NVDA greeks',
+      'OPT SPY 30d calls 20',
+      'OPT BTC',
+      'OPT ETH #3 greeks',
+    ],
+    handler(command, { panels, panelContext }) {
+      const options = parseOptionArgs(command.args);
+      const id = OptionChainPanel.idFor(options.symbol);
+      const existing = panels.find(id);
+
+      // Re-issuing OPT for an open chain re-configures it rather than stacking
+      // a second copy — the same contract GP and STK make.
+      if (existing instanceof OptionChainPanel) {
+        existing.reconfigure(options);
+        panels.focus(id);
+        return;
+      }
+      panels.open(id, () => new OptionChainPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'OPD',
+    aliases: ['OPTQ', 'CONTRACT'],
+    group: 'markets',
+    summary: 'One option contract: quote, Greeks and history',
+    usage: 'OPD <contract>',
+    examples: ['OPD AAPL260918C00300000', 'OPD BTC-25DEC26-104000-C'],
+    handler(command, { panels, panelContext }) {
+      const contract = requireArg(command, 0, 'contract').toUpperCase();
+      const id = OptionDetailPanel.idFor(contract);
+      panels.open(id, () => new OptionDetailPanel(id, panelContext, contract));
+    },
+  },
+  {
+    verb: 'VOL',
+    aliases: ['SMILE', 'IV', 'SURFACE'],
+    group: 'markets',
+    summary: 'Volatility smile and at-the-money term structure',
+    usage: 'VOL <symbol> [YYYY-MM-DD|30d|#2]',
+    examples: ['VOL SPY', 'VOL BTC', 'VOL NVDA 60d', 'VOL ETH #1'],
+    handler(command, { panels, panelContext }) {
+      const options = parseSymbolAndExpiry(command.args);
+      const id = VolPanel.idFor(options.symbol);
+      const existing = panels.find(id);
+
+      if (existing instanceof VolPanel) {
+        existing.reconfigure(options);
+        panels.focus(id);
+        return;
+      }
+      panels.open(id, () => new VolPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'OI',
+    aliases: ['MAXPAIN', 'OPENINT'],
+    group: 'markets',
+    summary: 'Open interest and volume by strike, with max pain',
+    usage: 'OI <symbol> [YYYY-MM-DD|30d|#2]',
+    examples: ['OI SPY', 'OI BTC', 'OI TSLA 30d'],
+    handler(command, { panels, panelContext }) {
+      const options = parseSymbolAndExpiry(command.args);
+      const id = OpenInterestPanel.idFor(options.symbol);
+      const existing = panels.find(id);
+
+      if (existing instanceof OpenInterestPanel) {
+        existing.reconfigure(options);
+        panels.focus(id);
+        return;
+      }
+      panels.open(id, () => new OpenInterestPanel(id, panelContext, options));
     },
   },
   {

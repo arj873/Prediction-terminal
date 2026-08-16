@@ -22,6 +22,7 @@ import { entertainmentRouter } from './routes/entertainment.js';
 import { fredRouter } from './routes/fred.js';
 import { impliedRouter } from './routes/implied.js';
 import { kalshiRouter } from './routes/kalshi.js';
+import { optionsRouter } from './routes/options.js';
 import { spotRouter } from './routes/spot.js';
 import { warmCorpus } from './sources/kalshi.js';
 
@@ -78,6 +79,7 @@ export function createApp(): express.Express {
   // ---- routes ------------------------------------------------------------
   app.use('/api/kalshi', kalshiRouter);
   app.use('/api/spot', spotRouter);
+  app.use('/api/options', optionsRouter);
   app.use('/api/implied', impliedRouter);
   app.use('/api/fred', fredRouter);
   app.use('/api/billboard', billboardRouter);
@@ -148,6 +150,7 @@ if (invokedDirectly) {
     console.log(`PREDICTION TERMINAL api  http://${HOST}:${PORT}`);
     console.log(`  kalshi     /api/kalshi/{markets,events,search,top,series}`);
     console.log(`  spot       /api/spot/{stock,crypto}/:symbol[/candles]`);
+    console.log(`  options    /api/options/:symbol/{chain,surface,positioning,expiries}`);
     console.log(`  implied    /api/implied/{underlyings,candidates,series}`);
     console.log(`  fred       /api/fred/{series/:id,search}`);
     console.log(`  billboard  /api/billboard/{charts,chart/:slug}`);
