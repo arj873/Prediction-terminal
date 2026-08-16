@@ -125,8 +125,11 @@ export class HelpPanel extends Panel<Command[]> {
           el('li', { text: 'Steam — Valve’s public API for live players, steamcharts.com for the leaderboard.' }),
           el('li', { text: 'TV schedules — the TVmaze public API.' }),
           el('li', {
+            text: 'News — Alpaca’s wire (Benzinga). The one keyed feed: set ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY.',
+          }),
+          el('li', {
             class: 'dim',
-            text: 'Read-only market data. Nothing here places an order or touches an account.',
+            text: 'Read-only market data. Nothing here places an order; the Alpaca key is used to read news and nothing else.',
           }),
         ]),
       ]),

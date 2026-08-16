@@ -20,6 +20,7 @@ import {
 import {
   guessAssetClass,
   parseChartArgs,
+  parseNewsArgs,
   parseSpotArgs,
 } from '../src/client/terminal/registry.js';
 
@@ -253,6 +254,48 @@ describe('parseSpotArgs', () => {
 
   it('rejects an argument it cannot classify', () => {
     assert.throws(() => parseSpotArgs(['AAPL', 'weekly'], stock), /Unrecognised argument "weekly"/);
+  });
+});
+
+describe('parseNewsArgs', () => {
+  it('defaults to the whole wire', () => {
+    assert.deepEqual(parseNewsArgs([]), { symbols: [], limit: 30, days: 7 });
+  });
+
+  it('reads a bare integer as a headline count, not a symbol', () => {
+    // `30` satisfies the symbol shape too, so the order these are claimed in is
+    // the whole difference between 30 headlines and a ticker called 30.
+    const result = parseNewsArgs(['NVDA', '50']);
+    assert.deepEqual(result.symbols, ['NVDA']);
+    assert.equal(result.limit, 50);
+  });
+
+  it('reads a duration as the look-back window', () => {
+    assert.equal(parseNewsArgs(['NVDA', '30d']).days, 30);
+    assert.equal(parseNewsArgs(['NVDA', '1w']).days, 7);
+    // Sub-day windows round up rather than asking for zero days of news.
+    assert.equal(parseNewsArgs(['NVDA', '6h']).days, 1);
+  });
+
+  it('takes symbols, count and window in any order', () => {
+    assert.deepEqual(parseNewsArgs(['aapl', '10', 'msft', '14d']), {
+      symbols: ['AAPL', 'MSFT'],
+      limit: 10,
+      days: 14,
+    });
+  });
+
+  it('de-duplicates symbols so the panel id is stable', () => {
+    assert.deepEqual(parseNewsArgs(['AAPL', 'aapl']).symbols, ['AAPL']);
+  });
+
+  it('rejects a count the upstream cannot serve', () => {
+    assert.throws(() => parseNewsArgs(['NVDA', '500']), /between 1 and 50/);
+    assert.throws(() => parseNewsArgs(['NVDA', '0']), /between 1 and 50/);
+  });
+
+  it('rejects an argument it cannot classify', () => {
+    assert.throws(() => parseNewsArgs(['NVDA', '--']), /Unrecognised argument/);
   });
 });
 

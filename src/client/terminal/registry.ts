@@ -26,6 +26,7 @@ import {
 } from '../panels/mediadata.js';
 import { DepthPanel, QuotePanel, TradesPanel } from '../panels/market.js';
 import { HelpPanel } from '../panels/help.js';
+import { NewsPanel, type NewsPanelOptions } from '../panels/news.js';
 import { SpotPanel, type SpotPanelOptions, type SpotStyle } from '../panels/spot.js';
 import type { PanelContext } from '../panels/panel.js';
 import {
@@ -221,6 +222,54 @@ export function guessAssetClass(symbol: string): AssetClass {
   return CRYPTO_SYMBOLS.has(upper) || CRYPTO_SYMBOLS.has(base) ? 'crypto' : 'stock';
 }
 
+/* ---------------------------------------------------------- NEWS arguments */
+
+const NEWS_DEFAULT_LIMIT = 30;
+const NEWS_DEFAULT_DAYS = 7;
+/** Alpaca caps a page at 50; the window cap is this terminal's own sanity bound. */
+const NEWS_MAX_LIMIT = 50;
+const NEWS_MAX_DAYS = 90;
+
+/**
+ * `NEWS [symbol…] [count] [window]` — every argument optional, in any order.
+ *
+ * The three argument kinds are told apart by shape rather than position: a bare
+ * integer is a headline count, a duration is the look-back window, and anything
+ * else has to be a symbol. That ordering matters — `30` is a valid symbol shape
+ * too, so the count is claimed first, and `7d` parses as a duration before it
+ * can be mistaken for a ticker.
+ */
+export function parseNewsArgs(args: string[]): NewsPanelOptions {
+  const symbols: string[] = [];
+  let limit = NEWS_DEFAULT_LIMIT;
+  let days = NEWS_DEFAULT_DAYS;
+
+  for (const token of args) {
+    if (/^\d+$/.test(token)) {
+      const value = Number(token);
+      if (value < 1 || value > NEWS_MAX_LIMIT) {
+        throw new UsageError(`Headline count must be between 1 and ${NEWS_MAX_LIMIT}`);
+      }
+      limit = value;
+      continue;
+    }
+
+    const duration = parseDuration(token);
+    if (duration !== null) {
+      // Sub-day windows are legal to type and round up to a day: the wire is
+      // sparse enough per ticker that anything shorter usually shows nothing.
+      days = Math.min(Math.max(Math.round(duration / 86400), 1), NEWS_MAX_DAYS);
+      continue;
+    }
+
+    if (!looksLikeSymbol(token)) throw new UsageError(`Unrecognised argument "${token}"`);
+    const symbol = token.toUpperCase();
+    if (!symbols.includes(symbol)) symbols.push(symbol);
+  }
+
+  return { symbols, limit, days };
+}
+
 /**
  * Open or re-configure the chart for a symbol.
  *
@@ -404,6 +453,28 @@ export const COMMANDS: Command[] = [
           `Pick a Kalshi expiry under the chart to overlay its implied price on ${options.symbol}.`,
         );
       }
+    },
+  },
+  {
+    verb: 'NEWS',
+    aliases: ['N', 'WIRE'],
+    group: 'data',
+    summary: 'Market news wire, for a symbol or the whole tape',
+    usage: 'NEWS [symbol…] [count] [window]',
+    examples: ['NEWS', 'NEWS NVDA', 'NEWS AAPL MSFT 50', 'NEWS BTCUSD 30d'],
+    handler(command, { panels, panelContext }) {
+      const options = parseNewsArgs(command.args);
+      const id = NewsPanel.idFor(options.symbols);
+      const existing = panels.find(id);
+
+      // Re-issuing NEWS for symbols already on screen re-runs that panel with
+      // the new count and window rather than tiling the same wire twice.
+      if (existing instanceof NewsPanel) {
+        existing.reconfigure(options);
+        panels.focus(id);
+        return;
+      }
+      panels.open(id, () => new NewsPanel(id, panelContext, options));
     },
   },
   {

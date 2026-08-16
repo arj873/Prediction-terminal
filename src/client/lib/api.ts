@@ -25,6 +25,7 @@ import type {
   KalshiEvent,
   Market,
   NetflixTop10,
+  NewsFeed,
   OrderBook,
   RtSearchResponse,
   RtTitle,
@@ -226,6 +227,19 @@ export const billboard = {
     request('/billboard/charts', signal),
 };
 
+/* -------------------------------------------------------------------- news */
+
+export const news = {
+  /** Headlines, newest first. No symbols means the whole wire. */
+  feed: (
+    symbols: string[],
+    limit = 30,
+    days = 7,
+    signal?: AbortSignal,
+  ): Promise<NewsFeed> =>
+    request(`/news${query({ symbols: symbols.join(','), limit, days })}`, signal),
+};
+
 /* ----------------------------------------------------------- entertainment */
 
 export const ent = {
@@ -272,6 +286,8 @@ export interface Health {
   uptimeSeconds: number;
   cache: { hits: number; misses: number; entries: number; evictions: number };
   fredApiKey: boolean;
+  /** Whether this deployment can serve `NEWS` — the feed needs a key pair. */
+  alpacaKeys: boolean;
   time: string;
 }
 
