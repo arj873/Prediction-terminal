@@ -45,7 +45,11 @@ const STOPWORDS = new Set([
  */
 const SYNONYMS: Record<string, string> = {
   fomc: 'fed',
-  federal: 'fed',
+  // `federal` deliberately does NOT fold onto `fed`. It appears in "federal
+  // crime", "federal government", "federal court" and a dozen other markets
+  // that have nothing to do with the Federal Reserve, and folding it paired a
+  // federal-charges market with the Fed's year-end target rate. "Federal
+  // Reserve" still reaches `fed` through `reserve`.
   reserve: 'fed',
   fedfunds: 'fed',
   powell: 'powell',
@@ -74,6 +78,25 @@ const SYNONYMS: Record<string, string> = {
   democratic: 'democrat',
   potus: 'president',
   presidential: 'president',
+  // Central bank tickers. Polymarket US names its rate books `boj`, `boe`,
+  // `bcb`; Kalshi spells them out. Each side is folded onto one distinctive
+  // token, so the bank is matched on its identity rather than on the words
+  // "bank" and "decision", which every one of them shares.
+  boj: 'bankofjapan',
+  boe: 'bankofengland',
+  boc: 'bankofcanada',
+  bcb: 'bankofbrazil',
+  bcbbrazil: 'bankofbrazil',
+  boi: 'bankofisrael',
+  bok: 'bankofkorea',
+  cbr: 'bankofrussia',
+  banxico: 'bankofmexico',
+  ecb: 'ecb',
+  rbnz: 'bankofnewzealand',
+  rba: 'bankofaustralia',
+  snb: 'bankofswitzerland',
+  pboc: 'bankofchina',
+  rbi: 'bankofindia',
   inflation: 'cpi',
   unemployment: 'jobless',
   nyc: 'newyork',
@@ -84,6 +107,8 @@ const SYNONYMS: Record<string, string> = {
   temperatures: 'temperature',
   high: 'high',
   highest: 'high',
+  low: 'low',
+  lowest: 'low',
   academy: 'oscar',
   oscars: 'oscar',
   awards: 'award',
@@ -119,6 +144,19 @@ const MONTHS: Record<string, string> = {
  * the same rung of the same ladder, and no word-for-word mapping connects them.
  */
 const PHRASES: [RegExp, string][] = [
+  // A central bank's name is its identity; the words around it are shared by
+  // every other central bank on the board.
+  [/\bbank of japan\b|\bboj\b/g, ' bankofjapan '],
+  [/\bbank of england\b|\bboe\b/g, ' bankofengland '],
+  [/\bbank of canada\b|\bboc\b/g, ' bankofcanada '],
+  [/\b(?:central )?bank of brazil\b|\bbcb\b/g, ' bankofbrazil '],
+  [/\bbank of israel\b|\bboi\b/g, ' bankofisrael '],
+  [/\bbank of korea\b|\bbok\b/g, ' bankofkorea '],
+  [/\bbank of russia\b|\bcbr\b/g, ' bankofrussia '],
+  [/\bbank of mexico\b|\bbanxico\b/g, ' bankofmexico '],
+  [/\breserve bank of new zealand\b|\brbnz\b/g, ' bankofnewzealand '],
+  [/\breserve bank of australia\b|\brba\b/g, ' bankofaustralia '],
+  [/\beuropean central bank\b|\becb\b/g, ' ecb '],
   [/\bno change\b/g, 'nochange'],
   [/\bunchanged\b/g, 'nochange'],
   [/\bmaintains? (?:the )?(?:rate|rates)\b/g, 'nochange'],
@@ -250,6 +288,47 @@ export interface MatchScore {
   reason: string;
 }
 
+/**
+ * Words that carve a family of markets into its members.
+ *
+ * These are the opposite of a shared term: when one side says `supporting` and
+ * the other does not, the six words they agree on stop mattering, because
+ * "Best Actor" and "Best Supporting Actor" are two awards with two winners.
+ * Set overlap cannot see that — one word out of six barely moves a Dice
+ * coefficient — so presence on exactly one side is scored in its own right.
+ *
+ * Only tokens whose absence is *meaningful* belong here. `high` qualifies
+ * because every temperature market on all three venues states whether it is the
+ * day's high or its low, so a title that omits it is not a title about
+ * temperature at all. A word that one venue simply happens to leave implicit
+ * would cause a correct pair to be rejected, and does not belong.
+ *
+ * Written in post-{@link tokenise} form: `highest` arrives here as `high`.
+ */
+const QUALIFIERS: readonly string[] = [
+  // Award categories, where the qualifier *is* the category. The Emmys alone
+  // run twenty of these, differing by three words and nothing else.
+  'supporting',
+  'lead',
+  'guest',
+  'animated',
+  'documentary',
+  'adapted',
+  'original',
+  'comedy',
+  'drama',
+  'variety',
+  'anthology',
+  'actor',
+  'actress',
+  // Temperature markets, which always state their direction.
+  'high',
+  'low',
+];
+
+/** Applied once per lopsided qualifier, so two of them compound. */
+const QUALIFIER_PENALTY = 0.45;
+
 /** Where a text score stops being worth showing at all. */
 export const MATCH_FLOOR = 0.34;
 
@@ -304,6 +383,14 @@ function similarity(a: SeriesDescriptor, b: SeriesDescriptor): MatchScore {
       : shared.length
         ? `shared terms: ${shared.slice(0, 4).join(', ')}`
         : 'no shared terms';
+
+  // A qualifier on one side and not the other is the whole question, whatever
+  // the rest of the words did.
+  const lopsided = QUALIFIERS.filter((q) => leftSet.has(q) !== rightSet.has(q));
+  if (lopsided.length > 0) {
+    score *= QUALIFIER_PENALTY ** lopsided.length;
+    reason += `; only one side says ${lopsided.slice(0, 3).join('/')}`;
+  }
 
   score = Math.min(1, score);
   return { score, confidence: confidenceOf(score), shared, reason };

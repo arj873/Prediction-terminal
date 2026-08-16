@@ -16,6 +16,7 @@ import {
   normaliseMarket,
   normaliseOrderBook,
   seriesFromEvent,
+  stripDates,
   type RawUsBbo,
   type RawUsMarket,
 } from '../src/server/sources/polymarketus.js';
@@ -196,6 +197,38 @@ describe('seriesFromEvent', () => {
     assert.equal(seriesFromEvent({ slug: 'usfed-fomc-2026-10-28' }), 'usfed-fomc');
     assert.equal(seriesFromEvent({ slug: 'usfed-fomc-2026-12-09' }), 'usfed-fomc');
     assert.equal(seriesFromEvent({ slug: 'jerpowgov' }), 'jerpowgov');
+  });
+});
+
+describe('stripDates', () => {
+  it('removes a trailing ISO date', () => {
+    assert.equal(stripDates('usse-nc-2026-11-03'), 'usse-nc');
+    assert.equal(stripDates('mlb-nlchamp-2026-09-27'), 'mlb-nlchamp');
+  });
+
+  it('removes a date that is not at the end', () => {
+    assert.equal(stripDates('oscars-03-14-2027-bestpic'), 'oscars-bestpic');
+    assert.equal(stripDates('oscars-nom-2027-01-31-bestpic'), 'oscars-nom-bestpic');
+    assert.equal(stripDates('usgubp-ok-2026-06-16-rep'), 'usgubp-ok-rep');
+  });
+
+  it('removes a month named in words, wherever it sits', () => {
+    // Without this each month of CPI is its own one-event series, and none of
+    // them can pair with the monthly CPI market at either other broker.
+    assert.equal(stripDates('uscpi-august-yoy'), 'uscpi-yoy');
+    assert.equal(stripDates('uscpi-september-yoy'), 'uscpi-yoy');
+  });
+
+  it('keeps a number that is not part of a date', () => {
+    // The district is the question. Stripping loose numbers would file all 38
+    // Texas House races under one series.
+    assert.equal(stripDates('ushr-tx-15-2026-11-03'), 'ushr-tx-15');
+    assert.equal(stripDates('ushr-tx-28-2026-11-03'), 'ushr-tx-28');
+    assert.equal(stripDates('bbus-s28-winner'), 'bbus-s28-winner');
+  });
+
+  it('removes a bare trailing season year', () => {
+    assert.equal(stripDates('nfl-2026'), 'nfl');
   });
 });
 

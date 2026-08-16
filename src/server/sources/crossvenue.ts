@@ -276,29 +276,86 @@ function byActivity(a: SeriesLeg, b: SeriesLeg): number {
 }
 
 /**
- * The best counterpart for `anchor` at `other`, or nothing.
+ * Every candidate pairing for `anchor` at `other`, above the floor.
  *
  * Candidates come from the token index rather than the whole catalogue — with
  * thousands of series per venue, scoring every pair would mean millions of
  * comparisons for one board. A series sharing no distinguishing token with the
  * anchor cannot clear the floor anyway.
  */
-function bestMatch(
+function candidatesFor(
   anchor: IndexedSeries,
   other: VenueIndex,
-): { series: IndexedSeries; match: MatchScore } | null {
+): { series: IndexedSeries; match: MatchScore }[] {
   const candidates = new Set<IndexedSeries>();
   for (const token of anchor.tokens) {
     for (const candidate of other.byToken.get(token) ?? []) candidates.add(candidate);
   }
 
-  let best: { series: IndexedSeries; match: MatchScore } | null = null;
+  const scored: { series: IndexedSeries; match: MatchScore }[] = [];
   for (const candidate of candidates) {
     const match = scoreSeries(anchor.descriptor, candidate.descriptor);
-    if (match.score < MATCH_FLOOR) continue;
-    if (!best || match.score > best.match.score) best = { series: candidate, match };
+    if (match.score >= MATCH_FLOOR) scored.push({ series: candidate, match });
+  }
+  return scored;
+}
+
+/**
+ * The single best counterpart for one series — used when comparing one event,
+ * where there is no field of other anchors to weigh it against.
+ */
+function bestMatch(
+  anchor: IndexedSeries,
+  other: VenueIndex,
+): { series: IndexedSeries; match: MatchScore } | null {
+  let best: { series: IndexedSeries; match: MatchScore } | null = null;
+  for (const candidate of candidatesFor(anchor, other)) {
+    if (!best || candidate.match.score > best.match.score) best = candidate;
   }
   return best;
+}
+
+/**
+ * Assign one venue's series to another's, globally rather than one at a time.
+ *
+ * Taking each anchor's own favourite in turn is not good enough where a family
+ * of sibling series all resemble each other. The Emmys list twenty categories
+ * that differ by three words — comedy or drama, lead or supporting, actor or
+ * actress — and every one of them scores respectably against every other. Asked
+ * in isolation, "Outstanding Lead Actor in a Comedy Series" will happily take
+ * whichever sibling happens to score highest, leaving the sibling that was
+ * actually its twin to be claimed by someone else.
+ *
+ * So every candidate pairing is scored first, then assigned best-first with
+ * both sides struck off as they are taken — the discipline {@link pairLabels}
+ * already applies to the rungs of one ladder, applied here to the catalogue.
+ */
+function assignPairs(
+  anchors: IndexedSeries[],
+  other: VenueIndex,
+  taken: Set<string>,
+): Map<IndexedSeries, { series: IndexedSeries; match: MatchScore }> {
+  const all: { anchor: IndexedSeries; series: IndexedSeries; match: MatchScore }[] = [];
+
+  for (const anchor of anchors) {
+    for (const candidate of candidatesFor(anchor, other)) {
+      if (taken.has(`${candidate.series.venue}:${candidate.series.seriesTicker}`)) continue;
+      all.push({ anchor, ...candidate });
+    }
+  }
+
+  all.sort((x, y) => y.match.score - x.match.score);
+
+  const assigned = new Map<IndexedSeries, { series: IndexedSeries; match: MatchScore }>();
+  const usedCandidates = new Set<IndexedSeries>();
+
+  for (const pair of all) {
+    if (assigned.has(pair.anchor) || usedCandidates.has(pair.series)) continue;
+    assigned.set(pair.anchor, { series: pair.series, match: pair.match });
+    usedCandidates.add(pair.series);
+  }
+
+  return assigned;
 }
 
 /** The weakest confidence among a set of matches — what the group is worth. */
@@ -369,11 +426,19 @@ export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeries
 
   if (primary) {
     const others = anchors.slice(1);
-    const ranked = [...primary.series].sort((a, b) => (b.volume24h ?? -1) - (a.volume24h ?? -1));
+    const free = primary.series.filter((s) => !claimed.has(claim(s)));
+
+    // Assign each other venue's catalogue against the anchor's in one pass, so
+    // a family of sibling series is resolved as a whole rather than first-come.
+    const assignments = others.map((other) => ({
+      other,
+      pairs: assignPairs(free, other, claimed),
+    }));
+
+    // Busiest anchors first, purely so the board reads in a useful order.
+    const ranked = [...free].sort((a, b) => (b.volume24h ?? -1) - (a.volume24h ?? -1));
 
     for (const anchor of ranked) {
-      if (claimed.has(claim(anchor))) continue;
-
       const legs: SeriesLeg[] = [legOf(anchor)];
       const confidences: MatchConfidence[] = [];
       const reasons: string[] = [];
@@ -381,9 +446,9 @@ export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeries
       // solid legs and a doubtful third is a doubtful board.
       let score = 1;
 
-      for (const other of others) {
-        const best = bestMatch(anchor, other);
-        if (!best || claimed.has(claim(best.series))) continue;
+      for (const { other, pairs } of assignments) {
+        const best = pairs.get(anchor);
+        if (!best) continue;
         legs.push(legOf(best.series));
         confidences.push(best.match.confidence);
         reasons.push(`${venueInfo(other.venue).code}: ${best.match.reason}`);
@@ -391,7 +456,6 @@ export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeries
       }
 
       if (legs.length < 2) continue;
-      for (const leg of legs) claimed.add(`${leg.venue}:${leg.seriesTicker}`);
 
       found.push({
         key: anchor.seriesTicker.toLowerCase(),

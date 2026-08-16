@@ -217,15 +217,58 @@ export function normaliseMarket(
  *
  * The exchange states one on its sports and weather books (`mlb-2026`,
  * `weather-daily-high-nyc`) but leaves it empty on much of the rest, including
- * the FOMC and election books that matter most for comparing brokers. Slugs are
- * disciplined enough to fall back on: they are a stem and a date, so
- * `usfed-fomc-2026-10-28` and `usfed-fomc-2026-12-09` are one series without
- * the exchange having to say so.
+ * the FOMC, CPI and election books that matter most for comparing brokers.
+ * Slugs are disciplined enough to fall back on: strip the date and what is left
+ * names the recurring question, so `usfed-fomc-2026-10-28` and
+ * `usfed-fomc-2026-12-09` are one series without the exchange saying so.
+ *
+ * The date is not always at the end, and is not always numeric. `uscpi-august-
+ * yoy` puts the month in the middle, and stripping only a trailing date leaves
+ * every month its own series — twelve one-event series where there should be
+ * one twelve-event series, none of which can pair with the monthly CPI market
+ * at either other broker. So dates are removed wherever they appear.
  */
 export function seriesFromEvent(raw: RawUsEvent): string {
   if (raw.seriesSlug) return raw.seriesSlug;
   const slug = raw.ticker ?? raw.slug ?? '';
-  return slug.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/-\d{4}$/, '') || slug;
+  return stripDates(slug) || slug;
+}
+
+const MONTH_SEGMENT =
+  /^(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)$/;
+
+const isYear = (part = ''): boolean => /^(19|20)\d{2}$/.test(part);
+const isDayOrMonth = (part = ''): boolean => /^\d{1,2}$/.test(part);
+
+/**
+ * Drop the segments of a slug that name an occasion rather than a question.
+ *
+ * Dates are removed as whole groups, never as loose numbers, because a slug's
+ * other numbers carry meaning: `ushr-tx-15-2026-11-03` is the Texas 15th
+ * district on 3 November 2026, and stripping every short number would file all
+ * 38 Texas districts under one series. A year anchors the group — the two
+ * segments after it if they are a month and day (`2026-11-03`), otherwise the
+ * two before it (`03-14-2027`), otherwise nothing.
+ */
+export function stripDates(slug: string): string {
+  const parts = slug.split('-');
+  const drop = new Set<number>();
+
+  parts.forEach((part, i) => {
+    if (MONTH_SEGMENT.test(part)) drop.add(i);
+    if (!isYear(part)) return;
+
+    drop.add(i);
+    if (isDayOrMonth(parts[i + 1]) && isDayOrMonth(parts[i + 2])) {
+      drop.add(i + 1);
+      drop.add(i + 2);
+    } else if (isDayOrMonth(parts[i - 1]) && isDayOrMonth(parts[i - 2])) {
+      drop.add(i - 1);
+      drop.add(i - 2);
+    }
+  });
+
+  return parts.filter((part, i) => part !== '' && !drop.has(i)).join('-');
 }
 
 export function normaliseEvent(raw: RawUsEvent): VenueEvent {
