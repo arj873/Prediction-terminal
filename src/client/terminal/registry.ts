@@ -10,8 +10,6 @@
 import type { AssetClass, CandleInterval, EntGenre, ImpliedMethod, Venue } from '../../shared/types.js';
 import { ENT_GENRES } from '../../shared/types.js';
 import { VENUE_IDS, formatRef, parseRef, parseVenue, type VenueRef } from '../../shared/venue.js';
-import type { PanelManager } from '../panels/manager.js';
-import type { Workspace } from '../state.js';
 import { THEMES, type ThemeName } from '../state.js';
 import { BillboardChartsPanel, BillboardPanel } from '../panels/billboard.js';
 import { ChartPanel, type ChartStyle } from '../panels/chart.js';
@@ -30,7 +28,6 @@ import { DepthPanel, QuotePanel, TradesPanel } from '../panels/market.js';
 import { HelpPanel } from '../panels/help.js';
 import { NewsPanel, type NewsPanelOptions } from '../panels/news.js';
 import { SpotPanel, type SpotPanelOptions, type SpotStyle } from '../panels/spot.js';
-import type { PanelContext } from '../panels/panel.js';
 import {
   isIsoDate,
   looksLikeSymbol,
@@ -39,30 +36,17 @@ import {
   parseInterval,
   type ParsedCommand,
 } from './parser.js';
-
-export interface CommandContext {
-  panels: PanelManager;
-  workspace: Workspace;
-  panelContext: PanelContext;
-  log(message: string, level?: 'info' | 'warn' | 'error'): void;
-  /** Re-dispatch a command string. */
-  run(command: string): void;
-}
-
-export interface Command {
-  verb: string;
-  aliases?: string[];
-  /** One-line summary shown in `HELP`. */
-  summary: string;
-  /** Usage line, e.g. `GP <ticker> [1m|1h|1d] [range]`. */
-  usage: string;
-  /** Worked examples, shown in `HELP <verb>`. */
-  examples?: string[];
-  group: 'markets' | 'data' | 'workspace';
-  handler(command: ParsedCommand, context: CommandContext): void | Promise<void>;
-}
-
-class UsageError extends Error {}
+import {
+  UsageError,
+  countryCode,
+  indexCommands,
+  keyword,
+  openOrReconfigure,
+  parsed,
+  scanTokens,
+  type Command,
+  type CommandContext,
+} from './command.js';
 
 function requireArg(command: ParsedCommand, index: number, name: string): string {
   const value = command.args[index];
@@ -131,6 +115,15 @@ export function parseChartArgs(args: string[]): {
 } {
   const ticker = args[0];
   if (!ticker || !looksLikeTicker(ticker)) throw new UsageError('Missing <ticker>');
+  // Read the reference up front and as a usage error: `looksLikeTicker` admits
+  // a colon, so `GP foo:bar` reaches parseRef, which throws a plain Error and
+  // loses the ` · usage:` line that every other command's bad ref gets.
+  let ref: VenueRef;
+  try {
+    ref = parseRef(ticker);
+  } catch (err) {
+    throw new UsageError(err instanceof Error ? err.message : 'Bad <ticker>');
+  }
 
   let interval: CandleInterval | null = null;
   let lookbackSeconds: number | null = null;
@@ -166,7 +159,7 @@ export function parseChartArgs(args: string[]): {
 
   const resolvedInterval = interval ?? 60;
   return {
-    ref: parseRef(ticker),
+    ref,
     interval: resolvedInterval,
     lookbackSeconds: lookbackSeconds ?? DEFAULT_LOOKBACK[resolvedInterval],
     style,
@@ -321,18 +314,20 @@ export function parseNewsArgs(args: string[]): NewsPanelOptions {
  * named on the command line are merged into whatever is already selected —
  * `IMP` is additive, matching what the picker does when clicked.
  */
-function openSpot(options: SpotPanelOptions, { panels, panelContext }: CommandContext): void {
-  const id = SpotPanel.idFor(options.symbol);
-  const existing = panels.find(id);
-
-  if (existing instanceof SpotPanel) {
-    const merged = [...new Set([...existing.options.overlays, ...options.overlays])];
-    existing.reconfigure({ ...options, overlays: merged });
-    panels.focus(id);
-    return;
-  }
-
-  panels.open(id, () => new SpotPanel(id, panelContext, options));
+function openSpot(options: SpotPanelOptions, context: CommandContext): void {
+  openOrReconfigure(
+    context,
+    SpotPanel.idFor(options.symbol),
+    (panel): panel is SpotPanel => panel instanceof SpotPanel,
+    options,
+    (id, panelContext) => new SpotPanel(id, panelContext, options),
+    // `IMP` is additive: overlays named on the command line join the ones
+    // already drawn, matching what clicking the picker does.
+    (existing, incoming) => ({
+      ...incoming,
+      overlays: [...new Set([...existing.options.overlays, ...incoming.overlays])],
+    }),
+  );
 }
 
 /* ------------------------------------------------------------------ table */
@@ -350,19 +345,17 @@ export const COMMANDS: Command[] = [
       'GP pm:will-there-be-no-change-in-fed-interest-rates-after-the-september-2026-meeting-615 1h 7d',
       'GP KXHIGHNY-26AUG16-B82.5 1m 6h line',
     ],
-    handler(command, { panels, panelContext }) {
+    handler(command, context) {
       const options = parseChartArgs(command.args);
-      const id = ChartPanel.idFor(options.ref);
-      const existing = panels.find(id);
-
       // Re-issuing GP for an open chart re-configures it rather than stacking
       // a second chart of the same market.
-      if (existing instanceof ChartPanel) {
-        existing.reconfigure(options);
-        panels.focus(id);
-        return;
-      }
-      panels.open(id, () => new ChartPanel(id, panelContext, options));
+      openOrReconfigure(
+        context,
+        ChartPanel.idFor(options.ref),
+        (panel): panel is ChartPanel => panel instanceof ChartPanel,
+        options,
+        (id, panelContext) => new ChartPanel(id, panelContext, options),
+      );
     },
   },
   {
@@ -540,19 +533,17 @@ export const COMMANDS: Command[] = [
     summary: 'Market news wire, for a symbol or the whole tape',
     usage: 'NEWS [symbol…] [count] [window]',
     examples: ['NEWS', 'NEWS NVDA', 'NEWS AAPL MSFT 50', 'NEWS BTCUSD 30d'],
-    handler(command, { panels, panelContext }) {
+    handler(command, context) {
       const options = parseNewsArgs(command.args);
-      const id = NewsPanel.idFor(options.symbols);
-      const existing = panels.find(id);
-
       // Re-issuing NEWS for symbols already on screen re-runs that panel with
       // the new count and window rather than tiling the same wire twice.
-      if (existing instanceof NewsPanel) {
-        existing.reconfigure(options);
-        panels.focus(id);
-        return;
-      }
-      panels.open(id, () => new NewsPanel(id, panelContext, options));
+      openOrReconfigure(
+        context,
+        NewsPanel.idFor(options.symbols),
+        (panel): panel is NewsPanel => panel instanceof NewsPanel,
+        options,
+        (id, panelContext) => new NewsPanel(id, panelContext, options),
+      );
     },
   },
   {
@@ -674,14 +665,13 @@ export const COMMANDS: Command[] = [
       let scope = 'us';
 
       // Order-independent: `NFLX films gb` and `NFLX gb films` are one chart.
-      for (const token of command.args) {
-        const lower = token.toLowerCase();
-        if (['tv', 'shows', 'show', 'series'].includes(lower)) category = 'tv';
-        else if (['films', 'film', 'movies', 'movie'].includes(lower)) category = 'films';
-        else if (lower === 'global' || lower === 'world') scope = 'global';
-        else if (/^[a-z]{2}$/.test(lower)) scope = lower;
-        else throw new UsageError(`Unrecognised argument "${token}"`);
-      }
+      // `tv` names a category before it names Tuvalu, so it is claimed first.
+      scanTokens(command.args, [
+        keyword(['tv', 'shows', 'show', 'series'], 'tv', (v) => (category = v)),
+        keyword(['films', 'film', 'movies', 'movie'], 'films', (v) => (category = v)),
+        keyword(['global', 'world'], 'global', (v) => (scope = v)),
+        countryCode((code) => (scope = code)),
+      ]);
 
       const id = NetflixPanel.idFor(category, scope);
       panels.open(id, () => new NetflixPanel(id, panelContext, { category, scope }));
@@ -698,14 +688,12 @@ export const COMMANDS: Command[] = [
       let scope = 'us';
       let period = 'daily';
 
-      for (const token of command.args) {
-        const lower = token.toLowerCase();
-        if (lower === 'daily' || lower === 'day') period = 'daily';
-        else if (lower === 'weekly' || lower === 'week') period = 'weekly';
-        else if (lower === 'global' || lower === 'world') scope = 'global';
-        else if (/^[a-z]{2}$/.test(lower)) scope = lower;
-        else throw new UsageError(`Unrecognised argument "${token}"`);
-      }
+      scanTokens(command.args, [
+        keyword(['daily', 'day'], 'daily', (v) => (period = v)),
+        keyword(['weekly', 'week'], 'weekly', (v) => (period = v)),
+        keyword(['global', 'world'], 'global', (v) => (scope = v)),
+        countryCode((code) => (scope = code)),
+      ]);
 
       const options = { source: 'spotify' as const, scope, period };
       const id = StreamChartPanel.idFor(options);
@@ -771,11 +759,13 @@ export const COMMANDS: Command[] = [
       let date: string | undefined;
       let country: string | undefined;
 
-      for (const token of command.args) {
-        if (isIsoDate(token)) date = token;
-        else if (/^[a-z]{2}$/i.test(token)) country = token.toUpperCase();
-        else throw new UsageError(`Unrecognised argument "${token}"`);
-      }
+      scanTokens(command.args, [
+        parsed(
+          (token) => (isIsoDate(token) ? token : null),
+          (value) => (date = value),
+        ),
+        countryCode((code) => (country = code), 'upper'),
+      ]);
 
       const options = { ...(date ? { date } : {}), ...(country ? { country } : {}) };
       const id = TvPanel.idFor(options);
@@ -912,13 +902,12 @@ export const COMMANDS: Command[] = [
 ];
 
 /** Verb (or alias) → command. Built once; aliases are first-class. */
-export const COMMAND_INDEX: Map<string, Command> = new Map();
-for (const command of COMMANDS) {
-  COMMAND_INDEX.set(command.verb, command);
-  for (const alias of command.aliases ?? []) COMMAND_INDEX.set(alias, command);
-}
+export const COMMAND_INDEX: Map<string, Command> = indexCommands(COMMANDS);
 
 /** Every verb and alias, for autocomplete. */
 export const ALL_VERBS: string[] = [...COMMAND_INDEX.keys()].sort();
 
+// Re-exported so `main.ts`, `commandline.ts`, `panels/help.ts` and the parser
+// tests keep importing the terminal's vocabulary from one place.
 export { UsageError };
+export type { Command, CommandContext };
