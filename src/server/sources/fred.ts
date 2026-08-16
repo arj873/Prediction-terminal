@@ -29,6 +29,7 @@ import type {
 } from '../../shared/types.js';
 import { TTL, cache } from '../lib/cache.js';
 import { UpstreamError, fetchJson, fetchText } from '../lib/http.js';
+import { firstAnswer, type ChainOptions, type Provider } from '../lib/providers.js';
 
 /**
  * Overridable so the scrape path can be exercised against a fixture server.
@@ -402,36 +403,37 @@ async function apiSearch(query: string, limit: number): Promise<FredSearchResult
  * When both fail, the *scrape* error is what surfaces — it carries the
  * `upstream_blocked` hint that tells the operator what actually went wrong.
  */
-async function withFallback<T>(
+/**
+ * The scrape is the source of record; the official API stands behind it.
+ *
+ * The API arm only exists when a key is configured, and when it is *not*, a
+ * blocked scrape is worth annotating: the operator can fix it, and nothing
+ * else in the response would tell them how.
+ */
+function fredProviders<T>(
+  what: string,
   scrape: () => Promise<T>,
   viaApi: () => Promise<T>,
-  label: string,
-): Promise<T> {
-  try {
-    return await scrape();
-  } catch (scrapeError) {
-    // A definitive "no such series" is the real answer — do not paper over it.
-    if (scrapeError instanceof UpstreamError && scrapeError.code === 'not_found') throw scrapeError;
-
-    if (!apiKey()) {
-      if (scrapeError instanceof UpstreamError && scrapeError.code === 'upstream_blocked') {
-        throw new UpstreamError(scrapeError.message, {
-          code: scrapeError.code,
-          hint:
-            `${scrapeError.hint ?? ''} Set FRED_API_KEY (free, from ` +
-            `https://fred.stlouisfed.org/docs/api/api_key.html) to use the official API instead.`.trim(),
-        });
-      }
-      throw scrapeError;
-    }
-
-    try {
-      return await viaApi();
-    } catch (apiError) {
-      console.warn(`[fred] ${label}: scrape and API both failed`, { scrapeError, apiError });
-      throw scrapeError;
-    }
-  }
+): { providers: Provider<T>[]; options: ChainOptions } {
+  return {
+    providers: [
+      { id: 'scrape', label: 'fred.stlouisfed.org', run: scrape },
+      {
+        id: 'api',
+        label: 'the FRED API',
+        available: () => Boolean(apiKey()),
+        skippedHint: (cause) =>
+          cause?.code === 'upstream_blocked'
+            ? `${cause.hint ?? ''} Set FRED_API_KEY (free, from ` +
+              `https://fred.stlouisfed.org/docs/api/api_key.html) to use the official API instead.`.trim()
+            : undefined,
+        run: viaApi,
+      },
+    ],
+    // When both fail the scrape's error is what surfaces: it carries the
+    // `upstream_blocked` hint that says what actually went wrong.
+    options: { what, logPrefix: 'fred' },
+  };
 }
 
 export async function getSeries(
@@ -442,8 +444,9 @@ export async function getSeries(
   const id = assertSeriesId(rawId);
   const key = `fred:series:${id}:${start ?? ''}:${end ?? ''}`;
 
-  return cache.cached(key, TTL.fred, () =>
-    withFallback(
+  return cache.cached(key, TTL.fred, async () => {
+    const { providers, options } = fredProviders<FredSeriesResponse>(
+      `series ${id}`,
       async () => {
         // Observations are the deliverable; metadata is best-effort alongside.
         const [observations, meta] = await Promise.all([
@@ -476,9 +479,10 @@ export async function getSeries(
         return { series, observations };
       },
       () => apiSeries(id, start, end),
-      `series ${id}`,
-    ),
-  );
+    );
+
+    return (await firstAnswer(providers, options)).value;
+  });
 }
 
 export async function searchSeries(query: string, limit = 25): Promise<FredSearchResponse> {
@@ -490,15 +494,14 @@ export async function searchSeries(query: string, limit = 25): Promise<FredSearc
   const key = `fred:search:${q.toLowerCase()}:${capped}`;
 
   return cache.cached(key, TTL.fred, async () => {
-    let source: 'scrape' | 'api' = 'scrape';
-    const results = await withFallback(
-      () => scrapeSearch(q, capped),
-      async () => {
-        source = 'api';
-        return apiSearch(q, capped);
-      },
+    const { providers, options } = fredProviders(
       `search ${q}`,
+      () => scrapeSearch(q, capped),
+      () => apiSearch(q, capped),
     );
-    return { query: q, results, source };
+    // Which arm answered is reported by the chain rather than by a variable the
+    // fallback reassigned on its way past.
+    const { value: results, source } = await firstAnswer(providers, options);
+    return { query: q, results, source: source as 'scrape' | 'api' };
   });
 }

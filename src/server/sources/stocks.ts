@@ -26,6 +26,7 @@ import type {
 } from '../../shared/types.js';
 import { TTL, cache } from '../lib/cache.js';
 import { UpstreamError, fetchJson } from '../lib/http.js';
+import { firstAnswer, type ChainOptions, type Provider } from '../lib/providers.js';
 
 const YAHOO_BASE = process.env.YAHOO_API_BASE ?? 'https://query1.finance.yahoo.com';
 const NASDAQ_BASE = process.env.NASDAQ_API_BASE ?? 'https://api.nasdaq.com';
@@ -408,44 +409,49 @@ async function nasdaqCandles(
  * symbol, and it is worth naming: it is the difference between "your symbol is
  * wrong" and "this host is blocking your network".
  */
-async function withFallback<T>(
+/**
+ * Yahoo first, Nasdaq behind it.
+ *
+ * A 429 from Yahoo is the signature of a shared datacentre IP rather than a bad
+ * symbol, and it is worth naming: it is the difference between "your symbol is
+ * wrong" and "this host is blocking your network".
+ */
+function priceProviders<T>(
   symbol: string,
-  primary: () => Promise<T>,
-  fallback: () => Promise<T>,
-): Promise<T> {
-  try {
-    return await primary();
-  } catch (primaryError) {
-    // A definitive "no such symbol" from Yahoo will not become a yes at Nasdaq.
-    if (primaryError instanceof UpstreamError && primaryError.code === 'not_found') {
-      throw primaryError;
-    }
-    try {
-      return await fallback();
-    } catch (fallbackError) {
-      if (fallbackError instanceof UpstreamError && fallbackError.code === 'unsupported') {
-        throw fallbackError;
-      }
-      const status = primaryError instanceof UpstreamError ? primaryError.status : undefined;
-      throw new UpstreamError(`No price source could quote ${symbol}`, {
-        code: 'upstream_error',
-        hint:
-          status === 429
-            ? `Yahoo Finance is rate-limiting this IP — it does that to shared ` +
-              `datacentre addresses — and the Nasdaq fallback does not cover ${symbol}. ` +
-              `The same request usually succeeds from a residential connection.`
-            : `Yahoo Finance and Nasdaq both refused ${symbol}. Check the symbol: ` +
-              `cash indices need a caret, e.g. \`^GSPC\`.`,
-      });
-    }
-  }
+  viaYahoo: () => Promise<T>,
+  viaNasdaq: () => Promise<T>,
+): { providers: Provider<T>[]; options: ChainOptions } {
+  return {
+    providers: [
+      { id: 'yahoo', label: 'Yahoo Finance', run: viaYahoo },
+      { id: 'nasdaq', label: 'Nasdaq', run: viaNasdaq },
+    ],
+    options: {
+      what: `a price for ${symbol}`,
+      logPrefix: 'stocks',
+      onExhausted: (failures) => {
+        const primary = failures.find((f) => f.id === 'yahoo')?.error;
+        const status = primary instanceof UpstreamError ? primary.status : undefined;
+        return new UpstreamError(`No price source could quote ${symbol}`, {
+          code: 'upstream_error',
+          hint:
+            status === 429
+              ? `Yahoo Finance is rate-limiting this IP — it does that to shared ` +
+                `datacentre addresses — and the Nasdaq fallback does not cover ${symbol}. ` +
+                `The same request usually succeeds from a residential connection.`
+              : `Yahoo Finance and Nasdaq both refused ${symbol}. Check the symbol: ` +
+                `cash indices need a caret, e.g. \`^GSPC\`.`,
+        });
+      },
+    },
+  };
 }
 
 export async function getQuote(symbol: string): Promise<SpotQuote> {
   const upper = symbol.trim().toUpperCase();
   const now = Math.floor(Date.now() / 1000);
 
-  return withFallback(
+  const { providers, options } = priceProviders<SpotQuote>(
     upper,
     async () => (await yahooChart(upper, 1440, now - 7 * 86400, now)).quote,
     async () => {
@@ -460,6 +466,8 @@ export async function getQuote(symbol: string): Promise<SpotQuote> {
       );
     },
   );
+
+  return (await firstAnswer(providers, options)).value;
 }
 
 export async function getCandles(
@@ -470,24 +478,26 @@ export async function getCandles(
 ): Promise<SpotCandlesResponse> {
   const upper = symbol.trim().toUpperCase();
 
-  const { candles, source, name, currency } = await withFallback(
+  const { providers, options } = priceProviders(
     upper,
     async () => {
       const chart = await yahooChart(upper, interval, startTs, endTs);
       return {
         candles: chart.candles,
-        source: 'yahoo',
         name: chart.quote.name,
         currency: chart.quote.currency,
       };
     },
     async () => ({
       candles: await nasdaqCandles(upper, interval, startTs, endTs),
-      source: 'nasdaq',
       name: upper,
       currency: 'USD',
     }),
   );
+
+  // `source` comes from whichever provider answered rather than from a literal
+  // written beside each branch, so it cannot disagree with what actually ran.
+  const { value: { candles, name, currency }, source } = await firstAnswer(providers, options);
 
   return {
     symbol: upper,
