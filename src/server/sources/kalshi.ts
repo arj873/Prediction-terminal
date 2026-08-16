@@ -403,7 +403,18 @@ interface Corpus {
 }
 
 const CORPUS_KEY = 'kalshi:corpus';
-const CORPUS_MAX_PAGES = 20;
+
+/**
+ * Pages of 200 to crawl.
+ *
+ * Sized to cover the whole open universe rather than to bound the crawl: at 20
+ * pages the snapshot stopped at 4,000 of ~9,800 open events, and because the
+ * upstream does not order by category the truncation fell unevenly — it hid
+ * 265 of the 545 open Entertainment events, so half of them were unreachable
+ * from `SRCH` and `ENT`. 60 pages leaves headroom above the current universe;
+ * the loop still stops as soon as the cursor runs out.
+ */
+const CORPUS_MAX_PAGES = 60;
 
 async function buildCorpus(): Promise<Corpus> {
   const events: KalshiEvent[] = [];
@@ -439,6 +450,18 @@ async function buildCorpus(): Promise<Corpus> {
 async function corpus(): Promise<Corpus> {
   return cache.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
 }
+
+/**
+ * The open-event snapshot, for callers that slice it differently to `search`.
+ *
+ * Exported so the entertainment browser can filter by category without paying
+ * for its own crawl — it reads the same cached snapshot `SRCH` and `TOP` use.
+ */
+export async function corpusSnapshot(): Promise<Corpus> {
+  return corpus();
+}
+
+export type { Corpus };
 
 /**
  * Kick off the crawl without blocking startup.

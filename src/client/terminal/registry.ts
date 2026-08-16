@@ -7,14 +7,23 @@
  * they open panels and report back, and never touch the DOM directly.
  */
 
-import type { CandleInterval } from '../../shared/types.js';
+import type { CandleInterval, EntGenre } from '../../shared/types.js';
+import { ENT_GENRES } from '../../shared/types.js';
 import type { PanelManager } from '../panels/manager.js';
 import type { Workspace } from '../state.js';
 import { THEMES, type ThemeName } from '../state.js';
 import { BillboardChartsPanel, BillboardPanel } from '../panels/billboard.js';
 import { ChartPanel, type ChartStyle } from '../panels/chart.js';
 import { EventPanel, SearchPanel, TopPanel, WatchlistPanel } from '../panels/browse.js';
+import { EntPanel, RtPanel, RtSearchPanel } from '../panels/entertainment.js';
 import { FredPanel, FredSearchPanel } from '../panels/fred.js';
+import {
+  BoxOfficePanel,
+  NetflixPanel,
+  SteamPanel,
+  StreamChartPanel,
+  TvPanel,
+} from '../panels/mediadata.js';
 import { DepthPanel, QuotePanel, TradesPanel } from '../panels/market.js';
 import { HelpPanel } from '../panels/help.js';
 import type { PanelContext } from '../panels/panel.js';
@@ -290,6 +299,167 @@ export const COMMANDS: Command[] = [
 
       const id = BillboardPanel.idFor(chart, date);
       panels.open(id, () => new BillboardPanel(id, panelContext, { chart, date }));
+    },
+  },
+  {
+    verb: 'ENT',
+    aliases: ['SHOW', 'SHOWBIZ'],
+    group: 'markets',
+    summary: 'Kalshi entertainment markets by genre',
+    usage: `ENT [${ENT_GENRES.join('|')}]`,
+    examples: ['ENT', 'ENT music', 'ENT games', 'ENT film'],
+    handler(command, { panels, panelContext }) {
+      const raw = (command.args[0] ?? 'all').toLowerCase();
+      const genre = raw === 'all' ? 'all' : raw;
+      if (genre !== 'all' && !(ENT_GENRES as readonly string[]).includes(genre)) {
+        throw new UsageError(`Unknown genre "${command.args[0]}". Try: ${ENT_GENRES.join(', ')}`);
+      }
+      const id = EntPanel.idFor(genre);
+      panels.open(id, () => new EntPanel(id, panelContext, genre as EntGenre | 'all'));
+    },
+  },
+  {
+    verb: 'RT',
+    aliases: ['TOMATO', 'SCORE'],
+    group: 'data',
+    summary: 'Rotten Tomatoes scores (settles Kalshi KXRT)',
+    usage: 'RT <title> | RT SEARCH <words>',
+    examples: ['RT dune part three', 'RT wicked_for_good', 'RT SEARCH wicked'],
+    handler(command, { panels, panelContext }) {
+      const first = (command.args[0] ?? '').toUpperCase();
+
+      if (first === 'SEARCH' || first === 'S') {
+        const query = command.args.slice(1).join(' ').trim();
+        if (!query) throw new UsageError('Missing <words>');
+        const id = RtSearchPanel.idFor(query);
+        panels.open(id, () => new RtSearchPanel(id, panelContext, query));
+        return;
+      }
+
+      const query = command.args.join(' ').trim();
+      if (!query) throw new UsageError('Missing <title>');
+      const id = RtPanel.idFor(query);
+      panels.open(id, () => new RtPanel(id, panelContext, query));
+    },
+  },
+  {
+    verb: 'NFLX',
+    aliases: ['NETFLIX'],
+    group: 'data',
+    summary: 'Netflix Top 10 (settles Kalshi KXNETFLIX*)',
+    usage: 'NFLX [tv|films] [global|<country>]',
+    examples: ['NFLX', 'NFLX films', 'NFLX tv global', 'NFLX films gb'],
+    handler(command, { panels, panelContext }) {
+      let category = 'tv';
+      let scope = 'us';
+
+      // Order-independent: `NFLX films gb` and `NFLX gb films` are one chart.
+      for (const token of command.args) {
+        const lower = token.toLowerCase();
+        if (['tv', 'shows', 'show', 'series'].includes(lower)) category = 'tv';
+        else if (['films', 'film', 'movies', 'movie'].includes(lower)) category = 'films';
+        else if (lower === 'global' || lower === 'world') scope = 'global';
+        else if (/^[a-z]{2}$/.test(lower)) scope = lower;
+        else throw new UsageError(`Unrecognised argument "${token}"`);
+      }
+
+      const id = NetflixPanel.idFor(category, scope);
+      panels.open(id, () => new NetflixPanel(id, panelContext, { category, scope }));
+    },
+  },
+  {
+    verb: 'SPOT',
+    aliases: ['SPOTIFY'],
+    group: 'data',
+    summary: 'Spotify streaming charts (settles Kalshi KXTOPARTIST*)',
+    usage: 'SPOT [global|<country>] [daily|weekly]',
+    examples: ['SPOT', 'SPOT global', 'SPOT global weekly', 'SPOT gb daily'],
+    handler(command, { panels, panelContext }) {
+      let scope = 'us';
+      let period = 'daily';
+
+      for (const token of command.args) {
+        const lower = token.toLowerCase();
+        if (lower === 'daily' || lower === 'day') period = 'daily';
+        else if (lower === 'weekly' || lower === 'week') period = 'weekly';
+        else if (lower === 'global' || lower === 'world') scope = 'global';
+        else if (/^[a-z]{2}$/.test(lower)) scope = lower;
+        else throw new UsageError(`Unrecognised argument "${token}"`);
+      }
+
+      const options = { source: 'spotify' as const, scope, period };
+      const id = StreamChartPanel.idFor(options);
+      panels.open(id, () => new StreamChartPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'YT',
+    aliases: ['YOUTUBE'],
+    group: 'data',
+    summary: 'YouTube music video charts (settles Kalshi KXYT*)',
+    usage: 'YT [today|alltime|trending]',
+    examples: ['YT', 'YT alltime', 'YT trending'],
+    handler(command, { panels, panelContext }) {
+      const view = (command.args[0] ?? 'today').toLowerCase();
+      const valid = ['today', 'alltime', 'trending'];
+      if (!valid.includes(view)) {
+        throw new UsageError(`Unknown view "${command.args[0]}". Try: ${valid.join(', ')}`);
+      }
+
+      const options = { source: 'youtube' as const, scope: view, period: '' };
+      const id = StreamChartPanel.idFor(options);
+      panels.open(id, () => new StreamChartPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'BO',
+    aliases: ['BOXOFFICE'],
+    group: 'data',
+    summary: 'Domestic daily box office (Box Office Mojo)',
+    usage: 'BO [YYYY-MM-DD]',
+    examples: ['BO', 'BO 2026-08-14'],
+    handler(command, { panels, panelContext }) {
+      const date = command.args[0];
+      if (date !== undefined && !isIsoDate(date)) {
+        throw new UsageError(`Date must be YYYY-MM-DD, got "${date}"`);
+      }
+      const id = BoxOfficePanel.idFor(date);
+      panels.open(id, () => new BoxOfficePanel(id, panelContext, date));
+    },
+  },
+  {
+    verb: 'STEAM',
+    aliases: ['GAMES'],
+    group: 'data',
+    summary: 'Steam concurrent players (settles Kalshi KXSTEAM*)',
+    usage: 'STEAM [game|appid]',
+    examples: ['STEAM', 'STEAM counter-strike', 'STEAM 730'],
+    handler(command, { panels, panelContext }) {
+      const query = command.args.join(' ').trim();
+      const id = SteamPanel.idFor(query);
+      panels.open(id, () => new SteamPanel(id, panelContext, query));
+    },
+  },
+  {
+    verb: 'TV',
+    aliases: ['SCHEDULE', 'GUIDE'],
+    group: 'data',
+    summary: 'TV schedule for a day (TVmaze)',
+    usage: 'TV [YYYY-MM-DD] [country]',
+    examples: ['TV', 'TV 2026-08-20', 'TV GB', 'TV 2026-08-20 CA'],
+    handler(command, { panels, panelContext }) {
+      let date: string | undefined;
+      let country: string | undefined;
+
+      for (const token of command.args) {
+        if (isIsoDate(token)) date = token;
+        else if (/^[a-z]{2}$/i.test(token)) country = token.toUpperCase();
+        else throw new UsageError(`Unrecognised argument "${token}"`);
+      }
+
+      const options = { ...(date ? { date } : {}), ...(country ? { country } : {}) };
+      const id = TvPanel.idFor(options);
+      panels.open(id, () => new TvPanel(id, panelContext, options));
     },
   },
   {

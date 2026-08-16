@@ -122,4 +122,16 @@ export const TTL = {
   fred: 30 * 60_000,
   /** Billboard: refreshes once a week. */
   billboard: 60 * 60_000,
+  /** Rotten Tomatoes: reviews trickle in, and a score can move mid-day. */
+  rottenTomatoes: 15 * 60_000,
+  /** Netflix Top 10: published once a week, on Tuesdays. */
+  netflix: 6 * 60 * 60_000,
+  /** Spotify and YouTube chart mirrors: rebuilt once a day. */
+  streamCharts: 30 * 60_000,
+  /** Box office: estimates are revised through the day, then finalised. */
+  boxOffice: 30 * 60_000,
+  /** Steam concurrents: a live number, and the whole point of the panel. */
+  steam: 120_000,
+  /** TV schedules: fixed a day ahead, occasionally amended. */
+  tvSchedule: 30 * 60_000,
 } as const;

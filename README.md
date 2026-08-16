@@ -1,14 +1,16 @@
 # Prediction Terminal
 
 A Bloomberg-style terminal for [Kalshi](https://kalshi.com) prediction markets,
-[FRED](https://fred.stlouisfed.org) economic data, and the
-[Billboard](https://www.billboard.com/charts/) charts — driven entirely from a
-command prompt.
+[FRED](https://fred.stlouisfed.org) economic data, the
+[Billboard](https://www.billboard.com/charts/) charts, and the entertainment
+feeds Kalshi settles against — driven entirely from a command prompt.
 
 ```
 > GP KXFEDDECISION-27JAN-H26 1d 1y
 > FRED UNRATE
 > BB hot-100
+> ENT film
+> RT dune part three
 ```
 
 Type a command, get a panel. Panels tile into a grid, poll on their own timers,
@@ -52,6 +54,7 @@ shows usage and runnable examples.
 | `SRCH` | `SRCH <words>` | Search open events, grouped with their strike ladders |
 | `EVT` | `EVT <event-ticker>` | Every contract in an event |
 | `TOP` | `TOP [volume\|gainers\|losers\|oi\|liquidity]` | Leaderboards |
+| `ENT` | `ENT [music\|film\|tv\|games\|awards\|celeb]` | The entertainment book, by genre, with a link to each market's settlement feed |
 
 Arguments after the ticker on `GP` are order-independent — `GP X 1d 1y line`
 and `GP X line 1y 1d` are the same chart.
@@ -64,6 +67,39 @@ and `GP X line 1y 1d` are the same chart.
 | `FSRCH` | `FSRCH <words>` | Find a FRED series id |
 | `BB` | `BB [chart-slug] [YYYY-MM-DD]` | A Billboard chart as a ranked table |
 | `BB` | `BB CHARTS` | List the chart slugs |
+| `RT` | `RT <title>` · `RT SEARCH <words>` | Tomatometer and Popcornmeter, with review counts |
+| `NFLX` | `NFLX [tv\|films] [global\|<country>]` | Netflix Top 10, with views and hours viewed |
+| `SPOT` | `SPOT [global\|<country>] [daily\|weekly]` | Spotify streaming chart |
+| `YT` | `YT [today\|alltime\|trending]` | YouTube music video views |
+| `BO` | `BO [YYYY-MM-DD]` | Domestic daily box office |
+| `STEAM` | `STEAM [game\|appid]` | Live concurrent players, or the most-played leaderboard |
+| `TV` | `TV [YYYY-MM-DD] [country]` | What airs that day, by network |
+
+`NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
+and `NFLX gb films` are the same chart.
+
+### Entertainment markets, and what settles them
+
+`ENT` exists because Kalshi files ~2,500 series under one flat `Entertainment`
+category with no sub-category, and its `/events` endpoint accepts a `category`
+parameter and then ignores it. The only usable discriminator is the ticker, and
+Kalshi's tickers are disciplined enough to classify on — `KXOSCARPIC`,
+`KXNETFLIXRANKSHOW`, `KXGAMEAWARDS`. Genres are tags rather than a partition,
+because an Oscar market is both `film` and `awards`.
+
+Each row carries a FEED column naming the command that shows the data the market
+resolves against. Those pairings are read off each series' own
+`settlement_sources`, not guessed:
+
+| Kalshi series | Settles on | Command |
+| --- | --- | --- |
+| `KXRT`, `KXRTCOMPARE` | rottentomatoes.com | `RT` |
+| `KXNETFLIXRANK*`, `KXNETFLIXTOPVIEWS*` | Netflix's own Top 10 publication | `NFLX` |
+| `KXTOPARTIST*`, `KXTOPSONGSPOTIFY`, `KXARTISTSTREAMSY` | Spotify | `SPOT` |
+| `KXYTVIEWSW`, `KXYTTOPSONGW`, `KXYTDAILYTOPVIDEO` | YouTube | `YT` |
+| `KXTOPSONG`, `KXTOPALBUM`, `KXALBUMEQUIV` | Billboard / Luminate | `BB` |
+| `KXSTEAM*`, `GAMERANK` | Steam | `STEAM` |
+| `KXBIGBROTHER*`, `KXDWTS`, `KXSNL` | what actually aired | `TV` |
 
 ### Workspace
 
@@ -96,14 +132,18 @@ and `GP X line 1y 1d` are the same chart.
 ```
 browser (Vite + TypeScript, no framework)
   └── /api/*  ──► Express server
-                    ├── Kalshi   trade-api v2  (JSON)
-                    ├── FRED     scraped from fred.stlouisfed.org
-                    └── Billboard scraped from billboard.com/charts
+                    ├── Kalshi     trade-api v2  (JSON)
+                    ├── FRED       scraped from fred.stlouisfed.org
+                    ├── Billboard  scraped from billboard.com/charts
+                    ├── Netflix    published TSV at netflix.com/tudum/top10
+                    ├── TVmaze     public JSON API
+                    ├── Steam      Valve's API + steamcharts.com
+                    └── scraped    rottentomatoes.com, boxofficemojo.com, kworb.net
 ```
 
 The server exists for three reasons the browser cannot handle alone: none of
-the three upstreams allow cross-origin reads, two of them serve HTML that has
-to be parsed somewhere, and N polling panels should make 1 upstream request.
+these upstreams allow cross-origin reads, most of them serve HTML that has to be
+parsed somewhere, and N polling panels should make 1 upstream request.
 Responses are cached with per-source TTLs and concurrent misses for the same
 key are collapsed onto a single in-flight request.
 
@@ -122,8 +162,14 @@ past the server boundary.
 ~99.98% auto-generated multivariate parlay legs — paging `/markets` returned
 11,998 of them in the first 12,000 rows, two of which were real contracts.
 `/events?with_nested_markets=true` excludes them entirely. The server crawls
-that into a snapshot at boot (~4,000 events / ~35,000 markets in ~15s) so the
-first `SRCH` does not pay for the crawl.
+that into a snapshot at boot (~9,800 events / ~82,000 markets) so the first
+`SRCH` does not pay for the crawl.
+
+That crawl used to stop at 20 pages, which covered 4,000 of the ~9,800 open
+events. Because the upstream does not order by category, the truncation fell
+unevenly: it hid 265 of the 545 open Entertainment events, so half of them were
+simply unreachable from `SRCH`. The page cap now leaves headroom above the open
+universe, and the loop still stops as soon as the cursor runs out.
 
 **Quiet candles are drawn flat, not skipped.** Kalshi returns a bucket with
 only `previous_dollars` when nothing printed in the period. Those become flat
@@ -134,6 +180,33 @@ chart stays continuous instead of gapping.
 and NO — with no ask side, because an offer to sell YES at `p` is a bid to buy
 NO at `1 - p`. The server converts the NO ladder into YES ask terms once, so
 every panel sees a conventional bid/ask.
+
+**"No score yet" is not zero.** A film awaiting reviews reports a `null`
+Tomatometer, never `0` — the distinction is the entire point when the market is
+"will it score above 85". The same rule holds across these feeds: a box office
+day Mojo has not posted is a `not_found` with a "grosses land the following
+afternoon" hint, not a parse failure, and a chart with no movement column
+reports unknown movement rather than claiming every row held its position.
+
+**Two columns can normalise to the same key.** Box Office Mojo prints `YD`
+(yesterday's rank) beside `%± YD` (the day-over-day change), and kworb prints
+`Streams` beside `Streams+`. Strip the punctuation and each pair collapses onto
+one key, so the parser silently reads a rank where a percentage belongs. Both
+header normalisers keep the distinguishing character — `%` becomes `pct`, `+`
+becomes `plus` — and the tests assert exactly that.
+
+**Netflix publishes the data, so it is not scraped.** The Top 10 site is backed
+by TSV files Netflix publishes itself, carrying the same views and hours-viewed
+figures the `KXNETFLIX*` markets settle on. The country file is ~31 MB, so it is
+fetched at most once per TTL, reduced immediately to the latest week for *every*
+country, and only that reduction is cached — `NFLX us` and `NFLX gb` share one
+download. Expect the first country request after a cold start to take ~10s.
+
+**Spotify and YouTube come via kworb.net, and the panel says so.** Neither
+platform publishes those numbers in a form a server can read — charts.spotify.com
+requires a login and charts.youtube.com renders client-side — so the terminal
+reads the mirror the trading community actually quotes, and labels it rather
+than passing it off as first-party data.
 
 ---
 
@@ -186,6 +259,16 @@ networks. The scrape is always tried first; the key is only a safety net.
 | `GET /api/billboard/chart/:slug?date=` | Chart entries |
 | `GET /api/billboard/charts` | Known chart slugs |
 | `GET /api/billboard/art?u=` | Artwork proxy (allowlisted hosts only) |
+| `GET /api/ent/markets?genre=&limit=` | Entertainment events, genre-tagged, with settlement feeds |
+| `GET /api/ent/rt?q=` | Rotten Tomatoes title with both scores |
+| `GET /api/ent/rt/search?q=&limit=` | Rotten Tomatoes title search |
+| `GET /api/ent/netflix?category=&scope=` | Netflix Top 10 for a week |
+| `GET /api/ent/spotify?scope=&period=&limit=` | Spotify chart |
+| `GET /api/ent/youtube?view=&limit=` | YouTube chart |
+| `GET /api/ent/charts?source=` | Known streaming chart slugs |
+| `GET /api/ent/boxoffice?date=` | Domestic daily box office |
+| `GET /api/ent/steam?q=&limit=` | Steam leaderboard, or one game's live count |
+| `GET /api/ent/tv?date=&country=` | TV schedule for a day |
 | `GET /api/health` | Liveness, cache stats, whether a FRED key is set |
 
 Errors are JSON: `{ error, code, hint? }`. The `hint` is written to be shown to
@@ -197,16 +280,21 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 95 tests
+npm test             # 168 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
 
-Tests cover the parsers and normalisers rather than the network: the Billboard
-and FRED parsers run against fixtures captured from the real pages, the Kalshi
+Tests cover the parsers and normalisers rather than the network: the scraped
+parsers run against fixtures captured from the real pages, the Kalshi
 normalisers against trimmed real API responses, and `test/fred.integration.test.ts`
 exercises the whole FRED scrape path against a local fixture server — which is
 how that path stays covered on networks where the live host refuses to answer.
+
+The entertainment tests lean on the cases where a plausible-looking parser reads
+the wrong number without ever failing: the two header collisions above, a film
+with no Tomatometer, a chart with no movement column, and an upstream that
+answers `200 OK` with "no data available" instead of an error.
 
 ---
 
@@ -214,6 +302,12 @@ how that path stays covered on networks where the live host refuses to answer.
 
 Read-only market data. Nothing here places an order, holds a credential, or
 touches a Kalshi account — the terminal uses only public, unauthenticated
-endpoints. Scraped sources are third-party sites whose markup can change
-without notice; the parsers are written to degrade with a diagnosable error
-rather than silently return wrong numbers.
+endpoints, and no entertainment feed needs a key either. Scraped sources are
+third-party sites whose markup can change without notice; the parsers are
+written to degrade with a diagnosable error rather than silently return wrong
+numbers.
+
+The entertainment feeds show what a market is *likely* to settle against, not
+what it *will*. Kalshi resolves against its own stated settlement sources under
+its own rules, and a scraped page can lag, revise, or disagree. Read these
+panels as the public evidence, not as the settlement.
