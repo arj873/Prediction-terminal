@@ -387,3 +387,238 @@ export interface BillboardChartListItem {
   slug: string;
   name: string;
 }
+
+/* ----------------------------------------------------- entertainment: kalshi */
+
+/**
+ * Genre tags for a Kalshi entertainment event.
+ *
+ * Tags, not a single category, because the clusters genuinely overlap: an Oscar
+ * market is both `film` and `awards`, and someone typing `ENT film` expects to
+ * see it. An event carries every tag that applies.
+ */
+export type EntGenre = 'music' | 'film' | 'tv' | 'games' | 'awards' | 'celeb';
+
+export const ENT_GENRES: readonly EntGenre[] = [
+  'music',
+  'film',
+  'tv',
+  'games',
+  'awards',
+  'celeb',
+] as const;
+
+export interface EntEvent {
+  eventTicker: string;
+  seriesTicker: string;
+  title: string;
+  subTitle: string;
+  genres: EntGenre[];
+  /** Markets in the event, most liquid first. */
+  markets: Market[];
+  volume24h: number;
+  openInterest: number;
+  /** Soonest close across the event's markets, ISO — the clock that matters. */
+  closeTime: string;
+  /** The data feed Kalshi settles this series against, when we know of one. */
+  feed?: EntFeed;
+}
+
+/** A terminal command that shows the data a market settles against. */
+export interface EntFeed {
+  /** Command to run, e.g. `RT dune part three`. */
+  command: string;
+  /** Human label for the upstream, e.g. `Rotten Tomatoes`. */
+  source: string;
+}
+
+export interface EntResponse {
+  genre: EntGenre | 'all';
+  events: EntEvent[];
+  /** Events scanned in the snapshot. */
+  scanned: number;
+  snapshotAgeSeconds: number;
+  /** Per-genre counts, so the panel can show what else is available. */
+  counts: Record<string, number>;
+}
+
+/* ------------------------------------------------ entertainment: rotten tomatoes */
+
+export interface RtScore {
+  /** 0..100, or `null` when the score has not been issued yet. */
+  score: number | null;
+  /** Average critic/user rating on the source's own scale, e.g. `8.40`. */
+  averageRating: string;
+  reviewCount: number | null;
+  /** `certified fresh` / `fresh` / `rotten`, as RT states it. */
+  state: string;
+  certified: boolean;
+}
+
+export interface RtTitle {
+  /** RT url slug, e.g. `dune_part_two`. */
+  slug: string;
+  title: string;
+  year: string;
+  mediaType: string;
+  /** The Tomatometer — critics. */
+  critics: RtScore;
+  /** The Popcornmeter — verified audience. */
+  audience: RtScore;
+  synopsis: string;
+  sourceUrl: string;
+}
+
+export interface RtSearchResult {
+  slug: string;
+  title: string;
+  year: string;
+  mediaType: string;
+  criticsScore: number | null;
+}
+
+export interface RtSearchResponse {
+  query: string;
+  results: RtSearchResult[];
+}
+
+/* ------------------------------------------------------ entertainment: netflix */
+
+export interface NetflixEntry {
+  rank: number;
+  title: string;
+  /** Season label for TV rows; `""` when Netflix reports `N/A`. */
+  season: string;
+  /** Views for the week (global feed only; country feeds are rank-only). */
+  views: number | null;
+  hoursViewed: number | null;
+  /** Runtime in hours, as Netflix publishes it. */
+  runtime: number | null;
+  weeksInTop10: number | null;
+}
+
+export interface NetflixTop10 {
+  /** `global`, or an ISO-3166 alpha-2 country code. */
+  scope: string;
+  scopeLabel: string;
+  /** `tv` or `films`. */
+  category: string;
+  categoryLabel: string;
+  /** Week ending, `YYYY-MM-DD`. */
+  week: string;
+  entries: NetflixEntry[];
+  sourceUrl: string;
+}
+
+/* ------------------------------------------- entertainment: spotify / youtube */
+
+export interface StreamEntry {
+  rank: number;
+  /** Previous position; `null` for a debut. */
+  lastRank: number | null;
+  title: string;
+  artist: string;
+  /** Streams or views for the period. */
+  streams: number | null;
+  /** Change vs the previous period. */
+  streamsChange: number | null;
+  /** Cumulative total since entering the chart. */
+  total: number | null;
+  peak: number | null;
+  days: number | null;
+  move: number | null;
+  isNew: boolean;
+}
+
+export interface StreamChart {
+  /** `spotify` or `youtube`. */
+  source: string;
+  /** Chart identifier, e.g. `us-daily`. */
+  chart: string;
+  title: string;
+  /** Date the chart covers, when the page states one. */
+  date: string;
+  entries: StreamEntry[];
+  sourceUrl: string;
+}
+
+export interface StreamChartListItem {
+  slug: string;
+  name: string;
+  source: string;
+}
+
+/* --------------------------------------------------- entertainment: box office */
+
+export interface BoxOfficeEntry {
+  rank: number;
+  /** Yesterday's rank; `null` when absent. */
+  lastRank: number | null;
+  title: string;
+  /** Gross for the day, in whole dollars. */
+  gross: number | null;
+  /** Percent change vs the previous day. */
+  changeDay: number | null;
+  /** Percent change vs the same day last week. */
+  changeWeek: number | null;
+  theaters: number | null;
+  /** Per-theatre average, in dollars. */
+  average: number | null;
+  totalGross: number | null;
+  daysInRelease: number | null;
+  distributor: string;
+  move: number | null;
+  isNew: boolean;
+}
+
+export interface BoxOfficeDay {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  title: string;
+  entries: BoxOfficeEntry[];
+  /** Summed gross across the chart, in dollars. */
+  totalGross: number;
+  sourceUrl: string;
+}
+
+/* -------------------------------------------------------- entertainment: steam */
+
+export interface SteamGame {
+  appId: number;
+  name: string;
+  rank: number | null;
+  /** Players in game right now. */
+  currentPlayers: number | null;
+  /** Highest concurrent players in the last 24h. */
+  peakPlayers: number | null;
+}
+
+export interface SteamChart {
+  /** `top` for the most-played leaderboard, or `game` for a single title. */
+  view: string;
+  games: SteamGame[];
+  sourceUrl: string;
+}
+
+/* ------------------------------------------------------- entertainment: tv guide */
+
+export interface TvEpisode {
+  /** `HH:MM`, network local time. */
+  airtime: string;
+  show: string;
+  network: string;
+  season: number | null;
+  episode: number | null;
+  name: string;
+  /** Minutes, when the schedule states one. */
+  runtime: number | null;
+  type: string;
+}
+
+export interface TvSchedule {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  country: string;
+  episodes: TvEpisode[];
+  sourceUrl: string;
+}

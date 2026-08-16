@@ -113,6 +113,18 @@ export class HelpPanel extends Panel<Command[]> {
           }),
           el('li', { text: 'Billboard — scraped from billboard.com/charts.' }),
           el('li', {
+            text: 'Rotten Tomatoes — scraped from rottentomatoes.com. Settles Kalshi KXRT.',
+          }),
+          el('li', {
+            text: 'Netflix — the official Top 10 dataset published at netflix.com/tudum/top10.',
+          }),
+          el('li', {
+            text: 'Spotify / YouTube — mirrored by kworb.net; both platforms’ own charts need a login or render client-side.',
+          }),
+          el('li', { text: 'Box office — scraped from boxofficemojo.com daily charts.' }),
+          el('li', { text: 'Steam — Valve’s public API for live players, steamcharts.com for the leaderboard.' }),
+          el('li', { text: 'TV schedules — the TVmaze public API.' }),
+          el('li', {
             class: 'dim',
             text: 'Read-only market data. Nothing here places an order or touches an account.',
           }),

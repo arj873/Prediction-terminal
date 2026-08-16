@@ -12,8 +12,11 @@ import type {
   AssetClass,
   BillboardChart,
   BillboardChartListItem,
+  BoxOfficeDay,
   CandleInterval,
   CandlesResponse,
+  EntGenre,
+  EntResponse,
   FredSearchResponse,
   FredSeriesResponse,
   ImpliedCandidatesResponse,
@@ -21,11 +24,18 @@ import type {
   ImpliedSeriesResponse,
   KalshiEvent,
   Market,
+  NetflixTop10,
   OrderBook,
+  RtSearchResponse,
+  RtTitle,
   SpotCandlesResponse,
   SpotQuote,
   SpotSearchResult,
+  SteamChart,
+  StreamChart,
+  StreamChartListItem,
   TradesResponse,
+  TvSchedule,
 } from '../../shared/types.js';
 
 export class ApiRequestError extends Error {
@@ -214,6 +224,45 @@ export const billboard = {
 
   charts: (signal?: AbortSignal): Promise<{ charts: BillboardChartListItem[] }> =>
     request('/billboard/charts', signal),
+};
+
+/* ----------------------------------------------------------- entertainment */
+
+export const ent = {
+  /** Kalshi's entertainment book, grouped by genre. */
+  markets: (genre: EntGenre | 'all', limit = 60, signal?: AbortSignal): Promise<EntResponse> =>
+    request(`/ent/markets${query({ genre, limit })}`, signal),
+
+  rt: (q: string, signal?: AbortSignal): Promise<RtTitle> =>
+    request(`/ent/rt${query({ q })}`, signal),
+
+  rtSearch: (q: string, limit = 20, signal?: AbortSignal): Promise<RtSearchResponse> =>
+    request(`/ent/rt/search${query({ q, limit })}`, signal),
+
+  netflix: (category: string, scope: string, signal?: AbortSignal): Promise<NetflixTop10> =>
+    request(`/ent/netflix${query({ category, scope })}`, signal),
+
+  spotify: (
+    scope: string,
+    period: string,
+    limit = 200,
+    signal?: AbortSignal,
+  ): Promise<StreamChart> => request(`/ent/spotify${query({ scope, period, limit })}`, signal),
+
+  youtube: (view: string, limit = 200, signal?: AbortSignal): Promise<StreamChart> =>
+    request(`/ent/youtube${query({ view, limit })}`, signal),
+
+  charts: (source?: string, signal?: AbortSignal): Promise<{ charts: StreamChartListItem[] }> =>
+    request(`/ent/charts${query({ source })}`, signal),
+
+  boxOffice: (date?: string, signal?: AbortSignal): Promise<BoxOfficeDay> =>
+    request(`/ent/boxoffice${query({ date })}`, signal),
+
+  steam: (q?: string, limit = 25, signal?: AbortSignal): Promise<SteamChart> =>
+    request(`/ent/steam${query({ q, limit })}`, signal),
+
+  tv: (date?: string, country?: string, signal?: AbortSignal): Promise<TvSchedule> =>
+    request(`/ent/tv${query({ date, country })}`, signal),
 };
 
 /* ------------------------------------------------------------------ health */

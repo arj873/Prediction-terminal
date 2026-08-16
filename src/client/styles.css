@@ -1127,6 +1127,113 @@ button {
   color: var(--fg-muted);
 }
 
+/* ------------------------------------------------------- entertainment (ENT) */
+
+/* Genre chips double as navigation on the ENT panel. */
+.ent-chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--border-bright);
+  color: var(--fg-muted);
+  font-size: var(--size-tiny);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.ent-chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.ent-chip-active {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The FEED cell: a click target inside an already-clickable row. */
+.ent-feed {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.ent-feed:hover {
+  color: var(--fg);
+}
+
+/* -------------------------------------------------------- rotten tomatoes */
+
+.rt-meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.rt-meter {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.rt-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rt-meter-label {
+  color: var(--fg-muted);
+  font-size: var(--size-tiny);
+  letter-spacing: 0.08em;
+}
+
+.rt-meter-score {
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.rt-meter-track {
+  margin-top: 4px;
+  height: 6px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.rt-meter-fill {
+  height: 100%;
+  /* Width is set per-render; a score of 0 and "no score" both read as empty,
+     which is why the numeral above it is the authority, not the bar. */
+  background: var(--fg-muted);
+  transition: width 120ms linear;
+}
+
+.rt-meter-fill.up {
+  background: var(--up);
+}
+
+.rt-meter-fill.down {
+  background: var(--down);
+}
+
+.rt-meter-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: var(--size-tiny);
+}
+
+/* A secondary figure stacked under a primary one, e.g. a streams delta. */
+.tiny {
+  font-size: var(--size-tiny);
+  line-height: 1.2;
+}
+
 /* ---------------------------------------------------------------- scrollbar */
 
 ::-webkit-scrollbar {

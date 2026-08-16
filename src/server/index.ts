@@ -18,6 +18,7 @@ import type { ApiError } from '../shared/types.js';
 import { cache } from './lib/cache.js';
 import { UpstreamError } from './lib/http.js';
 import { billboardRouter } from './routes/billboard.js';
+import { entertainmentRouter } from './routes/entertainment.js';
 import { fredRouter } from './routes/fred.js';
 import { impliedRouter } from './routes/implied.js';
 import { kalshiRouter } from './routes/kalshi.js';
@@ -80,6 +81,7 @@ export function createApp(): express.Express {
   app.use('/api/implied', impliedRouter);
   app.use('/api/fred', fredRouter);
   app.use('/api/billboard', billboardRouter);
+  app.use('/api/ent', entertainmentRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -149,6 +151,7 @@ if (invokedDirectly) {
     console.log(`  implied    /api/implied/{underlyings,candidates,series}`);
     console.log(`  fred       /api/fred/{series/:id,search}`);
     console.log(`  billboard  /api/billboard/{charts,chart/:slug}`);
+    console.log(`  ent        /api/ent/{markets,rt,netflix,spotify,youtube,boxoffice,steam,tv}`);
     if (!process.env.FRED_API_KEY?.trim()) {
       console.log(`  note: FRED_API_KEY unset — FRED uses scraping only (no fallback).`);
     }
