@@ -46,6 +46,8 @@ const PREFIX_GENRES: Record<string, EntGenre[]> = {
   KX10SONG: ['music'],
   KX20SONG: ['music'],
   KXBILLBOARD: ['music'],
+  KXBBCHART: ['music'],
+  KXCATALOGUE: ['music'],
   KXWEEKSNUM1: ['music'],
   KXSONGRELEASE: ['music'],
   KXTOUR: ['music'],
@@ -89,6 +91,12 @@ const PREFIX_GENRES: Record<string, EntGenre[]> = {
   KXSPINOFF: ['tv'],
   KXLOVEISLAND: ['tv'],
   KXUPONLY: ['tv'],
+  // Podcasts have no genre of their own; they are shows, and a guest booking is
+  // as much a celebrity market as a programming one.
+  KXTOPPOD: ['tv'],
+  KXPODCASTGUEST: ['tv', 'celeb'],
+  KXROGANGUEST: ['tv', 'celeb'],
+  KXCALLHERDADDY: ['tv', 'celeb'],
 
   // ---- games -------------------------------------------------------------
   KXGAME: ['games'],
@@ -117,6 +125,7 @@ const PREFIX_GENRES: Record<string, EntGenre[]> = {
   KXTIME: ['awards', 'celeb'],
   KXSEXYMAN: ['awards', 'celeb'],
   KXWORDOFTHEYEAR: ['awards'],
+  KXMOSTWINSEMMYS: ['tv', 'awards'],
 
   // ---- celebrity / culture ------------------------------------------------
   KXSWIFT: ['celeb', 'music'],
@@ -135,7 +144,7 @@ const PREFIX_GENRES: Record<string, EntGenre[]> = {
 const TITLE_GENRES: [RegExp, EntGenre[]][] = [
   [/\b(album|song|single|billboard|spotify|streams?|tour|concert|headlin|grammy)\b/i, ['music']],
   [/\b(box office|rotten tomatoes|film|movie|oscar|cast as|screenplay|director)\b/i, ['film']],
-  [/\b(netflix|episode|season|series|emmy|show|tv|premiere)\b/i, ['tv']],
+  [/\b(netflix|episode|season|series|emmy|show|tv|premiere|podcast)\b/i, ['tv']],
   [/\b(game|steam|nintendo|playstation|xbox|console|dlc|speedrun)\b/i, ['games']],
   [/\b(award|nominee|winner|nomination)\b/i, ['awards']],
 ];
@@ -176,6 +185,89 @@ const FEEDS: Record<string, { command: string; source: string }> = {
   KXBIGBROTHER: { command: 'TV', source: 'TV schedule' },
   KXDWTS: { command: 'TV', source: 'TV schedule' },
   KXSNL: { command: 'TV', source: 'TV schedule' },
+
+  // ---- awards --------------------------------------------------------------
+  // The largest block of entertainment volume that had no feed. Each category
+  // gets the `AWRD` argument that looks *it* up, not a generic one: the point of
+  // the column is that clicking it answers the market's own question.
+  //
+  // Longest prefix wins, which is what keeps `KXOSCARNOMPIC` (nominees) and
+  // `KXOSCARPIC` (winner) on their own rows while both fall back to the generic
+  // `KXOSCAR` rule if Kalshi adds a category this table has not seen.
+  KXOSCAR: { command: 'AWRD best picture', source: 'Academy Awards' },
+  KXOSCARPIC: { command: 'AWRD best picture', source: 'Academy Awards' },
+  KXOSCARNOMPIC: { command: 'AWRD best picture', source: 'Academy Awards' },
+  KXOSCARDIR: { command: 'AWRD best director', source: 'Academy Awards' },
+  KXOSCARNOMDIR: { command: 'AWRD best director', source: 'Academy Awards' },
+  KXOSCARACTO: { command: 'AWRD best actor', source: 'Academy Awards' },
+  KXOSCARNOMACTO: { command: 'AWRD best actor', source: 'Academy Awards' },
+  KXOSCARACTR: { command: 'AWRD best actress', source: 'Academy Awards' },
+  KXOSCARNOMACTR: { command: 'AWRD best actress', source: 'Academy Awards' },
+  KXOSCARSUPACTO: { command: 'AWRD supporting actor', source: 'Academy Awards' },
+  KXOSCARNOMSUPACTO: { command: 'AWRD supporting actor', source: 'Academy Awards' },
+  KXOSCARSUPACTR: { command: 'AWRD supporting actress', source: 'Academy Awards' },
+  KXOSCARNOMSUPACTR: { command: 'AWRD supporting actress', source: 'Academy Awards' },
+  KXOSCARANIMATED: { command: 'AWRD animated', source: 'Academy Awards' },
+  KXOSCARDOCU: { command: 'AWRD documentary', source: 'Academy Awards' },
+  KXOSCARNOMDOCU: { command: 'AWRD documentary', source: 'Academy Awards' },
+  KXOSCARNOMINTERFILM: { command: 'AWRD international', source: 'Academy Awards' },
+  KXOSCARCINE: { command: 'AWRD cinematography', source: 'Academy Awards' },
+  KXOSCARNOMCIN: { command: 'AWRD cinematography', source: 'Academy Awards' },
+  KXOSCARSCORE: { command: 'AWRD score', source: 'Academy Awards' },
+  KXOSCARNOMSCORE: { command: 'AWRD score', source: 'Academy Awards' },
+  KXOSCARASPLAY: { command: 'AWRD adapted screenplay', source: 'Academy Awards' },
+  KXOSCARNOMASPLAY: { command: 'AWRD adapted screenplay', source: 'Academy Awards' },
+  KXOSCARSPLAY: { command: 'AWRD original screenplay', source: 'Academy Awards' },
+  KXOSCARNOMSPLAY: { command: 'AWRD original screenplay', source: 'Academy Awards' },
+  KXOSCARVIS: { command: 'AWRD visual effects', source: 'Academy Awards' },
+  KXOSCARNOMVISUAL: { command: 'AWRD visual effects', source: 'Academy Awards' },
+  KXOSCARNOMMAKEUP: { command: 'AWRD makeup', source: 'Academy Awards' },
+
+  KXEMMY: { command: 'AWRD drama series', source: 'Primetime Emmys' },
+  KXEMMYCSERIES: { command: 'AWRD comedy series', source: 'Primetime Emmys' },
+  KXEMMYDSERIES: { command: 'AWRD drama series', source: 'Primetime Emmys' },
+  KXEMMYLSERIES: { command: 'AWRD limited series', source: 'Primetime Emmys' },
+  KXMOSTWINSEMMYS: { command: 'AWRD drama series', source: 'Primetime Emmys' },
+
+  KXGRAM: { command: 'AWRD album of the year', source: 'Grammys' },
+  KXGRAMAOTY: { command: 'AWRD album of the year', source: 'Grammys' },
+  KXLGRAM: { command: 'AWRD album of the year', source: 'Grammys' },
+  KXGRAMMYNOMROTY: { command: 'AWRD record of the year', source: 'Grammys' },
+  KXGRAMMYNOMSOTY: { command: 'AWRD song of the year', source: 'Grammys' },
+  KXGRAMMYNOMNAOTY: { command: 'AWRD new artist', source: 'Grammys' },
+
+  KXGAMEAWARDS: { command: 'AWRD game of the year', source: 'The Game Awards' },
+  KXGOLDENGLOBE: { command: 'AWRD golden globe', source: 'Golden Globes' },
+  KXBAFTA: { command: 'AWRD bafta', source: 'BAFTA' },
+
+  // ---- google trends -------------------------------------------------------
+  KXRANKLISTGOOGLESEARCH: { command: 'TRND', source: 'Google Trends' },
+  KXGOOGLESEARCH: { command: 'TRND', source: 'Google Trends' },
+
+  // ---- release calendars ---------------------------------------------------
+  // These ask *when*, which `BB` and `SPOT` cannot answer: both rank what has
+  // already come out, and the market is about a record that has not.
+  // Music only. Apple's Search API no longer returns films, so the film
+  // release-date series (`KXMOVIERELEASEDATE`, `KXMEDIARELEASE*`) deliberately
+  // stay unmapped rather than pointing at a command that cannot answer them.
+  KXALBUMRELEASE: { command: 'REL', source: 'Apple / iTunes' },
+  KXSONGRELEASE: { command: 'REL', source: 'Apple / iTunes' },
+  KXNEWTAYLOR: { command: 'REL taylor swift', source: 'Apple / iTunes' },
+  KXCATALOGUE: { command: 'REL', source: 'Apple / iTunes' },
+
+  // First-week-sales and debut-position markets settle on Billboard's own
+  // chart, per their settlement_sources — not on the release feed above.
+  KXALBUMDEBUT: { command: 'BB billboard-200', source: 'Billboard 200' },
+  KXALBUMVS: { command: 'BB billboard-200', source: 'Luminate / Billboard' },
+  KXBBCHARTPOSITIONSONG: { command: 'BB hot-100', source: 'Billboard Hot 100' },
+  KXBBCHARTPOSITIONALBUM: { command: 'BB billboard-200', source: 'Billboard 200' },
+  KXBBCHARTTOP3: { command: 'BB hot-100', source: 'Billboard Hot 100' },
+
+  // ---- podcasts ------------------------------------------------------------
+  KXTOPPOD: { command: 'POD', source: 'Apple Podcasts' },
+  KXPODCASTGUEST: { command: 'POD episodes', source: 'Apple Podcasts' },
+  KXROGANGUEST: { command: 'POD episodes', source: 'Apple Podcasts' },
+  KXCALLHERDADDY: { command: 'POD episodes', source: 'Apple Podcasts' },
 };
 
 /** Longest matching prefix in `table`, or undefined. */

@@ -600,6 +600,128 @@ export interface SteamChart {
   sourceUrl: string;
 }
 
+/* --------------------------------------------------------- entertainment: awards */
+
+/**
+ * One recipient of an award, at one ceremony.
+ *
+ * `won` distinguishes the winner from the rest of the field. `year` is the
+ * ceremony, taken from the statement's own date qualifier, and is `null` when
+ * Wikidata records the award without saying which year — a real record with a
+ * missing field, not something to drop.
+ */
+export interface AwardEntry {
+  /** Wikidata item id, e.g. `Q104123`. */
+  id: string;
+  name: string;
+  /**
+   * The work the nomination was for, when the recipient is a person. Empty when
+   * the recipient *is* the work, as it is for Best Picture.
+   */
+  work: string;
+  won: boolean;
+  year: number | null;
+}
+
+export interface AwardResult {
+  /** Wikidata item id for the award category itself. */
+  awardId: string;
+  /** The award's canonical Wikidata label. */
+  award: string;
+  /** Ceremony year requested, or `null` for every year on record. */
+  year: number | null;
+  entries: AwardEntry[];
+  /** Ceremony years present in `entries`, newest first. */
+  years: number[];
+  sourceUrl: string;
+  /**
+   * Why the result looks the way it does — an unannounced ceremony, or a field
+   * with no winner yet. Shown verbatim; absent when there is nothing to say.
+   */
+  note?: string;
+}
+
+/* --------------------------------------------------------- entertainment: trends */
+
+export interface TrendEntry {
+  rank: number;
+  /** The search term itself. */
+  query: string;
+  /**
+   * Google's stated *lower bound* on searches (`500+`, `2M+`), never an exact
+   * count. `null` when the feed omitted it.
+   */
+  trafficFloor: number | null;
+  /** When the term started trending, as the feed states it (RFC 822). */
+  startedAt: string;
+  /** The story Google attributes the spike to. */
+  headline: string;
+  headlineSource: string;
+  headlineUrl: string;
+  /** How many news items the feed attached. */
+  articles: number;
+}
+
+export interface TrendList {
+  /** ISO-3166 alpha-2, uppercase. */
+  geo: string;
+  geoLabel: string;
+  entries: TrendEntry[];
+  sourceUrl: string;
+}
+
+/* ------------------------------------------------------- entertainment: releases */
+
+export interface Release {
+  title: string;
+  artist: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** `album`, `song` or `movie`. */
+  kind: string;
+  trackCount: number | null;
+  genre: string;
+  url: string;
+  /** True when `date` is still ahead — a pre-order or an announced record. */
+  upcoming: boolean;
+}
+
+export interface ReleaseList {
+  query: string;
+  kind: string;
+  kindLabel: string;
+  /** Newest first, upcoming releases included. */
+  releases: Release[];
+  sourceUrl: string;
+}
+
+/* ------------------------------------------------------- entertainment: podcasts */
+
+export interface PodcastEntry {
+  rank: number;
+  name: string;
+  /** Publisher on the show chart; the show itself on the episode chart. */
+  publisher: string;
+  genre: string;
+  /** `YYYY-MM-DD`, when Apple states one. */
+  released: string;
+  explicit: boolean;
+  url: string;
+}
+
+export interface PodcastChart {
+  /** `top` for shows, `episodes` for episodes. */
+  view: string;
+  viewLabel: string;
+  /** ISO-3166 alpha-2, uppercase. */
+  country: string;
+  title: string;
+  /** When Apple last rebuilt the chart, as the feed states it. */
+  updated: string;
+  entries: PodcastEntry[];
+  sourceUrl: string;
+}
+
 /* ------------------------------------------------------- entertainment: tv guide */
 
 export interface TvEpisode {

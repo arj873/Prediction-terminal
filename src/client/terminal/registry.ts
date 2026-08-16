@@ -15,6 +15,13 @@ import { THEMES, type ThemeName } from '../state.js';
 import { BillboardChartsPanel, BillboardPanel } from '../panels/billboard.js';
 import { ChartPanel, type ChartStyle } from '../panels/chart.js';
 import { EventPanel, SearchPanel, TopPanel, WatchlistPanel } from '../panels/browse.js';
+import {
+  AwardListPanel,
+  AwardPanel,
+  PodcastPanel,
+  ReleasePanel,
+  TrendsPanel,
+} from '../panels/culture.js';
 import { EntPanel, RtPanel, RtSearchPanel } from '../panels/entertainment.js';
 import { FredPanel, FredSearchPanel } from '../panels/fred.js';
 import {
@@ -609,6 +616,109 @@ export const COMMANDS: Command[] = [
       const query = command.args.join(' ').trim();
       const id = SteamPanel.idFor(query);
       panels.open(id, () => new SteamPanel(id, panelContext, query));
+    },
+  },
+  {
+    verb: 'AWRD',
+    aliases: ['AWARD', 'AWARDS'],
+    group: 'data',
+    summary: 'Award nominees and winners (settles Kalshi KXOSCAR*, KXEMMY*, KXGRAM*)',
+    usage: 'AWRD [award] [year]',
+    examples: ['AWRD', 'AWRD best picture', 'AWRD best picture 2026', 'AWRD game of the year'],
+    handler(command, { panels, panelContext }) {
+      // `AWRD` alone lists what the terminal can look up, rather than erroring.
+      if (command.args.length === 0) {
+        panels.open(
+          AwardListPanel.ID,
+          () => new AwardListPanel(AwardListPanel.ID, panelContext),
+        );
+        return;
+      }
+
+      // A trailing four-digit token is the ceremony year; everything before it
+      // is the award name, which is free text and usually several words.
+      const args = [...command.args];
+      const last = args[args.length - 1] ?? '';
+      const year = /^\d{4}$/.test(last) ? Number(args.pop()) : undefined;
+
+      const award = args.join(' ').trim();
+      if (!award) throw new UsageError('Missing <award>');
+      if (year !== undefined && (year < 1900 || year > 2100)) {
+        throw new UsageError(`"${last}" is not a ceremony year`);
+      }
+
+      const options = { award, ...(year === undefined ? {} : { year }) };
+      const id = AwardPanel.idFor(options);
+      panels.open(id, () => new AwardPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'TRND',
+    aliases: ['TRENDS', 'GOOGLE'],
+    group: 'data',
+    summary: 'Google search trends (settles Kalshi KXRANKLISTGOOGLESEARCH*)',
+    usage: 'TRND [country]',
+    examples: ['TRND', 'TRND GB', 'TRND IN'],
+    handler(command, { panels, panelContext }) {
+      const geo = (command.args[0] ?? 'US').toUpperCase();
+      if (!/^[A-Z]{2}$/.test(geo)) {
+        throw new UsageError(`"${command.args[0]}" is not a two-letter country code`);
+      }
+      const id = TrendsPanel.idFor(geo);
+      panels.open(id, () => new TrendsPanel(id, panelContext, geo));
+    },
+  },
+  {
+    verb: 'REL',
+    aliases: ['RELEASE', 'DROPS'],
+    group: 'data',
+    summary: 'Release dates, upcoming included (settles Kalshi KXALBUMRELEASEDATE*)',
+    usage: 'REL <artist> [album|song]',
+    examples: ['REL taylor swift', 'REL sabrina carpenter song', 'REL drake'],
+    handler(command, { panels, panelContext }) {
+      const kinds = ['album', 'albums', 'song', 'songs'];
+      const args = [...command.args];
+
+      // The kind is an optional trailing word; the artist is everything else,
+      // so `REL taylor swift song` splits without needing a flag.
+      let kind = 'album';
+      const last = (args[args.length - 1] ?? '').toLowerCase();
+      if (args.length > 1 && kinds.includes(last)) {
+        args.pop();
+        kind = last.replace(/s$/, '');
+      }
+
+      const query = args.join(' ').trim();
+      if (!query) throw new UsageError('Missing <artist>');
+
+      const options = { query, kind };
+      const id = ReleasePanel.idFor(options);
+      panels.open(id, () => new ReleasePanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'POD',
+    aliases: ['PODCAST', 'PODCASTS'],
+    group: 'data',
+    summary: 'Apple podcast charts (settles Kalshi KXTOPPOD, KXPODCASTGUEST*)',
+    usage: 'POD [top|episodes] [country]',
+    examples: ['POD', 'POD episodes', 'POD top gb', 'POD episodes us'],
+    handler(command, { panels, panelContext }) {
+      let view = 'top';
+      let country = 'us';
+
+      // Order-independent, matching NFLX and SPOT.
+      for (const token of command.args) {
+        const lower = token.toLowerCase();
+        if (['top', 'shows', 'show'].includes(lower)) view = 'top';
+        else if (['episodes', 'episode', 'eps'].includes(lower)) view = 'episodes';
+        else if (/^[a-z]{2}$/.test(lower)) country = lower;
+        else throw new UsageError(`Unrecognised argument "${token}"`);
+      }
+
+      const options = { view, country };
+      const id = PodcastPanel.idFor(options);
+      panels.open(id, () => new PodcastPanel(id, panelContext, options));
     },
   },
   {

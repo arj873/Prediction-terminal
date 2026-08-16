@@ -134,4 +134,16 @@ export const TTL = {
   steam: 120_000,
   /** TV schedules: fixed a day ahead, occasionally amended. */
   tvSchedule: 30 * 60_000,
+  /**
+   * Award records: a ceremony is one night a year, and the edits that matter
+   * arrive in the hours after it. Long enough to keep WDQS traffic negligible,
+   * short enough that a winner announced mid-session shows up.
+   */
+  awards: 20 * 60_000,
+  /** Google Trends: the feed itself is rebuilt through the day. */
+  trends: 10 * 60_000,
+  /** Release calendars: a date moves on announcement, not on a schedule. */
+  releases: 60 * 60_000,
+  /** Apple's podcast charts: recomputed daily. */
+  podcasts: 60 * 60_000,
 } as const;

@@ -912,6 +912,34 @@ button {
   font-size: var(--size-tiny);
 }
 
+/* ------------------------------------------------- awrd / trnd / rel / pod */
+
+.awrd-table td,
+.trnd-table td,
+.rel-table td,
+.pod-table td {
+  vertical-align: middle;
+  max-width: 44ch;
+}
+
+/*
+ * A winner and an upcoming release are the two rows a reader is scanning for,
+ * so both get a left rule rather than only a coloured cell — colour alone is
+ * easy to miss in a dense table and carries nothing without it.
+ */
+.awrd-won td:first-child {
+  box-shadow: inset 2px 0 0 var(--up);
+}
+
+.rel-upcoming td:first-child {
+  box-shadow: inset 2px 0 0 var(--up);
+}
+
+.awrd-list-table td:first-child {
+  color: var(--fg-bright);
+  white-space: nowrap;
+}
+
 /* -------------------------------------------------------------- search/evt */
 
 .group {

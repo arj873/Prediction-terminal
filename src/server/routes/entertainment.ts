@@ -2,18 +2,22 @@
  * Entertainment routes.
  *
  * One router for the whole entertainment surface — the Kalshi market browser
- * and the six data feeds those markets settle against — because they are one
+ * and the ten data feeds those markets settle against — because they are one
  * feature and share a prefix. Each handler is a thin shell: validation lives in
  * the source modules next to the parsers that depend on it.
  */
 
 import { Router } from 'express';
+import * as awards from '../sources/awards.js';
 import * as boxoffice from '../sources/boxoffice.js';
 import * as entertainment from '../sources/entertainment.js';
 import * as netflix from '../sources/netflix.js';
+import * as podcasts from '../sources/podcasts.js';
+import * as releases from '../sources/releases.js';
 import * as rt from '../sources/rottentomatoes.js';
 import * as steam from '../sources/steam.js';
 import * as streamcharts from '../sources/streamcharts.js';
+import * as trends from '../sources/trends.js';
 import * as tvmaze from '../sources/tvmaze.js';
 import { asyncRoute, intParam } from './helpers.js';
 
@@ -112,6 +116,61 @@ entertainmentRouter.get(
       ? steam.getTop(intParam(req.query['limit'], 25, 1, 100))
       : steam.getGame(query);
   }),
+);
+
+/* -------------------------------------------------------------------- awards */
+
+entertainmentRouter.get('/awards/list', (_req, res) => {
+  res.json({ awards: awards.AWARD_MENU });
+});
+
+entertainmentRouter.get(
+  '/awards',
+  asyncRoute(async (req) => {
+    const year = str(req.query['year']);
+    return awards.getAward(
+      str(req.query['q']),
+      // An omitted year means every ceremony on record, which is a different
+      // request from a year with nothing in it — so it stays `null`, not 0.
+      year === '' ? null : awards.assertYear(year),
+      intParam(req.query['limit'], 300, 1, 500),
+    );
+  }),
+);
+
+/* -------------------------------------------------------------------- trends */
+
+entertainmentRouter.get(
+  '/trends',
+  asyncRoute(async (req) =>
+    trends.getTrending(str(req.query['geo'], 'US'), intParam(req.query['limit'], 25, 1, 50)),
+  ),
+);
+
+/* ------------------------------------------------------------------ releases */
+
+entertainmentRouter.get(
+  '/releases',
+  asyncRoute(async (req) =>
+    releases.getReleases(
+      str(req.query['q']),
+      str(req.query['kind'], 'album') || 'album',
+      intParam(req.query['limit'], 25, 1, 100),
+    ),
+  ),
+);
+
+/* ------------------------------------------------------------------ podcasts */
+
+entertainmentRouter.get(
+  '/podcasts',
+  asyncRoute(async (req) =>
+    podcasts.getChart(
+      str(req.query['view'], 'top') || 'top',
+      str(req.query['country'], 'us') || 'us',
+      intParam(req.query['limit'], 50, 1, 100),
+    ),
+  ),
 );
 
 /* ------------------------------------------------------------------ tv guide */

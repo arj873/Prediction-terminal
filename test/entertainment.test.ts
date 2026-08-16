@@ -81,6 +81,66 @@ describe('feedFor', () => {
   it('returns undefined for a series with no terminal feed', () => {
     assert.equal(feedFor('KXSEXYMAN'), undefined);
   });
+
+  /**
+   * The award tickers are the densest prefix family in the table, and the
+   * collisions are not obvious: `KXOSCARSUPACTO` starts with `KXOSCARS`, so a
+   * rule keyed on that would quietly claim every supporting-actor market for
+   * Original Screenplay. Longest-prefix resolution is what prevents it, and
+   * these are the pairs that would silently swap.
+   */
+  it('resolves each award category to its own AWRD lookup', () => {
+    assert.equal(feedFor('KXOSCARPIC-27')?.command, 'AWRD best picture');
+    assert.equal(feedFor('KXOSCARDIR')?.command, 'AWRD best director');
+    assert.equal(feedFor('KXOSCARACTO')?.command, 'AWRD best actor');
+    assert.equal(feedFor('KXOSCARACTR')?.command, 'AWRD best actress');
+    assert.equal(feedFor('KXOSCARSUPACTO')?.command, 'AWRD supporting actor');
+    assert.equal(feedFor('KXOSCARSUPACTR')?.command, 'AWRD supporting actress');
+    assert.equal(feedFor('KXOSCARSPLAY')?.command, 'AWRD original screenplay');
+    assert.equal(feedFor('KXOSCARASPLAY')?.command, 'AWRD adapted screenplay');
+    assert.equal(feedFor('KXGAMEAWARDS')?.command, 'AWRD game of the year');
+    assert.equal(feedFor('KXEMMYCSERIES')?.command, 'AWRD comedy series');
+    assert.equal(feedFor('KXEMMYDSERIES')?.command, 'AWRD drama series');
+  });
+
+  it('keeps a nominee series on the same category as its winner series', () => {
+    assert.equal(feedFor('KXOSCARNOMPIC')?.command, feedFor('KXOSCARPIC')?.command);
+    assert.equal(feedFor('KXOSCARNOMSUPACTR')?.command, feedFor('KXOSCARSUPACTR')?.command);
+  });
+
+  it('falls back to the family rule for a category the table has not seen', () => {
+    assert.equal(feedFor('KXOSCARSOMETHINGNEW')?.command, 'AWRD best picture');
+    assert.equal(feedFor('KXEMMYSOMETHINGNEW')?.command, 'AWRD drama series');
+  });
+
+  it('points the newer feeds at their own commands', () => {
+    assert.equal(feedFor('KXRANKLISTGOOGLESEARCHTOP5')?.command, 'TRND');
+    assert.equal(feedFor('KXALBUMRELEASEDATEBEY')?.command, 'REL');
+    assert.equal(feedFor('KXNEWTAYLOR-TS')?.command, 'REL taylor swift');
+    assert.equal(feedFor('KXTOPPOD')?.command, 'POD');
+    assert.equal(feedFor('KXROGANGUEST')?.command, 'POD episodes');
+  });
+
+  /**
+   * A debut-position market settles on the Billboard chart, not on the release
+   * feed, even though its ticker sits in the `KXALBUM*` family — the mapping
+   * follows each series' own `settlement_sources`, not the ticker's shape.
+   */
+  it('keeps chart-position series on Billboard rather than the release feed', () => {
+    assert.equal(feedFor('KXALBUMDEBUT')?.command, 'BB billboard-200');
+    assert.equal(feedFor('KXALBUMVS')?.command, 'BB billboard-200');
+    assert.equal(feedFor('KXALBUMEQUIV')?.command, 'BB billboard-200');
+  });
+
+  /**
+   * Apple's Search API no longer returns films, so `REL` is music-only and the
+   * film release-date series stay unmapped on purpose. A feed that opens a panel
+   * which cannot answer is worse than no feed column at all.
+   */
+  it('leaves film release-date series unmapped', () => {
+    assert.equal(feedFor('KXMOVIERELEASEDATE'), undefined);
+    assert.equal(feedFor('KXMEDIARELEASEST'), undefined);
+  });
 });
 
 describe('assertGenre', () => {

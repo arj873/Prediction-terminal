@@ -14,6 +14,8 @@ feeds Kalshi settles against — driven entirely from a command prompt.
 > BB hot-100
 > ENT film
 > RT dune part three
+> AWRD best picture 2026
+> TRND US
 ```
 
 Type a command, get a panel. Panels tile into a grid, poll on their own timers,
@@ -97,9 +99,17 @@ does exactly what naming its event ticker does.
 | `BO` | `BO [YYYY-MM-DD]` | Domestic daily box office |
 | `STEAM` | `STEAM [game\|appid]` | Live concurrent players, or the most-played leaderboard |
 | `TV` | `TV [YYYY-MM-DD] [country]` | What airs that day, by network |
+| `AWRD` | `AWRD [award] [year]` · `AWRD` | Nominees and winners for a ceremony; bare `AWRD` lists the awards |
+| `TRND` | `TRND [country]` | What is being searched on Google right now, and why |
+| `REL` | `REL <artist> [album\|song]` | An artist's releases, newest first, announced ones flagged |
+| `POD` | `POD [top\|episodes] [country]` | Apple's podcast charts |
 
-`NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
-and `NFLX gb films` are the same chart.
+`NFLX`, `SPOT`, `TV` and `POD` take their arguments in any order, so `NFLX films
+gb` and `NFLX gb films` are the same chart.
+
+`AWRD` and `REL` read a trailing token as the year and the kind respectively, so
+the free-text part can be as many words as it needs: `AWRD supporting actress
+2026`, `REL sabrina carpenter song`.
 
 ### Entertainment markets, and what settles them
 
@@ -123,6 +133,49 @@ resolves against. Those pairings are read off each series' own
 | `KXTOPSONG`, `KXTOPALBUM`, `KXALBUMEQUIV` | Billboard / Luminate | `BB` |
 | `KXSTEAM*`, `GAMERANK` | Steam | `STEAM` |
 | `KXBIGBROTHER*`, `KXDWTS`, `KXSNL` | what actually aired | `TV` |
+| `KXOSCAR*`, `KXEMMY*`, `KXGRAM*`, `KXGAMEAWARDS` | the awarding body | `AWRD` |
+| `KXRANKLISTGOOGLESEARCH*`, `KXGOOGLESEARCH` | Google Trends | `TRND` |
+| `KXALBUMRELEASE*`, `KXSONGRELEASE*`, `KXNEWTAYLOR` | Spotify / the release itself | `REL` |
+| `KXTOPPOD`, `KXROGANGUEST`, `KXPODCASTGUEST*` | Apple Podcasts | `POD` |
+
+Each Oscar and Emmy category maps to the `AWRD` argument that looks up *that*
+category, not a generic one — `KXOSCARSUPACTR` shows `AWRD supporting actress` —
+because the point of the column is that clicking it answers the market's own
+question.
+
+#### Coverage
+
+Measured against a full crawl of the open universe — 545 entertainment events
+across 307 series:
+
+| | series with a feed | 24h volume | open interest |
+| --- | --- | --- | --- |
+| before | 69 / 307 | 78.0% | 38.9% |
+| after | 154 / 307 | 93.2% | 72.7% |
+
+Awards were the large hole — 57 of the 85 newly-covered series and ~89% of the
+newly-covered volume. `KXOSCARPIC` alone carries 2.7M in open interest, more than
+any single market the terminal already covered, which is why open-interest
+coverage nearly doubles while volume coverage moves 15 points.
+
+#### What is still uncovered, and why
+
+What remains uncovered is uncovered for a reason worth stating rather than
+papering over:
+
+* **Film release dates and casting** (`KXMOVIERELEASEDATE`, `KXROLEINPRODUCTION*`,
+  `KXBOND`) settle on trade reporting — Variety, Deadline, Marvel's own site.
+  Apple's Search API used to answer the release-date half; it now returns
+  `resultCount: 0` for every film title while music works normally, so `REL` is
+  music-only and these series are deliberately left unmapped.
+* **Live events and tours** (`KXHEADLINE`, `KXTOUR`, `KXVENUEPERFORMANCE*`) have
+  no key-free structured source — Ticketmaster, Songkick and Bandsintown all
+  require credentials.
+* **Auctions** (`KXART`, `KXHERMES*`) settle on Sotheby's, which publishes no
+  machine-readable results feed.
+
+A market with no `FEED` column has no feed, which is the honest reading; the
+alternative is a command that opens a panel and cannot answer.
 
 ### Workspace
 
@@ -164,6 +217,9 @@ browser (Vite + TypeScript, no framework)
                     ├── Netflix    published TSV at netflix.com/tudum/top10
                     ├── TVmaze     public JSON API
                     ├── Steam      Valve's API + steamcharts.com
+                    ├── Wikidata   WDQS SPARQL — award nominees and winners
+                    ├── Google     trending-search RSS
+                    ├── Apple      iTunes Search + the podcast chart JSON
                     └── scraped    rottentomatoes.com, boxofficemojo.com, kworb.net
 ```
 
@@ -227,6 +283,49 @@ figures the `KXNETFLIX*` markets settle on. The country file is ~31 MB, so it is
 fetched at most once per TTL, reduced immediately to the latest week for *every*
 country, and only that reduction is cached — `NFLX us` and `NFLX gb` share one
 download. Expect the first country request after a cold start to take ~10s.
+
+**Awards come from Wikidata, and winners are firmer than nominees.** The bodies
+that settle these markets do not answer a datacentre IP — oscars.org and its
+awards database both return 403 from a container, the way fred.stlouisfed.org
+resets one. Wikidata does answer, and holds the same facts as statements
+(`P166` award received, `P1411` nominated for, qualified by `P585` for the
+ceremony year). The asymmetry matters: editors record a winner within minutes and
+fill the losing slate in over days or weeks — the 98th Academy Awards had its
+Best Picture winner immediately and three of ten nominees. The panel says so
+above the table and reports the count it actually got, because a partial ballot
+presented as a whole one is exactly the kind of wrong number that still looks
+right. A ceremony that has not happened returns nothing at all, and *that is the
+answer*: `AWRD best picture 2027` reads "nominations are announced weeks before
+the ceremony", not `not_found`.
+
+Queries go to the WDQS SPARQL endpoint, not `wikidata.org/w/api.php`, which
+rate-limits shared egress hard enough to 429 on the first request. Entity search
+still happens against the MediaWiki API, but *server-side* through WDQS's
+`wikibase:mwapi` service, so the request Wikimedia throttles comes from WDQS
+rather than from here. The two halves of a ceremony are also two queries rather
+than one `UNION`: combined, the join runs the label service over the product of
+both statement patterns, and WDQS answers Best Picture with a 502.
+
+**`TRND` is today's list, not December's ranking.** `KXRANKLISTGOOGLESEARCH`
+settles on Google's annual Year in Search, published once, in December. What the
+feed carries is what is trending right now — the evidence a trader has in August
+for a market that resolves in December, the same relationship `BO` has to a
+total-gross market. The panel labels it rather than implying it is the ranking.
+Traffic figures are lower bounds (`500+`, `2M+`) and are rendered with the `+`,
+because that is part of what the number means; an absent figure is `null`, never
+zero.
+
+**An artist search is not a keyword search.** `REL` passes Apple's
+`attribute=artistTerm`, which narrows the result set but does not close it: five
+of fifty live results for "taylor swift" were tribute and covers acts. Those
+release weekly, so they sort to the *top* of a newest-first list, and the panel
+would have answered "her latest album" with a compilation by a band called
+8waves. Results are therefore held to the artist named, with containment either
+way so a record credited to "Madonna & Sabrina Carpenter" still counts. The
+dedupe is conservative for the mirror-image reason: collapsing bracketed suffixes
+folds `1989` together with `1989 (Taylor's Version)`, and those are two releases
+that two different markets trade. Apple also accepts `sort=recent` and ignores
+it, so the ordering is done here and the tests pin it.
 
 **Spotify and YouTube come via kworb.net, and the panel says so.** Neither
 platform publishes those numbers in a form a server can read — charts.spotify.com
@@ -293,6 +392,10 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
+| `WIKIDATA_SPARQL_BASE` | WDQS | Override the awards upstream |
+| `GOOGLE_TRENDS_BASE` | `https://trends.google.com` | Override the trends upstream |
+| `ITUNES_API_BASE` | `https://itunes.apple.com` | Override the release-calendar upstream |
+| `APPLE_RSS_BASE` | Apple marketing RSS v2 | Override the podcast-chart upstream |
 
 ### About FRED and `FRED_API_KEY`
 
@@ -363,6 +466,11 @@ Crypto has no such issue: Coinbase answers from anywhere.
 | `GET /api/ent/boxoffice?date=` | Domestic daily box office |
 | `GET /api/ent/steam?q=&limit=` | Steam leaderboard, or one game's live count |
 | `GET /api/ent/tv?date=&country=` | TV schedule for a day |
+| `GET /api/ent/awards?q=&year=&limit=` | Award nominees and winners |
+| `GET /api/ent/awards/list` | Award categories with a short-name alias |
+| `GET /api/ent/trends?geo=&limit=` | Google trending searches |
+| `GET /api/ent/releases?q=&kind=&limit=` | An artist's releases, upcoming flagged |
+| `GET /api/ent/podcasts?view=&country=&limit=` | Apple podcast chart |
 | `GET /api/health` | Liveness, cache stats, whether a FRED key is set |
 
 Errors are JSON: `{ error, code, hint? }`. The `hint` is written to be shown to
@@ -374,7 +482,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 243 tests
+npm test             # 274 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
@@ -400,6 +508,14 @@ the wrong number without ever failing: the two header collisions above, a film
 with no Tomatometer, a chart with no movement column, and an upstream that
 answers `200 OK` with "no data available" instead of an error.
 
+`test/culturefeeds.test.ts` covers the four newer feeds the same way, and every
+case in it is a bug that was caught against the live upstream rather than
+imagined: a covers band heading an artist's "latest release", a dedupe that folds
+a re-recording into the original, the namespaced RSS siblings that collapse onto
+each other under an HTML parse and put an image URL where the traffic figure
+belongs, and the Game Awards alias whose real Wikidata label — spelled with a
+U+2212 minus — resolves to nothing at all.
+
 ---
 
 ## Scope
@@ -420,3 +536,10 @@ The entertainment feeds show what a market is *likely* to settle against, not
 what it *will*. Kalshi resolves against its own stated settlement sources under
 its own rules, and a scraped page can lag, revise, or disagree. Read these
 panels as the public evidence, not as the settlement.
+
+That caveat is sharpest for `AWRD` and `TRND`. Wikidata is a community database,
+not the Academy — it is what editors have recorded so far, which for a nominee
+slate is often less than the full field for days after the announcement. And the
+Google Trends feed is the daily trending list, while the markets quoting it
+settle on an annual ranking published in December. Both panels label their source
+on screen for that reason.

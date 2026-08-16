@@ -10,6 +10,7 @@
 import type {
   ApiError,
   AssetClass,
+  AwardResult,
   BillboardChart,
   BillboardChartListItem,
   BoxOfficeDay,
@@ -26,6 +27,8 @@ import type {
   Market,
   NetflixTop10,
   OrderBook,
+  PodcastChart,
+  ReleaseList,
   RtSearchResponse,
   RtTitle,
   SpotCandlesResponse,
@@ -35,6 +38,7 @@ import type {
   StreamChart,
   StreamChartListItem,
   TradesResponse,
+  TrendList,
   TvSchedule,
 } from '../../shared/types.js';
 
@@ -263,6 +267,25 @@ export const ent = {
 
   tv: (date?: string, country?: string, signal?: AbortSignal): Promise<TvSchedule> =>
     request(`/ent/tv${query({ date, country })}`, signal),
+
+  awards: (q: string, year?: number, signal?: AbortSignal): Promise<AwardResult> =>
+    request(`/ent/awards${query({ q, year })}`, signal),
+
+  awardList: (signal?: AbortSignal): Promise<{ awards: { key: string; label: string }[] }> =>
+    request('/ent/awards/list', signal),
+
+  trends: (geo: string, limit = 25, signal?: AbortSignal): Promise<TrendList> =>
+    request(`/ent/trends${query({ geo, limit })}`, signal),
+
+  releases: (q: string, kind: string, limit = 25, signal?: AbortSignal): Promise<ReleaseList> =>
+    request(`/ent/releases${query({ q, kind, limit })}`, signal),
+
+  podcasts: (
+    view: string,
+    country: string,
+    limit = 50,
+    signal?: AbortSignal,
+  ): Promise<PodcastChart> => request(`/ent/podcasts${query({ view, country, limit })}`, signal),
 };
 
 /* ------------------------------------------------------------------ health */
