@@ -1402,3 +1402,11 @@ button {
   flex: 1;
   min-width: 0;
 }
+
+/* An action the quoting venue cannot serve — shown, so the reader learns the
+   book exists and the feed does not, rather than silently omitted. */
+.action-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}

@@ -112,11 +112,17 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
     const ref = formatRef({ venue: market.venue, id: market.ticker });
     const event = formatRef({ venue: market.venue, id: market.eventTicker });
 
+    // Only offer what this venue actually serves. Polymarket US publishes no
+    // public price history or tape, so an enabled GP/TAS button here was a
+    // click that could only ever land on a 501 — the capability is declared on
+    // the venue registry precisely so the button can know before the reader does.
+    const caps = venueInfo(market.venue).capabilities;
+
     this.body.append(
       el('div', { class: 'panel-actions' }, [
-        this.#action('GP', `GP ${ref}`),
+        this.#action('GP', `GP ${ref}`, caps.candles ? undefined : caps.note),
         this.#action('OB', `OB ${ref}`),
-        this.#action('TAS', `TAS ${ref}`),
+        this.#action('TAS', `TAS ${ref}`, caps.trades ? undefined : caps.note),
         market.eventTicker ? this.#action('EVT', `EVT ${event}`) : null,
         market.eventTicker ? this.#action('XV', `XV ${event}`) : null,
         this.#action('+WATCH', `W ADD ${ref}`),
@@ -131,8 +137,18 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
     ]);
   }
 
-  #action(label: string, command: string): HTMLElement {
-    const button = el('button', { class: 'action', type: 'button', text: label });
+  /** A `disabledReason` means this venue cannot serve the command behind the button. */
+  #action(label: string, command: string, disabledReason?: string): HTMLElement {
+    const button = el('button', {
+      class: `action${disabledReason ? ' action-disabled' : ''}`,
+      type: 'button',
+      text: label,
+    });
+    if (disabledReason !== undefined) {
+      button.disabled = true;
+      button.title = disabledReason;
+      return button;
+    }
     button.addEventListener('click', () => this.context.run(command));
     return button;
   }

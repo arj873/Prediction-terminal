@@ -1,5 +1,6 @@
 /**
- * The venues the terminal quotes, and how a contract at one of them is named.
+ * The venues the terminal quotes: who they are, what they can answer, and how
+ * a contract at one of them is named.
  *
  * Three brokers list the same questions under three naming schemes. Kalshi has
  * upper-case tickers (`KXFEDDECISION-26SEP-T3.75`), both Polymarkets have
@@ -15,12 +16,45 @@
  * Case is part of the identifier, not decoration: Kalshi 404s a lower-case
  * ticker and Polymarket 404s an upper-case slug, so folding happens here, once,
  * per venue — never at the call site.
+ *
+ * One table drives all of it. `Venue` is *derived* from the table rather than
+ * declared beside it, so a broker that is added to one and not the other is a
+ * compile error instead of a runtime throw. Everything a venue differs by —
+ * its aliases, whether it prints bare, whether it is the default for an
+ * unprefixed reference, and which endpoints it actually serves — is a field
+ * here rather than a `=== 'kalshi'` somewhere downstream.
  */
 
-export type Venue = 'kalshi' | 'polymarket' | 'polymarket-us';
+/** How `TOP` ranks a book. Defined here because every venue declares which it can serve. */
+export type MoverSort = 'volume' | 'gainers' | 'losers' | 'open_interest' | 'liquidity';
 
-export interface VenueInfo {
-  id: Venue;
+/**
+ * What a venue's public API actually offers.
+ *
+ * Declared rather than discovered. The alternative — call the endpoint and see
+ * whether it throws `unsupported` — means the UI cannot know until after it has
+ * offered the reader a button, and it cannot tell "this venue publishes no
+ * volume" apart from "this venue is down". Both of those were live bugs.
+ */
+export interface VenueCapabilities {
+  /** Publishes price history the terminal can chart (`GP`). */
+  candles: boolean;
+  /** Publishes a public print tape (`TAS`). */
+  trades: boolean;
+  /** `listSeries` honours a category filter. */
+  seriesCategoryFilter: boolean;
+  /** The rankings this venue populates. `TOP` will not ask it for the others. */
+  sorts: readonly MoverSort[];
+  /**
+   * Why a missing capability is missing, shown to the reader in place of a
+   * dead button. Absent when the venue serves everything.
+   */
+  note?: string;
+}
+
+/** The table's own row shape. `id` widens to `string` so `Venue` can derive from it. */
+interface VenueDefinition {
+  id: string;
   /** Full name, for panel headers and error messages. */
   label: string;
   /** Short badge for a table column. */
@@ -33,9 +67,21 @@ export interface VenueInfo {
   case: 'upper' | 'lower';
   /** Public web page for a market, so a panel can link out. */
   site: string;
+  /**
+   * Names a trader might type. Deliberately generous — the cost of accepting a
+   * synonym is nil and the cost of rejecting one is a command retyped.
+   */
+  aliases: readonly string[];
+  /** An unprefixed reference belongs to this venue. Exactly one venue sets it. */
+  isDefault?: boolean;
+  /** This venue's references print without their prefix. Follows from being the default. */
+  bareRef?: boolean;
+  capabilities: VenueCapabilities;
 }
 
-export const VENUES: readonly VenueInfo[] = [
+const ALL_SORTS = ['volume', 'gainers', 'losers', 'open_interest', 'liquidity'] as const;
+
+const VENUE_TABLE = [
   {
     id: 'kalshi',
     label: 'Kalshi',
@@ -44,6 +90,17 @@ export const VENUES: readonly VenueInfo[] = [
     idLabel: 'ticker',
     case: 'upper',
     site: 'https://kalshi.com',
+    aliases: ['kalshi', 'kal', 'kx', 'k'],
+    // Every command, example and habit in this terminal predates the other two
+    // venues; an unprefixed reference has to keep meaning what it always did.
+    isDefault: true,
+    bareRef: true,
+    capabilities: {
+      candles: true,
+      trades: true,
+      seriesCategoryFilter: true,
+      sorts: ALL_SORTS,
+    },
   },
   {
     id: 'polymarket',
@@ -53,6 +110,16 @@ export const VENUES: readonly VenueInfo[] = [
     idLabel: 'slug',
     case: 'lower',
     site: 'https://polymarket.com',
+    aliases: ['polymarket', 'poly', 'pm', 'intl', 'international', 'polymarket-intl'],
+    capabilities: {
+      candles: true,
+      trades: true,
+      seriesCategoryFilter: false,
+      // The catalogue carries no open interest, so an OI board would rank it last
+      // on a figure it never published rather than on a small one.
+      sorts: ['volume', 'gainers', 'losers', 'liquidity'],
+      note: 'Polymarket publishes price samples rather than OHLC bars, and no open interest.',
+    },
   },
   {
     id: 'polymarket-us',
@@ -62,8 +129,30 @@ export const VENUES: readonly VenueInfo[] = [
     idLabel: 'slug',
     case: 'lower',
     site: 'https://polymarket.us',
+    aliases: ['polymarketus', 'polymarket-us', 'polyus', 'pmus', 'pm-us', 'us'],
+    capabilities: {
+      candles: false,
+      trades: false,
+      seriesCategoryFilter: false,
+      // Its public catalogue carries no volume, change or open interest at all,
+      // so it can be ranked on nothing.
+      sorts: [],
+      note:
+        'Polymarket US serves price history, prints and ranking figures only to an ' +
+        'authenticated caller. The terminal reads public endpoints only, so quote ' +
+        'and book (DES, OB) work and the rest say so.',
+    },
   },
-] as const;
+] as const satisfies readonly VenueDefinition[];
+
+/** Derived from the table, so the two can never disagree. */
+export type Venue = (typeof VENUE_TABLE)[number]['id'];
+
+export interface VenueInfo extends VenueDefinition {
+  id: Venue;
+}
+
+export const VENUES: readonly VenueInfo[] = VENUE_TABLE;
 
 export const VENUE_IDS: readonly Venue[] = VENUES.map((v) => v.id);
 
@@ -79,35 +168,35 @@ export function isVenue(value: string): value is Venue {
   return BY_ID.has(value as Venue);
 }
 
-/**
- * Names a trader might type for a venue.
- *
- * Deliberately generous — `pm`, `poly` and `intl` all mean the international
- * book — because the cost of accepting a synonym is nil and the cost of
- * rejecting one is a command that has to be retyped.
- */
-const ALIASES: Record<string, Venue> = {
-  kalshi: 'kalshi',
-  kal: 'kalshi',
-  kx: 'kalshi',
-  k: 'kalshi',
-  polymarket: 'polymarket',
-  poly: 'polymarket',
-  pm: 'polymarket',
-  intl: 'polymarket',
-  international: 'polymarket',
-  'polymarket-intl': 'polymarket',
-  polymarketus: 'polymarket-us',
-  'polymarket-us': 'polymarket-us',
-  polyus: 'polymarket-us',
-  pmus: 'polymarket-us',
-  'pm-us': 'polymarket-us',
-  us: 'polymarket-us',
-};
+/** The venue an unprefixed reference belongs to. */
+export const DEFAULT_VENUE: Venue = (VENUES.find((v) => v.isDefault) ?? VENUES[0]!).id;
 
-/** Read a venue name or alias. `null` when the token names no venue. */
-export function parseVenue(token: string): Venue | null {
-  return ALIASES[token.trim().toLowerCase()] ?? null;
+/** Alias → venue, built from the table rather than maintained beside it. */
+const ALIASES: ReadonlyMap<string, Venue> = new Map(
+  VENUES.flatMap((v) => v.aliases.map((alias) => [alias, v.id] as const)),
+);
+
+/**
+ * Aliases that are ordinary English words.
+ *
+ * These are fine as a prefix — `us:` is unambiguous — but must not be claimed
+ * out of free text, or `SRCH us election` quietly becomes "search Polymarket US
+ * for *election*" and `TV The Office US` searches the wrong book. A venue
+ * filter is a convenience; silently changing which exchange was searched is not.
+ */
+const PREFIX_ONLY_ALIASES: ReadonlySet<string> = new Set(['us', 'k', 'intl', 'international']);
+
+/**
+ * Read a venue name or alias. `null` when the token names no venue.
+ *
+ * `context` says where the token came from. A `prefix` reading accepts every
+ * alias; a `word` reading — one token among the words of a search — declines
+ * the ones that are also ordinary English.
+ */
+export function parseVenue(token: string, context: 'prefix' | 'word' = 'prefix'): Venue | null {
+  const key = token.trim().toLowerCase();
+  if (context === 'word' && PREFIX_ONLY_ALIASES.has(key)) return null;
+  return ALIASES.get(key) ?? null;
 }
 
 /** A contract, event or series at a named venue. */
@@ -124,16 +213,12 @@ export function normaliseId(venue: Venue, id: string): string {
 /**
  * Read `[venue:]identifier`.
  *
- * An unprefixed reference belongs to `fallback`, which is Kalshi unless a
- * caller says otherwise — every command in the terminal predates the other two
- * venues, and none of their documented examples should change meaning.
- *
  * Only a *known* prefix is treated as one. Polymarket slugs are full of
  * colons' cousins but not colons, and Kalshi tickers have none, so a bare
  * `foo:bar` with an unrecognised `foo` is far more likely to be a typo than an
  * identifier — it is reported rather than silently mangled.
  */
-export function parseRef(raw: string, fallback: Venue = 'kalshi'): VenueRef {
+export function parseRef(raw: string, fallback: Venue = DEFAULT_VENUE): VenueRef {
   const text = raw.trim();
   const colon = text.indexOf(':');
 
@@ -155,9 +240,20 @@ export function parseRef(raw: string, fallback: Venue = 'kalshi'): VenueRef {
 /**
  * The canonical string form of a reference.
  *
- * Kalshi references print bare, because that is what every existing command,
+ * The default venue prints bare, because that is what every existing command,
  * example and README line already says.
  */
 export function formatRef(ref: VenueRef): string {
-  return ref.venue === 'kalshi' ? ref.id : `${venueInfo(ref.venue).prefix}${ref.id}`;
+  const info = venueInfo(ref.venue);
+  return info.bareRef ? ref.id : `${info.prefix}${ref.id}`;
+}
+
+/** Whether a venue serves a given capability, for a UI deciding what to offer. */
+export function supports(venue: Venue, capability: 'candles' | 'trades'): boolean {
+  return venueInfo(venue).capabilities[capability];
+}
+
+/** Whether `TOP` can rank this venue by `sort`. */
+export function supportsSort(venue: Venue, sort: MoverSort): boolean {
+  return venueInfo(venue).capabilities.sorts.includes(sort);
 }

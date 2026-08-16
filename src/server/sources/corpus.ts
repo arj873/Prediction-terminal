@@ -12,6 +12,7 @@
  */
 
 import type { Market, Venue, VenueEvent } from '../../shared/types.js';
+import type { MoverSort } from '../../shared/venue.js';
 
 export interface Corpus {
   venue: Venue;
@@ -132,7 +133,12 @@ export function searchCorpus(snapshot: Corpus, query: string, limit = 25): Searc
   };
 }
 
-export type MoverSort = 'volume' | 'gainers' | 'losers' | 'open_interest' | 'liquidity';
+/**
+ * Re-exported from the venue registry, where each venue declares which of
+ * these rankings it can actually serve. Kept exported here so the source
+ * modules that rank a corpus keep importing it from the module they rank with.
+ */
+export type { MoverSort } from '../../shared/venue.js';
 
 const FIELD: Record<MoverSort, (market: Market) => number | null> = {
   volume: (m) => m.volume24h,

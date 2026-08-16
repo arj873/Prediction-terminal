@@ -9,7 +9,15 @@
  */
 
 import type { Market, Venue, VenueEvent } from '../../shared/types.js';
-import { formatRef, parseRef, venueInfo, VENUE_IDS, type VenueRef } from '../../shared/venue.js';
+import {
+  formatRef,
+  parseRef,
+  supportsSort,
+  venueInfo,
+  VENUE_IDS,
+  type MoverSort,
+  type VenueRef,
+} from '../../shared/venue.js';
 import { venue, type SearchResponse } from '../lib/api.js';
 import { cell, el, row, table } from '../lib/dom.js';
 import { cents, compact, countdown, direction, signedCents, truncate } from '../lib/format.js';
@@ -244,8 +252,10 @@ const SORT_LABEL: Record<string, string> = {
 interface TopData {
   sort: string;
   markets: Market[];
-  /** Venues that ranked nothing, and why — usually "publishes no such figure". */
-  silent: Venue[];
+  /** Venues whose API does not publish this figure at all. */
+  cannotRank: Venue[];
+  /** Venues that do publish it but did not answer. */
+  unavailable: Venue[];
 }
 
 export class TopPanel extends Panel<TopData> {
@@ -278,17 +288,23 @@ export class TopPanel extends Panel<TopData> {
   }
 
   protected override async load(signal: AbortSignal): Promise<TopData> {
+    // A venue that does not publish this figure is not asked for it. Inferring
+    // that from an empty result made an outage indistinguishable from a fact
+    // about the venue's API — and the panel said the wrong one out loud.
+    const ranked = this.#venues.filter((v) => supportsSort(v, this.#sort as MoverSort));
+    const cannotRank = this.#venues.filter((v) => !ranked.includes(v));
+
     const settled = await Promise.allSettled(
-      this.#venues.map((v) => venue.top(v, this.#sort, 30, signal)),
+      ranked.map((v) => venue.top(v, this.#sort, 30, signal)),
     );
 
     const markets: Market[] = [];
-    const silent: Venue[] = [];
+    const unavailable: Venue[] = [];
 
     settled.forEach((result, i) => {
-      const v = this.#venues[i]!;
-      if (result.status !== 'fulfilled' || result.value.markets.length === 0) silent.push(v);
-      if (result.status === 'fulfilled') markets.push(...result.value.markets);
+      const v = ranked[i]!;
+      if (result.status !== 'fulfilled') unavailable.push(v);
+      else markets.push(...result.value.markets);
     });
 
     const field = (m: Market): number =>
@@ -302,22 +318,37 @@ export class TopPanel extends Panel<TopData> {
 
     markets.sort((a, b) => (this.#sort === 'losers' ? field(a) - field(b) : field(b) - field(a)));
 
-    return { sort: this.#sort, markets: markets.slice(0, 30), silent };
+    return { sort: this.#sort, markets: markets.slice(0, 30), cannotRank, unavailable };
   }
 
   protected override render(data: TopData): void {
     if (data.markets.length === 0) {
-      this.body.append(el('div', { class: 'panel-empty', text: 'No markets to rank yet.' }));
+      const why =
+        data.cannotRank.length === this.#venues.length
+          ? `No venue in this scope publishes ${SORT_LABEL[data.sort] ?? data.sort}.`
+          : 'No markets to rank yet.';
+      this.body.append(el('div', { class: 'panel-empty', text: why }));
       return;
     }
 
-    // A venue that publishes no volume cannot appear on a volume board, and
-    // that is a fact about its API rather than about its book. Say which.
-    if (data.silent.length > 0) {
+    // Two different absences, and a trader needs to tell them apart: a venue
+    // that publishes no volume cannot appear on a volume board however healthy
+    // it is, whereas a venue that does publish it and did not answer is an
+    // outage. Reporting the second as the first was actively misleading.
+    const label = SORT_LABEL[data.sort] ?? data.sort;
+    if (data.cannotRank.length > 0) {
       this.body.append(
         el('div', {
           class: 'result-note dim',
-          text: `${data.silent.map((v) => venueInfo(v).label).join(', ')} publishes no ${SORT_LABEL[data.sort] ?? data.sort} and is not ranked here.`,
+          text: `${data.cannotRank.map((v) => venueInfo(v).label).join(', ')} publishes no ${label} and is not ranked here.`,
+        }),
+      );
+    }
+    if (data.unavailable.length > 0) {
+      this.body.append(
+        el('div', {
+          class: 'result-note down',
+          text: `${data.unavailable.map((v) => venueInfo(v).label).join(', ')} did not answer — these rankings are incomplete.`,
         }),
       );
     }
