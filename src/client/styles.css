@@ -912,6 +912,16 @@ button {
   font-size: var(--size-tiny);
 }
 
+/*
+ * Two stacked lines in one cell — a title over its artist, a headline over its
+ * summary. Every ranked feed builds this the same way, so the width bound
+ * belongs on the cell rather than on `.bb-table td`: the stream charts reused
+ * the same markup and, being a different table, silently missed the sizing.
+ */
+.stacked-cell {
+  max-width: 44ch;
+}
+
 /* -------------------------------------------------------------- search/evt */
 
 .group {

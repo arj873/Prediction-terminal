@@ -223,6 +223,28 @@ export function move(value: number | null): string {
   return value > 0 ? `+${value}` : `${value}`;
 }
 
+/**
+ * Rank movement, as text and a tone, with `unknown` kept distinct from `held`.
+ *
+ * {@link move} reads a null as a debut, which is right for Billboard — where
+ * the parser derives `move` and `isNew` from the same missing last-week rank —
+ * and wrong for any chart that simply has no movement column, where it would
+ * report every row as NEW. This reads the debut flag instead of inferring it,
+ * so both kinds of feed render correctly from one helper.
+ */
+export function rankMove(value: number | null, isNew: boolean): { text: string; tone: string } {
+  if (isNew) return { text: 'NEW', tone: 'new' };
+  if (value === null) return { text: '—', tone: 'dim' };
+  if (value === 0) return { text: '=', tone: 'dim' };
+  return { text: value > 0 ? `+${value}` : `${value}`, tone: value > 0 ? 'up' : 'down' };
+}
+
+/** `$19,000,000` → `$19.0M`, for money that belongs in a fixed-width column. */
+export function money(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EM_DASH;
+  return `$${compact(value)}`;
+}
+
 /** CSS class for a directional value. Drives the up/down colouring. */
 export function direction(value: number | null | undefined): 'up' | 'down' | 'flat' {
   if (value === null || value === undefined || !Number.isFinite(value) || value === 0) return 'flat';
