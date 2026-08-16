@@ -122,6 +122,8 @@ export const TTL = {
   fred: 30 * 60_000,
   /** Billboard: refreshes once a week. */
   billboard: 60 * 60_000,
+  /** News: a wire. Short enough to feel live, long enough that N panels are 1 call. */
+  news: 30_000,
   /** Rotten Tomatoes: reviews trickle in, and a score can move mid-day. */
   rottenTomatoes: 15 * 60_000,
   /** Netflix Top 10: published once a week, on Tuesdays. */

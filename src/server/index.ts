@@ -23,8 +23,10 @@ import { entertainmentRouter } from './routes/entertainment.js';
 import { fredRouter } from './routes/fred.js';
 import { impliedRouter } from './routes/implied.js';
 import { kalshiRouter } from './routes/kalshi.js';
+import { newsRouter } from './routes/news.js';
 import { spotRouter } from './routes/spot.js';
 import { venueRouter } from './routes/venue.js';
+import { hasCredentials as hasAlpacaCredentials } from './sources/alpaca.js';
 import { warmIndexes } from './sources/crossvenue.js';
 import { warmAll } from './sources/venues.js';
 
@@ -87,6 +89,7 @@ export function createApp(): express.Express {
   app.use('/api/fred', fredRouter);
   app.use('/api/billboard', billboardRouter);
   app.use('/api/ent', entertainmentRouter);
+  app.use('/api/news', newsRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -94,6 +97,7 @@ export function createApp(): express.Express {
       uptimeSeconds: Math.round(process.uptime()),
       cache: cache.stats(),
       fredApiKey: Boolean(process.env.FRED_API_KEY?.trim()),
+      alpacaKeys: hasAlpacaCredentials(),
       time: new Date().toISOString(),
     });
   });
@@ -117,7 +121,9 @@ export function createApp(): express.Express {
     if (res.headersSent) return;
 
     if (err instanceof UpstreamError) {
-      // `bad_request` is the caller's fault; everything else is the upstream's.
+      // `bad_request` is the caller's fault, `not_configured` is the operator's
+      // — an unset key is this deployment not offering the feed, not a bad
+      // gateway — and everything else is the upstream's.
       const status =
         err.code === 'bad_request'
           ? 400
@@ -127,9 +133,11 @@ export function createApp(): express.Express {
               // does not publish this. A 501 says that and nothing else.
               err.code === 'unsupported'
               ? 501
-              : err.code === 'upstream_timeout'
-                ? 504
-                : 502;
+              : err.code === 'not_configured'
+                ? 503
+                : err.code === 'upstream_timeout'
+                  ? 504
+                  : 502;
       const body: ApiError = { error: err.message, code: err.code };
       if (err.hint) body.hint = err.hint;
       if (err.status) body.status = err.status;
@@ -163,8 +171,12 @@ if (invokedDirectly) {
     console.log(`  fred       /api/fred/{series/:id,search}`);
     console.log(`  billboard  /api/billboard/{charts,chart/:slug}`);
     console.log(`  ent        /api/ent/{markets,rt,netflix,spotify,youtube,boxoffice,steam,tv}`);
+    console.log(`  news       /api/news?symbols=&limit=&days=`);
     if (!process.env.FRED_API_KEY?.trim()) {
       console.log(`  note: FRED_API_KEY unset — FRED uses scraping only (no fallback).`);
+    }
+    if (!hasAlpacaCredentials()) {
+      console.log(`  note: ALPACA_API_KEY_ID/SECRET unset — NEWS is unavailable until they are.`);
     }
     // Crawl all three catalogues in the background, then pair their series up,
     // so the first `SRCH` or `XV` does not pay the cold-start cost.

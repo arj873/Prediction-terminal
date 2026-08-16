@@ -2,10 +2,10 @@
 
 A Bloomberg-style terminal for three prediction markets — [Kalshi](https://kalshi.com),
 [Polymarket](https://polymarket.com) and [Polymarket US](https://polymarket.us) —
-plus live stock and crypto prices, [FRED](https://fred.stlouisfed.org) economic
-data, the [Billboard](https://www.billboard.com/charts/) charts, and the
-entertainment feeds these markets settle against, driven entirely from a command
-prompt.
+plus live stock and crypto prices, the [Alpaca](https://alpaca.markets) news
+wire, [FRED](https://fred.stlouisfed.org) economic data, the
+[Billboard](https://www.billboard.com/charts/) charts, and the entertainment
+feeds these markets settle against, driven entirely from a command prompt.
 
 ```
 > GP KXFEDDECISION-27JAN-H26 1d 1y
@@ -14,6 +14,7 @@ prompt.
 > XV fed                      # what else more than one broker lists
 > STK NVDA 1d 1y
 > IMP BTC                     # Kalshi's implied BTC price, over the real one
+> NEWS NVDA
 > FRED UNRATE
 > BB hot-100
 ```
@@ -113,6 +114,7 @@ does exactly what naming its event ticker does.
 
 | Command | Usage | What it does |
 | --- | --- | --- |
+| `NEWS` | `NEWS [symbol…] [count] [window]` | The news wire, for a symbol or the whole tape |
 | `FRED` | `FRED <series-id> [start] [end]` | Economic series chart plus units, frequency and vintage |
 | `FSRCH` | `FSRCH <words>` | Find a FRED series id |
 | `BB` | `BB [chart-slug] [YYYY-MM-DD]` | A Billboard chart as a ranked table |
@@ -127,6 +129,20 @@ does exactly what naming its event ticker does.
 
 `NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
 and `NFLX gb films` are the same chart.
+
+```
+> NEWS                        # the whole wire
+> NEWS NVDA                   # …filtered to one ticker
+> NEWS AAPL MSFT 50           # two tickers, 50 headlines
+> NEWS BTCUSD 30d             # crypto is tagged as a pair
+```
+
+`NEWS` is the one command that needs a key — see
+[About the news wire](#about-the-news-wire-and-its-key). Its arguments are
+order-independent and told apart by shape: a bare integer is a headline count, a
+duration is the look-back window, anything else is a symbol. Each headline links
+to the publisher, and the rest of the row opens the chart of what the story is
+about.
 
 ### Cross-venue: lining the brokers up
 
@@ -267,6 +283,7 @@ browser (Vite + TypeScript, no framework)
                     ├── Yahoo      equities, ETFs and cash indices
                     │   └ Nasdaq   fallback, daily bars only
                     ├── Coinbase   crypto spot
+                    ├── Alpaca     news wire (Benzinga), the one keyed feed
                     ├── FRED       scraped from fred.stlouisfed.org
                     ├── Billboard  scraped from billboard.com/charts
                     ├── Netflix    published TSV at netflix.com/tudum/top10
@@ -374,6 +391,21 @@ requires a login and charts.youtube.com renders client-side — so the terminal
 reads the mirror the trading community actually quotes, and labels it rather
 than passing it off as first-party data.
 
+**"No news today" is not "no news".** Alpaca's `start` defaults to the beginning
+of the current day, so `NEWS MU` before lunchtime on a thinly-covered ticker
+answers `200 OK` with an empty list — which reads as "nothing has happened"
+rather than "nothing since midnight". The window is therefore always sent
+explicitly, defaults to seven days, and the panel states the width it used, so
+an empty wire is a fact about a stated period. The upstream's
+`exclude_contentless` filter stays off for the same reason: a halt notice with
+no article body is the fastest-moving item on the wire, not an empty row.
+
+**A news wire sorts on publication, not on the last edit.** Alpaca orders by
+`updated_at`, so a story filed at 09:02 and corrected at 21:10 outranks
+everything published in between — the top of the panel would be the newest
+*correction*, not the newest news. The server re-sorts on `created_at` after
+normalising.
+
 ---
 
 ## The implied price
@@ -427,6 +459,8 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `PORT` | `8787` | API server port |
 | `HOST` | `127.0.0.1` | API bind address |
 | `FRED_API_KEY` | — | Enables an official-API fallback when the FRED scrape fails |
+| `ALPACA_API_KEY_ID` | — | Enables `NEWS`. Also read from `APCA_API_KEY_ID` |
+| `ALPACA_API_SECRET_KEY` | — | The other half of the pair. Also `APCA_API_SECRET_KEY` |
 | `RATE_LIMIT` | `600` | Max API calls per IP per minute |
 | `KALSHI_API_BASE` | Kalshi v2 | Override the upstream base URL |
 | `POLYMARKET_GAMMA_BASE` | `https://gamma-api.polymarket.com` | Polymarket catalogue |
@@ -437,6 +471,7 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
+| `ALPACA_DATA_BASE` | `https://data.alpaca.markets/v1beta1` | Override the news upstream |
 
 ### About FRED and `FRED_API_KEY`
 
@@ -473,6 +508,38 @@ provider answered in the chart's `SRC` field rather than leaving it invisible:
 
 Crypto has no such issue: Coinbase answers from anywhere.
 
+### About the news wire, and its key
+
+`NEWS` is the only command here that does not work out of the box, and the
+reason is not laziness: there is no unauthenticated equity news feed that is
+both licensed to redistribute and stable enough to parse. Scraping one would
+mean shipping a parser that breaks on a template change and a redistribution
+question nobody wants. Alpaca resells Benzinga's wire as JSON, keyed to an
+account, and a **free paper-trading account issues a working pair** — no funding,
+no trading permissions needed for this feed.
+
+```bash
+export ALPACA_API_KEY_ID=PK...
+export ALPACA_API_SECRET_KEY=...
+npm run dev
+```
+
+Alpaca's own SDK variable names (`APCA_API_KEY_ID`, `APCA_API_SECRET_KEY`) are
+read as a fallback, so an environment already set up for Alpaca needs nothing
+new. The pair is sent as request headers to `data.alpaca.markets` and nowhere
+else — never in a query string, never to the browser, never into a log line —
+and `GET /api/health` reports only whether one is configured, never its value.
+
+The two failures worth distinguishing are distinguished:
+
+* **No key** → HTTP 503 `not_configured`, with the variable names to set. The
+  server never leaves the process, and says so on startup too.
+* **Wrong key** → HTTP 502 `bad_credentials`. Alpaca answers a bad pair with a
+  401, which the generic path would have reported as "this host may be blocking
+  your IP" — a hint that sends you hunting a network problem you do not have.
+
+Everything else in the terminal keeps working with no key at all.
+
 ---
 
 ## API
@@ -502,6 +569,7 @@ Crypto has no such issue: Coinbase answers from anywhere.
 | `GET /api/implied/underlyings` | Symbols with a mapped Kalshi ladder |
 | `GET /api/implied/candidates?symbol=` | Ladders pricing a symbol, each with its live implied price |
 | `GET /api/implied/series?event=&interval=&start=&end=&method=` | Implied price through time for one ladder |
+| `GET /api/news?symbols=&limit=&days=` | Headlines, newest first (needs Alpaca keys) |
 | `GET /api/fred/series/:id?start=&end=` | Series metadata + observations |
 | `GET /api/fred/search?q=&limit=` | FRED series search |
 | `GET /api/billboard/chart/:slug?date=` | Chart entries |
@@ -517,7 +585,7 @@ Crypto has no such issue: Coinbase answers from anywhere.
 | `GET /api/ent/boxoffice?date=` | Domestic daily box office |
 | `GET /api/ent/steam?q=&limit=` | Steam leaderboard, or one game's live count |
 | `GET /api/ent/tv?date=&country=` | TV schedule for a day |
-| `GET /api/health` | Liveness, cache stats, whether a FRED key is set |
+| `GET /api/health` | Liveness, cache stats, whether the FRED and Alpaca keys are set |
 
 Errors are JSON: `{ error, code, hint? }`. The `hint` is written to be shown to
 a person and is surfaced verbatim in the panel.
@@ -528,7 +596,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 326 tests
+npm test             # 388 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
@@ -538,7 +606,11 @@ parsers run against fixtures captured from the real pages, the Kalshi, Yahoo,
 Nasdaq and Coinbase normalisers against trimmed real API responses, and
 `test/fred.integration.test.ts` exercises the whole FRED scrape path against a
 local fixture server — which is how that path stays covered on networks where
-the live host refuses to answer.
+the live host refuses to answer. `test/news.integration.test.ts` does the same
+for the news wire, which nothing in CI has a key for: it asserts that the key
+pair goes in the headers rather than the query string, that the request
+overrides the two upstream defaults that would otherwise cost headlines, and
+that a missing key and a rejected key are different, actionable errors.
 
 The implied-price maths in `src/shared/implied.ts` is the most heavily tested
 part of the codebase, because it is the one piece whose output looks plausible
@@ -578,14 +650,25 @@ move when those fields do.
 
 ## Scope
 
-Read-only market data. Nothing here places an order, holds a credential, or
-touches an account at any of the three exchanges — the terminal uses only
-public, unauthenticated endpoints, and no price or entertainment feed needs a
-key either. That is a deliberate limit, and it is visible: Polymarket US serves
-its price history and prints only to an authenticated caller, so those two
-panels say so rather than appearing broken. Scraped sources are third-party
-sites whose markup can change without notice; the parsers are written to degrade
-with a diagnosable error rather than silently return wrong numbers.
+Read-only market data. Nothing here places an order or touches an account at
+any of the three exchanges — every market, price and entertainment feed is a
+public, unauthenticated endpoint. That is a deliberate limit, and it is visible:
+Polymarket US serves its price history and prints only to an authenticated
+caller, so those two panels say so rather than appearing broken.
+
+The news wire is the one exception to "holds no credential", and it is worth
+stating plainly: `NEWS` sends an Alpaca key pair to `data.alpaca.markets` to
+read headlines. Alpaca issues one pair per account, and the same pair can trade
+that account, so the terminal treats it accordingly — it is read from the
+environment, sent to that one host as a header, never written to a log or a
+response, and never used for anything but a `GET` on the news endpoint. Keys
+from a paper account carry no real money and are the recommended pair to use
+here. Leave the variables unset and every other command behaves exactly as
+before.
+
+Scraped sources are third-party sites whose markup can change without notice;
+the parsers are written to degrade with a diagnosable error rather than silently
+return wrong numbers.
 
 Cross-venue pairings are a reading of two catalogues, not a statement from
 either exchange. A `LINKED` pair is one the terminal names and re-checks against

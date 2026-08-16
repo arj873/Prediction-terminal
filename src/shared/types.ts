@@ -556,6 +556,40 @@ export interface BillboardChartListItem {
   name: string;
 }
 
+/* -------------------------------------------------------------------- news */
+
+/** One headline from the news wire. All text is plain — no markup, no escapes. */
+export interface NewsArticle {
+  /** Upstream article id, kept as text: it is an identity, never an amount. */
+  id: string;
+  headline: string;
+  /** One-paragraph precis. Empty for a headline-only item, which is normal. */
+  summary: string;
+  author: string;
+  /** Who filed it, e.g. `benzinga`. */
+  publisher: string;
+  /** Article link. Empty when the item has none, or its scheme was not http(s). */
+  url: string;
+  /** Publication time, unix seconds (UTC). */
+  time: number;
+  /** Last edit, unix seconds. Equal to {@link time} for an unrevised item. */
+  updated: number;
+  /** Tickers the publisher tagged, e.g. `["NVDA", "AMD"]`. */
+  symbols: string[];
+}
+
+export interface NewsFeed {
+  /** Symbols the wire was filtered to; empty means everything. */
+  symbols: string[];
+  /** How many days back the window reaches — the panel states it. */
+  days: number;
+  /** Newest first, by publication time. */
+  articles: NewsArticle[];
+  /** Provider, shown in the panel so the wire is never passed off as ours. */
+  source: string;
+  sourceUrl: string;
+}
+
 /* ----------------------------------------------------- entertainment: kalshi */
 
 /**
