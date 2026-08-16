@@ -212,12 +212,22 @@ const PHRASES: [RegExp, string][] = [
   [/\bnet worth\b|\bhow rich\b/g, ' networth '],
   [/\bcircuitbreaker\b/g, ' circuit breaker '],
   [/\bmarketwide\b/g, ' market wide '],
-  [/\bup\/down\b/g, ' up or down '],
-  [/\bs&p 500\b|\bs&p\b/g, ' sp500 '],
+  // `sandp` is what PUNCTUATED_PHRASES leaves behind for `S&P`; folding it here
+  // puts it past the letter/digit splitter, where `sp500` can survive intact
+  // and meet the same token SYNONYMS folds `spx` and `inx` onto.
+  [/\bsandp\s*500\b|\bsandp\b/g, ' sp500 '],
   [/\bnasdaq[- ]?100\b/g, ' nasdaq100 '],
-  // Kalshi's short-interval titles carry a live strike — "· $1,883.54 target" —
-  // which is noise that outweighs every content word in the title.
-  [/·?\s*\$[\d,.]+\s*target\b/g, ' '],
+  // A city named in full has to meet the same city named short. SYNONYMS maps
+  // the abbreviations onto these tokens (`nyc` → `newyork`); without the
+  // spelled-out side folded to match, `NYC` and `New York City` shared no term
+  // at all — and `york` is a place qualifier, so the lopsided-qualifier penalty
+  // then fired on top and drove the pair below the match floor.
+  [/\bnew york city\b|\bnew york\b/g, ' newyork '],
+  [/\blos angeles\b/g, ' losangeles '],
+  [/\bsan francisco\b/g, ' sanfrancisco '],
+  [/\bnew jersey\b/g, ' newjersey '],
+  [/\bnew hampshire\b/g, ' newhampshire '],
+  [/\bnew mexico\b/g, ' newmexico '],
   [/\bno change\b/g, 'nochange'],
   [/\bunchanged\b/g, 'nochange'],
   [/\bmaintains? (?:the )?(?:rate|rates)\b/g, 'nochange'],
@@ -229,12 +239,43 @@ const PHRASES: [RegExp, string][] = [
   [/[<≤]|\bor (?:below|less|lower|fewer)\b|\bat most\b/g, ' under '],
 ];
 
+/**
+ * Phrases whose own punctuation is what identifies them.
+ *
+ * These have to fold before the strip below removes the very characters they
+ * match on, and all three had been sitting after it — dead, silently. `s&p 500`
+ * arrived as `s p 500`, so an S&P title could never meet the `sp500` that
+ * `SYNONYMS` folds `spx` and `inx` onto; `up/down` arrived as `up down`, where
+ * `up` is a stopword and only `down` survived; and Kalshi's live-strike suffix
+ * `· $1,883.54 target` — the noise this rule exists to delete, and which
+ * outweighs every content word in a short-interval title — arrived already
+ * broken into pieces the pattern could not span.
+ */
+const PUNCTUATED_PHRASES: [RegExp, string][] = [
+  // Spelled out rather than folded straight to `sp500`, because the letter/digit
+  // split further down would only tear that back into `sp 500`. The all-letter
+  // form survives it and is folded with the rest, after the splitter has run.
+  [/\bs\s*&\s*p\b/g, ' sandp '],
+  [/\bup\s*\/\s*down\b/g, ' up or down '],
+  [/·?\s*\$[\d,.]+\s*target\b/g, ' '],
+];
+
 /** Lower-case, strip accents and punctuation, collapse whitespace. */
 export function normalise(text: string): string {
   let out = text
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
+    .toLowerCase();
+
+  for (const [pattern, replacement] of PUNCTUATED_PHRASES) out = out.replace(pattern, replacement);
+
+  out = out
+    // Keep a grouped number whole. The strip below turns every comma into a
+    // space, so `$63,000` became the two tokens `$63` and `000` — and `000`
+    // reads as the number zero. Two strikes thousands apart therefore both
+    // reported the single number 0, which `compareNumbers` scored as perfect
+    // agreement and *rewarded*.
+    .replace(/(\d),(?=\d{3}(?:,|\b))/g, '$1')
     .replace(/[^a-z0-9.%$+<>≥≤]+/g, ' ')
     // A unit welded to its number is one token to a string comparison and two
     // to a reader: `25bps` has to meet `25 bps` somewhere. Split before folding
@@ -280,7 +321,20 @@ export function tokenise(text: string): string[] {
   return out;
 }
 
-const isNumeric = (token: string): boolean => /^-?\d+(?:\.\d+)?$/.test(token);
+/**
+ * A token that states a quantity.
+ *
+ * The currency mark and the percent sign are part of how a strike is written,
+ * not part of the number: `$63000` and `3.75%` are quantities, and a matcher
+ * that cannot read them cannot tell two rungs of a ladder apart. Requiring bare
+ * digits meant every dollar strike and every rate strike was invisible to the
+ * numeric comparison — so the Fed ladder, the case this module exists for,
+ * was only ever compared as words.
+ */
+const isNumeric = (token: string): boolean => /^\$?-?\d+(?:\.\d+)?%?$/.test(token);
+
+/** The quantity a numeric token states, with its notation removed. */
+const numericValue = (token: string): number => Number(token.replace(/[$%]/g, ''));
 
 /**
  * A title's terms with its numbers taken out.
@@ -324,7 +378,7 @@ export function identityKey(id: string): string {
 export function numbersIn(text: string): number[] {
   return tokenise(text)
     .filter((token) => isNumeric(token) || isMonth(token))
-    .map((token) => Number(isMonth(token) ? token.slice(1) : token));
+    .map((token) => (isMonth(token) ? Number(token.slice(1)) : numericValue(token)));
 }
 
 const isYear = (n: number): boolean => Number.isInteger(n) && n >= 1900 && n <= 2100;

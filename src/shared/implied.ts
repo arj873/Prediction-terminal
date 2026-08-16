@@ -148,12 +148,29 @@ export function survivalKnots(legs: ImpliedLeg[]): SurvivalKnot[] {
   const usable = legs.filter((l) => Number.isFinite(l.p) && (l.lo !== null || l.hi !== null));
   if (usable.length === 0) return [];
 
-  const nested = usable.every((l) => l.hi === null);
+  /*
+   * What tells the two shapes apart is a *bounded* leg, not the absence of a
+   * `hi`. A leg with both bounds is a bucket and belongs to a mass function; a
+   * leg with one bound is a cumulative claim and already states a survival.
+   *
+   * Testing `every(l => l.hi === null)` instead meant a single "or below" rung
+   * — which is one-sided, and every bit as cumulative as its "or above"
+   * siblings — dragged an otherwise nested ladder down the disjoint path, where
+   * overlapping cumulative prices were summed and normalised as if they were
+   * disjoint masses. It moved a BTC ladder's median by about 2%, silently, and
+   * `selectStrikes` can drop or restore that one rung between polls, so a
+   * single overlay could flip interpretation mid-chart.
+   */
+  const bucketed = usable.some((l) => l.lo !== null && l.hi !== null);
 
-  if (nested) {
-    const knots = usable
-      .filter((l): l is ImpliedLeg & { lo: number } => l.lo !== null)
-      .map((l) => ({ strike: l.lo, survival: clamp01(l.p) }));
+  if (!bucketed) {
+    const knots = usable.map((l) =>
+      l.lo !== null
+        ? // "k or above" quotes P(price > k) directly.
+          { strike: l.lo, survival: clamp01(l.p) }
+        : // "k or below" quotes the complement of the same thing.
+          { strike: l.hi!, survival: clamp01(1 - l.p) },
+    );
     return collapseDuplicates(knots);
   }
 
@@ -172,6 +189,23 @@ export function survivalKnots(legs: ImpliedLeg[]): SurvivalKnot[] {
     running += leg.p * scale;
     knots.push({ strike: leg.lo, survival: clamp01(running) });
   }
+
+  /*
+   * Close the top of a bounded ladder.
+   *
+   * Emitting a knot only at each bucket's floor throws away the cap of the
+   * highest bucket, so `(120, 130]` left the curve ending at 120 with the
+   * bucket's own mass still sitting on it. `tailMass` then read that mass as
+   * unbracketed and reported 30% on a ladder that brackets everything — and
+   * `tailMass` is the number the panel offers a reader for judging how much of
+   * the estimate is assumption. Nothing lies above a bounded cap, so survival
+   * there is zero, and saying that costs one knot.
+   */
+  const highest = descending[0];
+  if (highest?.hi !== null && highest?.hi !== undefined) {
+    knots.push({ strike: highest.hi, survival: 0 });
+  }
+
   // The `less` leg contributes only mass below the lowest floor, which the
   // accumulation above already accounts for; it needs no knot of its own.
   return collapseDuplicates(knots.reverse());

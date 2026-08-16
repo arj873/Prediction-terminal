@@ -383,3 +383,89 @@ describe('arbitrary titles', () => {
     assert.equal(match.confidence, 'strong');
   });
 });
+
+describe('numbers written the way a strike is written', () => {
+  it('reads a comma-grouped price as one number', () => {
+    // The punctuation strip turned every comma into a space, so `$63,000`
+    // became the two tokens `$63` and `000` — and `000` reads as zero. Both
+    // sides of a BTC ladder therefore reported the single number 0.
+    assert.deepEqual(numbersIn('Bitcoin above $63,000'), [63000]);
+    assert.deepEqual(numbersIn('Will BTC hit $1,250,000?'), [1250000]);
+  });
+
+  it('does not let two strikes agree by both collapsing to zero', () => {
+    // This is the failure the module exists to prevent: identical number sets
+    // are treated as agreement and *rewarded*, so two strikes $8,000 apart
+    // scored `likely` and produced a side-by-side price row a reader would take
+    // for an arbitrage.
+    const match = scoreEvent(
+      { id: 'KXBTCD-1', title: 'Bitcoin above $63,000' },
+      { id: 'btc-above-71000', title: 'Bitcoin above $71,000' },
+    );
+    assert.ok(
+      match.score < MATCH_FLOOR || match.confidence === 'weak',
+      `two different strikes should not match; got ${match.confidence} at ${match.score}`,
+    );
+    assert.match(match.reason, /numbers differ/);
+  });
+
+  it('reads a percentage strike, which is how a rate ladder is written', () => {
+    assert.deepEqual(numbersIn('Fed decision 3.75% or below'), [3.75]);
+    assert.deepEqual(numbersIn('Fed decision 4.00% or below'), [4]);
+  });
+
+  it('tells two rungs of the same rate ladder apart', () => {
+    const match = scoreEvent(
+      { id: 'KXFED-375', title: 'Fed decision 3.75% or below' },
+      { id: 'fed-decision-400', title: 'Fed decision 4.00% or below' },
+    );
+    assert.match(match.reason, /numbers differ/);
+  });
+});
+
+describe('phrases whose punctuation is what identifies them', () => {
+  it('folds S&P onto the same token as SPX', () => {
+    // The fold sat after the punctuation strip, so it never saw the `&` it
+    // matched on and an S&P title could not meet the `sp500` that SYNONYMS
+    // folds `spx` and `inx` onto.
+    assert.ok(tokenise('S&P 500 above 6500').includes('sp500'));
+    assert.ok(tokenise('S&P above 6500').includes('sp500'));
+    assert.deepEqual(tokenise('S&P 500 above 6500'), tokenise('SPX above 6500'));
+  });
+
+  it('deletes the live strike from a short-interval title', () => {
+    // Kalshi's `· $1,883.54 target` suffix outweighs every content word in the
+    // title it is attached to; the rule that removes it could not span the
+    // pieces the strip had already broken it into.
+    assert.deepEqual(tokenise('ETH price · $1,883.54 target'), tokenise('ETH price'));
+  });
+});
+
+describe('a city named in full and the same city named short', () => {
+  it('matches NYC against New York City', () => {
+    // SYNONYMS maps the abbreviation onto `newyork`, but nothing folded the
+    // spelled-out side, so the two shared no term at all — and `york` is a
+    // place qualifier, so the lopsided-qualifier penalty fired on top.
+    assert.deepEqual(tokenise('NYC'), tokenise('New York City'));
+
+    const match = scoreSeries(
+      { id: 'KXHIGHNY', title: 'Highest temperature in NYC?' },
+      { id: 'highest-temperature-in-new-york-city', title: 'Highest temperature in New York City?' },
+    );
+    assert.ok(
+      match.score >= MATCH_FLOOR,
+      `NYC and New York City should match; got ${match.confidence} at ${match.score}`,
+    );
+  });
+
+  it('still keeps genuinely different places apart', () => {
+    const match = scoreSeries(
+      { id: 'KXHIGHNY', title: 'Highest temperature in New York City?' },
+      { id: 'highest-temperature-in-los-angeles', title: 'Highest temperature in Los Angeles?' },
+    );
+    assert.ok(
+      match.score < MATCH_FLOOR,
+      `two different cities should not match; got ${match.confidence} at ${match.score}`,
+    );
+  });
+});

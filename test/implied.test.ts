@@ -110,11 +110,12 @@ describe('survivalKnots', () => {
       { lo: 110, hi: 120, p: 0.5 },
       { lo: 120, hi: 130, p: 0.3 },
     ];
-    // P(>120) = 0.3, P(>110) = 0.8, P(>100) = 1.0
+    // P(>120) = 0.3, P(>110) = 0.8, P(>100) = 1.0, and nothing above the cap.
     assert.deepEqual(survivals(survivalKnots(legs)), [
       [100, 1],
       [110, 0.8],
       [120, 0.3],
+      [130, 0],
     ]);
   });
 
@@ -130,6 +131,61 @@ describe('survivalKnots', () => {
       [100, 1],
       [110, 0.8],
       [120, 0.3],
+      [130, 0],
+    ]);
+  });
+
+  it('closes a bounded ladder at its cap, so no bracketed mass reads as tail', () => {
+    // The top bucket's ceiling used to be dropped, leaving that bucket's own
+    // mass sitting on the last knot — which tailMass then reported as
+    // unbracketed. tailMass is what the panel offers a reader for judging how
+    // much of the estimate is assumption, so overstating it is not cosmetic.
+    const bounded: ImpliedLeg[] = [
+      { lo: 100, hi: 110, p: 0.2 },
+      { lo: 110, hi: 120, p: 0.5 },
+      { lo: 120, hi: 130, p: 0.3 },
+    ];
+    assert.equal(impliedPrice(bounded, 'mean').tailMass, 0);
+
+    // An open-ended top genuinely has mass nobody brackets, and still says so.
+    const openTopped: ImpliedLeg[] = [
+      { lo: 100, hi: 110, p: 0.2 },
+      { lo: 110, hi: 120, p: 0.5 },
+      { lo: 120, hi: null, p: 0.3 },
+    ];
+    assert.ok(impliedPrice(openTopped, 'mean').tailMass > 0);
+  });
+
+  it('reads a one-sided "or below" rung as cumulative, not as a bucket', () => {
+    // Every leg here is one-sided, so the whole ladder is cumulative. Testing
+    // for the absence of a `hi` instead of the presence of a *bounded* leg let
+    // this single "or below" rung drag the other three down the disjoint path,
+    // where overlapping cumulative prices were summed and normalised as though
+    // they were disjoint masses — moving the median about 2%, silently.
+    const nested: ImpliedLeg[] = [
+      { lo: 100, hi: null, p: 0.9 },
+      { lo: 110, hi: null, p: 0.5 },
+      { lo: 120, hi: null, p: 0.1 },
+    ];
+    const withFloorRung: ImpliedLeg[] = [{ lo: null, hi: 100, p: 0.1 }, ...nested];
+
+    assert.equal(impliedPrice(nested, 'median').value, 110);
+    assert.equal(impliedPrice(withFloorRung, 'median').value, 110);
+  });
+
+  it('still reads a genuine bucket ladder with cap and floor rungs as a mass function', () => {
+    // A bounded ladder wearing "or below" and "or above" rungs at its ends is a
+    // real PMF and must keep taking the disjoint path.
+    const legs: ImpliedLeg[] = [
+      { lo: null, hi: 100, p: 0.1 },
+      { lo: 100, hi: 110, p: 0.2 },
+      { lo: 110, hi: 120, p: 0.5 },
+      { lo: 120, hi: null, p: 0.2 },
+    ];
+    assert.deepEqual(survivals(survivalKnots(legs)), [
+      [100, 0.9],
+      [110, 0.7],
+      [120, 0.2],
     ]);
   });
 

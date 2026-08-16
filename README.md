@@ -596,7 +596,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 388 tests
+npm test             # 399 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
