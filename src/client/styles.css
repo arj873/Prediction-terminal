@@ -26,6 +26,14 @@
 
   --accent: #4aa3ff;
   --accent-soft: rgba(74, 163, 255, 0.16);
+  /* Implied-price overlays. Cool and deliberately never green or red: an
+     overlay is a second series, not a direction, and a green line on a price
+     chart reads as "rising" to everyone who has ever looked at one. */
+  --overlay-1: #4aa3ff;
+  --overlay-2: #c678dd;
+  --overlay-3: #56b6c2;
+  --overlay-4: #9aa8ff;
+  --overlay-5: #ff79c6;
   --up: #35d07f;
   --down: #ff5c5c;
   --warn: #ffb020;
@@ -47,6 +55,11 @@
   --chart-grid: #10201a;
   --accent: #ffd166;
   --accent-soft: rgba(255, 209, 102, 0.16);
+  --overlay-1: #ffd166;
+  --overlay-2: #6fd3ff;
+  --overlay-3: #c678dd;
+  --overlay-4: #ff9f4a;
+  --overlay-5: #ff79c6;
   --up: #6bff9e;
   --down: #ff6b6b;
 }
@@ -66,6 +79,11 @@
   --border-bright: #2d4159;
   --accent: #6fd3ff;
   --accent-soft: rgba(111, 211, 255, 0.16);
+  --overlay-1: #ffd166;
+  --overlay-2: #c678dd;
+  --overlay-3: #ff9f4a;
+  --overlay-4: #ff79c6;
+  --overlay-5: #b3a1ff;
 }
 
 *,
@@ -546,6 +564,120 @@ button {
 }
 .stat-value {
   color: var(--fg);
+}
+
+.stat-value.dim {
+  color: var(--fg-muted);
+}
+
+/* ------------------------------------------------------- implied overlays */
+
+/*
+ * The ladder picker: one chip per Kalshi expiry that prices this symbol,
+ * showing what it implies right now. A ticked chip wears the colour of its
+ * line, which is the only thing tying a dashed overlay to a contract ticker.
+ */
+.implied-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--border);
+  font-size: var(--size-tiny);
+  flex: 0 0 auto;
+  min-height: 24px;
+  overflow: hidden;
+}
+
+.picker-label {
+  color: var(--fg-muted);
+  letter-spacing: 0.08em;
+  flex: 0 0 auto;
+}
+
+.picker-empty {
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 1 1 auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: var(--size-tiny);
+  font-variant-numeric: tabular-nums;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.picker-chip:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-bright);
+  color: var(--fg);
+}
+
+.picker-chip.on {
+  border-color: var(--chip-color);
+  color: var(--fg-bright);
+  background: color-mix(in srgb, var(--chip-color) 12%, var(--bg-raised));
+}
+
+.picker-chip.failed {
+  border-color: var(--down);
+  color: var(--down);
+}
+
+.chip-swatch {
+  width: 9px;
+  height: 2px;
+  background: var(--border-bright);
+}
+
+.picker-chip.on .chip-swatch {
+  background: var(--chip-color);
+}
+
+.chip-implied {
+  color: var(--fg);
+}
+
+.picker-chip.on .chip-implied {
+  color: var(--fg-bright);
+}
+
+.picker-error {
+  color: var(--down);
+  flex: 0 0 auto;
+}
+
+.picker-note {
+  color: var(--fg-muted);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.legend-pair.implied .legend-key {
+  color: var(--chip-color);
+}
+
+.legend-basis {
+  color: var(--fg-muted);
 }
 
 /* ------------------------------------------------------------------- quote */

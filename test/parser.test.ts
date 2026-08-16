@@ -10,13 +10,18 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   isIsoDate,
+  looksLikeSymbol,
   looksLikeTicker,
   parse,
   parseDuration,
   parseInterval,
   tokenize,
 } from '../src/client/terminal/parser.js';
-import { parseChartArgs } from '../src/client/terminal/registry.js';
+import {
+  guessAssetClass,
+  parseChartArgs,
+  parseSpotArgs,
+} from '../src/client/terminal/registry.js';
 
 describe('tokenize', () => {
   it('splits on whitespace', () => {
@@ -179,5 +184,88 @@ describe('parseChartArgs', () => {
 
   it('rejects an argument it cannot classify', () => {
     assert.throws(() => parseChartArgs(['X-1', 'weekly']), /Unrecognised argument "weekly"/);
+  });
+});
+
+describe('looksLikeSymbol', () => {
+  it('accepts the shapes a market symbol actually takes', () => {
+    // Looser than a Kalshi ticker on purpose: cash indices carry a caret, FX
+    // pairs an equals, and `F` is a real NYSE listing.
+    for (const symbol of ['AAPL', '^GSPC', 'EURUSD=X', 'BTC-USD', 'BRK.B', 'F']) {
+      assert.ok(looksLikeSymbol(symbol), symbol);
+    }
+  });
+
+  it('rejects tokens that are not symbols at all', () => {
+    for (const token of ['', '--flag', '/', undefined]) {
+      assert.ok(!looksLikeSymbol(token as string));
+    }
+  });
+});
+
+describe('parseSpotArgs', () => {
+  const stock = { assetClass: 'stock' as const, withPicker: false };
+
+  it('reads the symbol and defaults the rest', () => {
+    const result = parseSpotArgs(['aapl'], stock);
+    assert.equal(result.symbol, 'AAPL');
+    assert.equal(result.interval, 60);
+    assert.equal(result.lookbackSeconds, 30 * 86400);
+    assert.equal(result.style, 'candle');
+    assert.equal(result.method, 'median');
+    assert.deepEqual(result.overlays, []);
+  });
+
+  it('accepts interval, window and style in any order', () => {
+    const a = parseSpotArgs(['AAPL', '1d', '1y', 'line'], stock);
+    const b = parseSpotArgs(['AAPL', 'line', '1y', '1d'], stock);
+    assert.deepEqual(a, b);
+    assert.equal(a.interval, 1440);
+    assert.equal(a.lookbackSeconds, 31_536_000);
+    assert.equal(a.style, 'line');
+  });
+
+  it('collects hyphenated arguments as Kalshi event tickers to overlay', () => {
+    const result = parseSpotArgs(['BTC', 'KXBTCD-26AUG1617', '1h', '7d'], {
+      assetClass: 'crypto',
+      withPicker: true,
+    });
+    assert.deepEqual(result.overlays, ['KXBTCD-26AUG1617']);
+    assert.equal(result.interval, 60);
+    assert.equal(result.lookbackSeconds, 7 * 86400);
+  });
+
+  it('reads the first argument as the symbol even when it is hyphenated', () => {
+    // `BTC-USD` is a symbol, not an event ticker to overlay.
+    const result = parseSpotArgs(['BTC-USD'], { assetClass: 'crypto', withPicker: false });
+    assert.equal(result.symbol, 'BTC-USD');
+    assert.deepEqual(result.overlays, []);
+  });
+
+  it('takes the implied method as a bare word', () => {
+    assert.equal(parseSpotArgs(['BTC', 'mean'], stock).method, 'mean');
+    assert.equal(parseSpotArgs(['BTC', 'median'], stock).method, 'median');
+  });
+
+  it('rejects a missing symbol', () => {
+    assert.throws(() => parseSpotArgs([], stock), /Missing <symbol>/);
+  });
+
+  it('rejects an argument it cannot classify', () => {
+    assert.throws(() => parseSpotArgs(['AAPL', 'weekly'], stock), /Unrecognised argument "weekly"/);
+  });
+});
+
+describe('guessAssetClass', () => {
+  it('claims the symbols Kalshi lists crypto ladders for', () => {
+    assert.equal(guessAssetClass('BTC'), 'crypto');
+    assert.equal(guessAssetClass('eth'), 'crypto');
+    assert.equal(guessAssetClass('BTC-USD'), 'crypto');
+  });
+
+  it('treats everything else as an equity', () => {
+    assert.equal(guessAssetClass('AAPL'), 'stock');
+    assert.equal(guessAssetClass('^GSPC'), 'stock');
+    assert.equal(guessAssetClass('SPX'), 'stock');
   });
 });

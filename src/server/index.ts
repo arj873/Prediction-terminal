@@ -19,7 +19,9 @@ import { cache } from './lib/cache.js';
 import { UpstreamError } from './lib/http.js';
 import { billboardRouter } from './routes/billboard.js';
 import { fredRouter } from './routes/fred.js';
+import { impliedRouter } from './routes/implied.js';
 import { kalshiRouter } from './routes/kalshi.js';
+import { spotRouter } from './routes/spot.js';
 import { warmCorpus } from './sources/kalshi.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -74,6 +76,8 @@ export function createApp(): express.Express {
 
   // ---- routes ------------------------------------------------------------
   app.use('/api/kalshi', kalshiRouter);
+  app.use('/api/spot', spotRouter);
+  app.use('/api/implied', impliedRouter);
   app.use('/api/fred', fredRouter);
   app.use('/api/billboard', billboardRouter);
 
@@ -141,6 +145,8 @@ if (invokedDirectly) {
   createApp().listen(PORT, HOST, () => {
     console.log(`PREDICTION TERMINAL api  http://${HOST}:${PORT}`);
     console.log(`  kalshi     /api/kalshi/{markets,events,search,top,series}`);
+    console.log(`  spot       /api/spot/{stock,crypto}/:symbol[/candles]`);
+    console.log(`  implied    /api/implied/{underlyings,candidates,series}`);
     console.log(`  fred       /api/fred/{series/:id,search}`);
     console.log(`  billboard  /api/billboard/{charts,chart/:slug}`);
     if (!process.env.FRED_API_KEY?.trim()) {

@@ -160,3 +160,16 @@ const TICKER = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 export function looksLikeTicker(token: string | undefined): token is string {
   return typeof token === 'string' && token.length >= 2 && TICKER.test(token);
 }
+
+/**
+ * A market symbol, which is a looser thing than a Kalshi ticker.
+ *
+ * Cash indices carry a caret (`^GSPC`), FX pairs an equals (`EURUSD=X`), crypto
+ * pairs a slash-free hyphen (`BTC-USD`), and a single letter is a real NYSE
+ * listing — so `looksLikeTicker`'s rules would reject several valid symbols.
+ */
+const SYMBOL = /^[\^]?[A-Za-z0-9][A-Za-z0-9.=^-]*$/;
+
+export function looksLikeSymbol(token: string | undefined): token is string {
+  return typeof token === 'string' && token.length >= 1 && SYMBOL.test(token);
+}

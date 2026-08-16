@@ -66,6 +66,49 @@ export function group(value: number | null | undefined, digits = 0): string {
 }
 
 /**
+ * An underlying's price, with decimals chosen from its magnitude.
+ *
+ * One formatter has to serve BTC at 63,058.21 and EUR/USD at 1.0842. Fixing the
+ * decimals would either bury the FX pair's whole daily range or pad crypto with
+ * meaningless digits, so the scale of the number picks.
+ */
+export function price(value: number | null | undefined, reference?: number): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EM_DASH;
+  const digits = priceDigits(reference ?? value);
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+/**
+ * Decimals for a price of this magnitude.
+ *
+ * `reference` exists for *differences*. A $8.57 basis on a $63,000 instrument
+ * is a large-instrument number that happens to be small, and formatting it from
+ * its own magnitude prints `-8.5714` next to `63,049.41` — two different
+ * precisions for two halves of the same subtraction. Passing the price as the
+ * reference keeps them in step.
+ */
+function priceDigits(magnitude: number): number {
+  const abs = Math.abs(magnitude);
+  if (!Number.isFinite(abs)) return 2;
+  return abs >= 10 ? 2 : abs >= 1 ? 4 : 6;
+}
+
+/** Signed price move, with an explicit `+`, matching {@link price}'s decimals. */
+export function signedPrice(value: number | null | undefined, reference?: number): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EM_DASH;
+  return `${value > 0 ? '+' : ''}${price(value, reference ?? value)}`;
+}
+
+/** `+1.24%` / `-0.30%`. */
+export function signedPercent(value: number | null | undefined, digits = 2): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EM_DASH;
+  return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`;
+}
+
+/**
  * A general-purpose numeric formatter for FRED, whose series range from
  * fractions of a percent to trillions of dollars.
  */

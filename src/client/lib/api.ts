@@ -9,15 +9,22 @@
 
 import type {
   ApiError,
+  AssetClass,
   BillboardChart,
   BillboardChartListItem,
   CandleInterval,
   CandlesResponse,
   FredSearchResponse,
   FredSeriesResponse,
+  ImpliedCandidatesResponse,
+  ImpliedMethod,
+  ImpliedSeriesResponse,
   KalshiEvent,
   Market,
   OrderBook,
+  SpotCandlesResponse,
+  SpotQuote,
+  SpotSearchResult,
   TradesResponse,
 } from '../../shared/types.js';
 
@@ -124,6 +131,64 @@ export const kalshi = {
     signal?: AbortSignal,
   ): Promise<{ sort: string; markets: Market[] }> =>
     request(`/kalshi/top${query({ sort, limit })}`, signal),
+};
+
+/* -------------------------------------------------------------------- spot */
+
+export const spot = {
+  quote: (assetClass: AssetClass, symbol: string, signal?: AbortSignal): Promise<SpotQuote> =>
+    request(`/spot/${assetClass}/${encodeURIComponent(symbol)}`, signal),
+
+  candles: (
+    assetClass: AssetClass,
+    symbol: string,
+    interval: CandleInterval,
+    start?: number,
+    end?: number,
+    signal?: AbortSignal,
+  ): Promise<SpotCandlesResponse> =>
+    request(
+      `/spot/${assetClass}/${encodeURIComponent(symbol)}/candles${query({ interval, start, end })}`,
+      signal,
+    ),
+
+  search: (
+    q: string,
+    assetClass?: AssetClass,
+    limit = 20,
+    signal?: AbortSignal,
+  ): Promise<{ query: string; results: SpotSearchResult[] }> =>
+    request(`/spot/search${query({ q, class: assetClass, limit })}`, signal),
+};
+
+/* ----------------------------------------------------------------- implied */
+
+export interface UnderlyingInfo {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  aliases: string[];
+}
+
+export const implied = {
+  underlyings: (signal?: AbortSignal): Promise<{ underlyings: UnderlyingInfo[] }> =>
+    request('/implied/underlyings', signal),
+
+  candidates: (symbol: string, signal?: AbortSignal): Promise<ImpliedCandidatesResponse> =>
+    request(`/implied/candidates${query({ symbol })}`, signal),
+
+  series: (
+    eventTicker: string,
+    interval: CandleInterval,
+    start?: number,
+    end?: number,
+    method: ImpliedMethod = 'median',
+    signal?: AbortSignal,
+  ): Promise<ImpliedSeriesResponse> =>
+    request(
+      `/implied/series${query({ event: eventTicker, interval, start, end, method })}`,
+      signal,
+    ),
 };
 
 /* -------------------------------------------------------------------- fred */

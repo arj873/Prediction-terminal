@@ -7,7 +7,7 @@
  * they open panels and report back, and never touch the DOM directly.
  */
 
-import type { CandleInterval } from '../../shared/types.js';
+import type { AssetClass, CandleInterval, ImpliedMethod } from '../../shared/types.js';
 import type { PanelManager } from '../panels/manager.js';
 import type { Workspace } from '../state.js';
 import { THEMES, type ThemeName } from '../state.js';
@@ -17,8 +17,16 @@ import { EventPanel, SearchPanel, TopPanel, WatchlistPanel } from '../panels/bro
 import { FredPanel, FredSearchPanel } from '../panels/fred.js';
 import { DepthPanel, QuotePanel, TradesPanel } from '../panels/market.js';
 import { HelpPanel } from '../panels/help.js';
+import { SpotPanel, type SpotPanelOptions, type SpotStyle } from '../panels/spot.js';
 import type { PanelContext } from '../panels/panel.js';
-import { isIsoDate, looksLikeTicker, parseDuration, parseInterval, type ParsedCommand } from './parser.js';
+import {
+  isIsoDate,
+  looksLikeSymbol,
+  looksLikeTicker,
+  parseDuration,
+  parseInterval,
+  type ParsedCommand,
+} from './parser.js';
 
 export interface CommandContext {
   panels: PanelManager;
@@ -110,6 +118,120 @@ export function parseChartArgs(args: string[]): {
     lookbackSeconds: lookbackSeconds ?? DEFAULT_LOOKBACK[resolvedInterval],
     style,
   };
+}
+
+/* ------------------------------------------- spot / implied argument parsing */
+
+/**
+ * `STK <symbol> [interval] [range] [line|candle]`, and `IMP` additionally takes
+ * Kalshi event tickers to overlay.
+ *
+ * Order-independent after the symbol, like `GP`. Telling an event ticker from a
+ * symbol is unambiguous in practice: a Kalshi event ticker contains a hyphen and
+ * a symbol does not — except for crypto pairs like `BTC-USD`, which is why the
+ * *first* argument is always read as the symbol and never as an overlay.
+ */
+export function parseSpotArgs(
+  args: string[],
+  defaults: { assetClass: AssetClass; withPicker: boolean },
+): SpotPanelOptions {
+  const symbol = args[0];
+  if (!symbol || !looksLikeSymbol(symbol)) throw new UsageError('Missing <symbol>');
+
+  let interval: CandleInterval | null = null;
+  let lookbackSeconds: number | null = null;
+  let style: SpotStyle = 'candle';
+  let method: ImpliedMethod = 'median';
+  const overlays: string[] = [];
+
+  for (const token of args.slice(1)) {
+    const lower = token.toLowerCase();
+    if (lower === 'line' || lower === 'area') {
+      style = 'line';
+      continue;
+    }
+    if (lower === 'candle' || lower === 'candles' || lower === 'ohlc') {
+      style = 'candle';
+      continue;
+    }
+    if (lower === 'median' || lower === 'mean') {
+      method = lower;
+      continue;
+    }
+
+    const asInterval = parseInterval(token);
+    if (asInterval !== null && interval === null) {
+      interval = asInterval;
+      continue;
+    }
+
+    const asDuration = parseDuration(token);
+    if (asDuration !== null) {
+      lookbackSeconds = asDuration;
+      continue;
+    }
+
+    // Anything left with a hyphen is a Kalshi event ticker to overlay.
+    if (token.includes('-')) {
+      overlays.push(token.toUpperCase());
+      continue;
+    }
+
+    throw new UsageError(`Unrecognised argument "${token}"`);
+  }
+
+  const resolvedInterval = interval ?? 60;
+  return {
+    symbol: symbol.toUpperCase(),
+    assetClass: defaults.assetClass,
+    interval: resolvedInterval,
+    lookbackSeconds: lookbackSeconds ?? DEFAULT_LOOKBACK[resolvedInterval],
+    style,
+    overlays,
+    method,
+    showPicker: defaults.withPicker,
+  };
+}
+
+/**
+ * Crypto or equity, from the symbol alone.
+ *
+ * `STK` and `CRY` state it outright; `IMP BTC` has to work it out. A bare
+ * three-or-four letter symbol is ambiguous in principle — `LINK` is both a
+ * token and an NYSE listing — so this only claims the ones Kalshi actually
+ * lists crypto ladders for, and treats everything else as an equity.
+ */
+const CRYPTO_SYMBOLS = new Set([
+  'BTC', 'XBT', 'BITCOIN', 'ETH', 'ETHEREUM', 'SOL', 'SOLANA', 'XRP', 'RIPPLE',
+  'BNB', 'HYPE', 'DOGE', 'ADA', 'AVAX', 'LINK', 'LTC', 'BCH', 'DOT', 'XLM', 'ZEC',
+]);
+
+export function guessAssetClass(symbol: string): AssetClass {
+  const upper = symbol.toUpperCase();
+  const base = upper.split('-')[0] ?? upper;
+  return CRYPTO_SYMBOLS.has(upper) || CRYPTO_SYMBOLS.has(base) ? 'crypto' : 'stock';
+}
+
+/**
+ * Open or re-configure the chart for a symbol.
+ *
+ * One panel per symbol, so `STK AAPL` then `IMP AAPL` adds overlays to the
+ * chart already on screen rather than tiling a second copy of it. Overlays
+ * named on the command line are merged into whatever is already selected —
+ * `IMP` is additive, matching what the picker does when clicked.
+ */
+function openSpot(options: SpotPanelOptions, { panels, panelContext }: CommandContext): void {
+  const id = SpotPanel.idFor(options.symbol);
+  const existing = panels.find(id);
+
+  if (existing instanceof SpotPanel) {
+    const merged = [...new Set([...existing.options.overlays, ...options.overlays])];
+    existing.reconfigure({ ...options, overlays: merged });
+    panels.focus(id);
+    return;
+  }
+
+  panels.open(id, () => new SpotPanel(id, panelContext, options));
 }
 
 /* ------------------------------------------------------------------ table */
@@ -224,6 +346,55 @@ export const COMMANDS: Command[] = [
       }
       const id = TopPanel.idFor(sort);
       panels.open(id, () => new TopPanel(id, panelContext, sort));
+    },
+  },
+  {
+    verb: 'STK',
+    aliases: ['EQ', 'STOCK'],
+    group: 'markets',
+    summary: 'Live stock, ETF or index chart',
+    usage: 'STK <symbol> [1m|1h|1d] [range] [candle|line]',
+    examples: ['STK AAPL', 'STK NVDA 1d 1y line', 'STK ^GSPC 1h 5d', 'STK SPX 1m 6h'],
+    handler(command, context) {
+      openSpot(parseSpotArgs(command.args, { assetClass: 'stock', withPicker: false }), context);
+    },
+  },
+  {
+    verb: 'CRY',
+    aliases: ['COIN', 'CRYPTO'],
+    group: 'markets',
+    summary: 'Live crypto chart',
+    usage: 'CRY <symbol> [1m|1h|1d] [range] [candle|line]',
+    examples: ['CRY BTC', 'CRY ETH 1h 30d', 'CRY SOL 1d 1y line'],
+    handler(command, context) {
+      openSpot(parseSpotArgs(command.args, { assetClass: 'crypto', withPicker: false }), context);
+    },
+  },
+  {
+    verb: 'IMP',
+    aliases: ['IMPLIED'],
+    group: 'markets',
+    summary: "Overlay Kalshi's implied price on the true price",
+    usage: 'IMP <symbol> [event-ticker…] [1m|1h|1d] [range] [median|mean]',
+    examples: [
+      'IMP BTC',
+      'IMP BTC KXBTCD-26AUG1617 1h 7d',
+      'IMP SPX 1h 5d',
+      'IMP ETH mean',
+    ],
+    handler(command, context) {
+      const symbol = command.args[0];
+      if (!symbol) throw new UsageError('Missing <symbol>');
+      const options = parseSpotArgs(command.args, {
+        assetClass: guessAssetClass(symbol),
+        withPicker: true,
+      });
+      openSpot(options, context);
+      if (options.overlays.length === 0) {
+        context.log(
+          `Pick a Kalshi expiry under the chart to overlay its implied price on ${options.symbol}.`,
+        );
+      }
     },
   },
   {

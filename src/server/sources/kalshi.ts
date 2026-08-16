@@ -17,6 +17,7 @@ import type {
   MarketsResponse,
   OrderBook,
   SeriesInfo,
+  StrikeType,
   TradesResponse,
 } from '../../shared/types.js';
 import { TTL, cache } from '../lib/cache.js';
@@ -74,6 +75,9 @@ interface RawMarket {
   result?: string;
   rules_primary?: string;
   category?: string;
+  strike_type?: string;
+  floor_strike?: number;
+  cap_strike?: number;
 }
 
 interface RawEvent {
@@ -156,8 +160,29 @@ function normaliseMarket(raw: RawMarket, seriesTicker?: string): Market {
     result: raw.result ?? '',
     rulesPrimary: raw.rules_primary ?? '',
     ...(raw.category ? { category: raw.category } : {}),
+    strikeType: STRIKE_TYPES.has(raw.strike_type ?? '')
+      ? (raw.strike_type as StrikeType)
+      : null,
+    // Unlike prices, strikes arrive as JSON numbers already. They are also the
+    // one field where 0 is a legitimate value (a rate or a spread can settle at
+    // zero), so `num` is right here and `price` would not be.
+    floorStrike: num(raw.floor_strike),
+    capStrike: num(raw.cap_strike),
   };
 }
+
+/**
+ * Strike types that name a numeric price level. Kalshi also uses `structured`
+ * and `custom` for contracts whose "strike" is a rule rather than a number;
+ * those carry no bound the implied-price maths can use.
+ */
+const STRIKE_TYPES = new Set<string>([
+  'greater',
+  'greater_or_equal',
+  'less',
+  'less_or_equal',
+  'between',
+]);
 
 function normaliseEvent(raw: RawEvent): KalshiEvent {
   const seriesTicker = raw.series_ticker ?? seriesFromTicker(raw.event_ticker);
@@ -630,13 +655,21 @@ export async function getCandles(
   interval: CandleInterval,
   startTs: number,
   endTs: number,
+  /**
+   * Skip the market lookup when the series is already known. The implied-price
+   * fan-out reads one ladder's worth of candles at a time and knows the series
+   * from the event, so passing it halves that route's upstream request count.
+   */
+  knownSeriesTicker?: string,
 ): Promise<CandlesResponse> {
-  let seriesTicker = seriesFromTicker(ticker);
-  try {
-    const market = await getMarket(ticker);
-    if (market.seriesTicker) seriesTicker = market.seriesTicker;
-  } catch {
-    // Market lookup is an optimisation; the prefix guess is right most of the time.
+  let seriesTicker = knownSeriesTicker ?? seriesFromTicker(ticker);
+  if (!knownSeriesTicker) {
+    try {
+      const market = await getMarket(ticker);
+      if (market.seriesTicker) seriesTicker = market.seriesTicker;
+    } catch {
+      // Market lookup is an optimisation; the prefix guess is right most of the time.
+    }
   }
 
   const path =

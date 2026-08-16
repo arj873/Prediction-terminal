@@ -63,7 +63,22 @@ export interface Market {
   result: string;
   rulesPrimary: string;
   category?: string;
+  /**
+   * How this contract's strike relates to the settlement value. `null` on a
+   * plain yes/no market that has no numeric strike at all.
+   *
+   * `greater` — settles YES above {@link floorStrike}
+   * `less`    — settles YES at or below {@link capStrike}
+   * `between` — settles YES inside `[floorStrike, capStrike]`
+   */
+  strikeType: StrikeType | null;
+  /** Lower bound of the YES region, in the underlying's units. */
+  floorStrike: number | null;
+  /** Upper bound of the YES region, in the underlying's units. */
+  capStrike: number | null;
 }
+
+export type StrikeType = 'greater' | 'greater_or_equal' | 'less' | 'less_or_equal' | 'between';
 
 export interface KalshiEvent {
   eventTicker: string;
@@ -160,6 +175,142 @@ export interface SeriesInfo {
   category: string;
   frequency: string;
   tags: string[];
+}
+
+/* -------------------------------------------------------------------- spot */
+
+/**
+ * Which upstream family a symbol is priced from. This is a routing decision,
+ * not a taxonomy: `stock` covers equities, ETFs and cash indices, because they
+ * all come from the same equity feed.
+ */
+export type AssetClass = 'stock' | 'crypto';
+
+/** Live quote for an underlying. Prices are in the instrument's own currency. */
+export interface SpotQuote {
+  symbol: string;
+  assetClass: AssetClass;
+  name: string;
+  currency: string;
+  price: number | null;
+  /** Previous session's close for equities, price 24h ago for crypto. */
+  previousClose: number | null;
+  change: number | null;
+  changePercent: number | null;
+  dayOpen: number | null;
+  dayHigh: number | null;
+  dayLow: number | null;
+  volume: number | null;
+  /** Exchange or venue the print came from, e.g. `NASDAQ`, `Coinbase`. */
+  venue: string;
+  /** When the price was observed, unix seconds. */
+  time: number;
+  /** Which provider answered — surfaced in the panel header. */
+  source: string;
+}
+
+/**
+ * One bar of an underlying's price history.
+ *
+ * Deliberately shares {@link CandleInterval} with Kalshi: an implied-price line
+ * is only readable against the true price if both sit on the same buckets.
+ */
+export interface SpotCandle {
+  /** Period *start*, unix seconds — the convention both upstreams use. */
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface SpotCandlesResponse {
+  symbol: string;
+  assetClass: AssetClass;
+  name: string;
+  currency: string;
+  interval: CandleInterval;
+  candles: SpotCandle[];
+  source: string;
+}
+
+export interface SpotSearchResult {
+  symbol: string;
+  name: string;
+  assetClass: AssetClass;
+  venue: string;
+  /** True when the terminal knows a Kalshi ladder that prices this symbol. */
+  hasImplied: boolean;
+}
+
+/* ----------------------------------------------------------------- implied */
+
+/** How a strike ladder is collapsed into one number. */
+export type ImpliedMethod = 'median' | 'mean';
+
+/**
+ * A Kalshi ladder that prices an underlying, as offered in the picker.
+ *
+ * One candidate is one *event* — a single expiry with its full strike ladder.
+ * A single strike cannot imply a price; the ladder is the unit of choice.
+ */
+export interface ImpliedCandidate {
+  eventTicker: string;
+  seriesTicker: string;
+  title: string;
+  subTitle: string;
+  /** When the ladder settles, ISO 8601. Empty when Kalshi does not state one. */
+  strikeDate: string;
+  /** Contracts in the ladder with a usable numeric strike. */
+  strikes: number;
+  /** How many of those are quoted (a two-sided book or a last print). */
+  quoted: number;
+  /** Summed 24h volume across the ladder, in contracts. */
+  volume24h: number;
+  /** Lowest and highest strike, so the picker can show the covered range. */
+  strikeLow: number | null;
+  strikeHigh: number | null;
+  /** Implied price from the live book right now, or `null` if underivable. */
+  implied: number | null;
+  /** Probability mass sitting outside the quoted strike range. */
+  tailMass: number | null;
+}
+
+export interface ImpliedCandidatesResponse {
+  symbol: string;
+  assetClass: AssetClass;
+  name: string;
+  candidates: ImpliedCandidate[];
+  /**
+   * Why the list is empty, when it is. "No Kalshi ladder prices this symbol" is
+   * an answer, not a failure — the panel shows this instead of an error.
+   */
+  note?: string;
+}
+
+export interface ImpliedPoint {
+  /** Bucket end, unix seconds — aligned to the Kalshi candle grid. */
+  time: number;
+  /** Implied price of the underlying, or `null` when the ladder was unusable. */
+  value: number | null;
+  /** Strikes that were quoted in this bucket. */
+  strikes: number;
+  /** Probability mass outside the quoted strike range in this bucket. */
+  tailMass: number;
+}
+
+export interface ImpliedSeriesResponse {
+  eventTicker: string;
+  title: string;
+  strikeDate: string;
+  method: ImpliedMethod;
+  interval: CandleInterval;
+  /** Tickers of the contracts that fed the calculation. */
+  contributors: string[];
+  /** Ladder contracts that were skipped for having no quotes at all. */
+  skipped: number;
+  points: ImpliedPoint[];
 }
 
 /* -------------------------------------------------------------------- fred */

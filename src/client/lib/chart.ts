@@ -63,6 +63,44 @@ export function chartTheme(): TerminalChartTheme {
   };
 }
 
+/**
+ * Colours for implied-price overlays, in assignment order.
+ *
+ * Read from CSS like the rest of the theme, so `THEME` restyles overlays too.
+ * They are deliberately distinct from `--up`/`--down`: an overlay is a separate
+ * *series*, not a direction, and colouring it green would read as "rising".
+ */
+export function overlayPalette(): string[] {
+  return [
+    cssVar('--overlay-1', '#4aa3ff'),
+    cssVar('--overlay-2', '#c678dd'),
+    cssVar('--overlay-3', '#e5c07b'),
+    cssVar('--overlay-4', '#56b6c2'),
+    cssVar('--overlay-5', '#e06c75'),
+  ];
+}
+
+/**
+ * Decimal places appropriate to a price's magnitude.
+ *
+ * The same axis has to render BTC at 63,000 and EUR/USD at 1.0842. Two decimals
+ * on the second one throws away the entire day's range; six on the first is
+ * noise. Picking from the magnitude gets both right without a per-instrument
+ * table.
+ */
+export function precisionFor(magnitude: number): number {
+  const abs = Math.abs(magnitude);
+  if (!Number.isFinite(abs) || abs === 0) return 2;
+  if (abs >= 1000) return 2;
+  if (abs >= 10) return 2;
+  if (abs >= 1) return 4;
+  return 6;
+}
+
+function priceFormat(precision: number) {
+  return { type: 'price' as const, precision, minMove: 10 ** -precision };
+}
+
 function baseOptions(theme: TerminalChartTheme): DeepPartial<TimeChartOptions> {
   return {
     layout: {
@@ -199,6 +237,54 @@ export class TerminalChart {
     });
   }
 
+  /* ------------------------------------------------------- spot + overlay */
+
+  /** Candles for an underlying, priced in its own currency rather than cents. */
+  addSpotCandles(precision: number): ISeriesApi<'Candlestick'> {
+    const theme = chartTheme();
+    return this.chart.addSeries(CandlestickSeries, {
+      upColor: theme.up,
+      downColor: theme.down,
+      wickUpColor: theme.up,
+      wickDownColor: theme.down,
+      borderUpColor: theme.up,
+      borderDownColor: theme.down,
+      priceFormat: priceFormat(precision),
+    });
+  }
+
+  addSpotLine(precision: number): ISeriesApi<'Line'> {
+    return this.chart.addSeries(LineSeries, {
+      color: chartTheme().text,
+      lineWidth: 2,
+      priceFormat: priceFormat(precision),
+    });
+  }
+
+  /**
+   * An implied-price line drawn over the true price.
+   *
+   * Dashed and thinner than the price on purpose: the two series are in the
+   * same units on the same axis, and the reader has to be able to tell at a
+   * glance which one is the market's forecast and which one actually happened.
+   */
+  addImpliedLine(color: string, precision: number): ISeriesApi<'Line'> {
+    return this.chart.addSeries(LineSeries, {
+      color,
+      lineWidth: 2,
+      lineStyle: LineStyle.Dashed,
+      priceFormat: priceFormat(precision),
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: true,
+    });
+  }
+
+  /** Drop a series without rebuilding the chart — used when an overlay is unticked. */
+  removeSeries(series: ISeriesApi<'Line'>): void {
+    this.chart.removeSeries(series);
+  }
+
   addFredArea(): ISeriesApi<'Area'> {
     const theme = chartTheme();
     return this.chart.addSeries(AreaSeries, {
@@ -284,6 +370,26 @@ export function toVolumeData(
 export function toLineData(candles: { time: number; close: number }[]): LineData<Time>[] {
   return dedupeAscending(
     candles.map((c) => ({ time: c.time as UTCTimestamp, value: c.close })),
+  );
+}
+
+/**
+ * Implied-price points → chart points.
+ *
+ * A `null` value becomes a whitespace point rather than being dropped. That is
+ * the whole reason this is not `toLineData`: a bucket where the ladder went
+ * unquoted is a genuine hole in the forecast, and joining across it would draw
+ * a straight line the market never implied.
+ */
+export function toImpliedData(
+  points: { time: number; value: number | null }[],
+): (LineData<Time> | WhitespaceData<Time>)[] {
+  return dedupeAscending(
+    points.map((p) =>
+      p.value === null
+        ? { time: p.time as UTCTimestamp }
+        : { time: p.time as UTCTimestamp, value: p.value },
+    ),
   );
 }
 
