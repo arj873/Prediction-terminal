@@ -10,7 +10,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { KalshiEvent, Market } from '../src/shared/types.js';
+import type { Market, VenueEvent } from '../src/shared/types.js';
 import {
   assertGenre,
   classify,
@@ -132,7 +132,7 @@ function market(overrides: Partial<Market>): Market {
   };
 }
 
-const EVENT: KalshiEvent = {
+const EVENT: VenueEvent = {
   eventTicker: 'KXRT-DUNE',
   seriesTicker: 'KXRT',
   title: 'Dune: Part Three · Rotten Tomatoes score',

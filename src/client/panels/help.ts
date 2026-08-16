@@ -8,7 +8,7 @@ import { Panel, type PanelContext } from './panel.js';
 import { COMMANDS, COMMAND_INDEX, type Command } from '../terminal/registry.js';
 
 const GROUP_TITLES: Record<Command['group'], string> = {
-  markets: 'KALSHI MARKETS',
+  markets: 'PREDICTION MARKETS',
   data: 'DATA SOURCES',
   workspace: 'WORKSPACE',
 };
@@ -106,7 +106,13 @@ export class HelpPanel extends Panel<Command[]> {
         el('h3', { class: 'help-group-title', text: 'DATA SOURCES' }),
         el('ul', { class: 'help-list' }, [
           el('li', {
-            text: 'Kalshi — public trade-api v2. Prices in cents; a Kalshi contract settles at $1.',
+            text: 'Kalshi — public trade-api v2. Prices in cents; a contract settles at $1.',
+          }),
+          el('li', {
+            text: 'Polymarket International — gamma-api for the catalogue, the CLOB for books and price history. Prefix a slug with pm:.',
+          }),
+          el('li', {
+            text: 'Polymarket US — the public gateway. Quote and book only: its trade tape and candles need an API key, and the terminal holds none. Prefix a slug with pmus:.',
           }),
           el('li', {
             text: 'FRED — scraped from fred.stlouisfed.org. Set FRED_API_KEY for an API fallback if the scrape is blocked.',

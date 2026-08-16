@@ -12,16 +12,25 @@ import type {
   CandleInterval,
   CandlesResponse,
   EventsResponse,
-  KalshiEvent,
   Market,
   MarketsResponse,
   OrderBook,
   SeriesInfo,
   StrikeType,
   TradesResponse,
+  VenueEvent,
 } from '../../shared/types.js';
 import { TTL, cache } from '../lib/cache.js';
 import { UpstreamError, fetchJson } from '../lib/http.js';
+import {
+  rankMarkets,
+  searchCorpus,
+  type Corpus,
+  type MoverSort,
+  type SearchResponse,
+} from './corpus.js';
+
+export type { Corpus, EventSearchHit, MoverSort, SearchResponse } from './corpus.js';
 
 const BASE = process.env.KALSHI_API_BASE ?? 'https://api.elections.kalshi.com/trade-api/v2';
 
@@ -34,7 +43,14 @@ function num(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Same as {@link num} but collapses missing values to 0 — for volumes. */
+/**
+ * Same as {@link num} but collapses missing values to 0.
+ *
+ * Only for figures Kalshi always sends and where an absent field genuinely
+ * means none — book sizes and candle volumes. A market's headline volume and
+ * open interest use {@link num}, because `null` there means "this venue does
+ * not publish it", a distinction the other two venues make real.
+ */
 function num0(value: unknown): number {
   return num(value) ?? 0;
 }
@@ -134,6 +150,7 @@ function normaliseMarket(raw: RawMarket, seriesTicker?: string): Market {
   const mid = yesBid !== null && yesAsk !== null ? (yesBid + yesAsk) / 2 : (last ?? yesBid ?? yesAsk);
 
   return {
+    venue: 'kalshi',
     ticker: raw.ticker,
     eventTicker,
     seriesTicker: seriesTicker ?? seriesFromTicker(eventTicker || raw.ticker),
@@ -150,10 +167,10 @@ function normaliseMarket(raw: RawMarket, seriesTicker?: string): Market {
     lastPrice: last,
     previousPrice: previous,
     change: last !== null && previous !== null ? round4(last - previous) : null,
-    volume: num0(raw.volume_fp),
-    volume24h: num0(raw.volume_24h_fp),
-    openInterest: num0(raw.open_interest_fp),
-    liquidity: num0(raw.liquidity_dollars),
+    volume: num(raw.volume_fp),
+    volume24h: num(raw.volume_24h_fp),
+    openInterest: num(raw.open_interest_fp),
+    liquidity: num(raw.liquidity_dollars),
     openTime: raw.open_time ?? '',
     closeTime: raw.close_time ?? '',
     expirationTime: raw.expiration_time ?? '',
@@ -184,9 +201,10 @@ const STRIKE_TYPES = new Set<string>([
   'between',
 ]);
 
-function normaliseEvent(raw: RawEvent): KalshiEvent {
+function normaliseEvent(raw: RawEvent): VenueEvent {
   const seriesTicker = raw.series_ticker ?? seriesFromTicker(raw.event_ticker);
   return {
+    venue: 'kalshi',
     eventTicker: raw.event_ticker,
     seriesTicker,
     title: raw.title ?? raw.event_ticker,
@@ -270,7 +288,7 @@ export async function listEvents(params: ListEventsParams = {}): Promise<EventsR
   return { events: (raw.events ?? []).map(normaliseEvent), cursor: raw.cursor || null };
 }
 
-export async function getEvent(eventTicker: string): Promise<KalshiEvent> {
+export async function getEvent(eventTicker: string): Promise<VenueEvent> {
   const raw = await get<{ event?: RawEvent; markets?: RawMarket[] }>(
     `/events/${encodeURIComponent(eventTicker)}${qs({ with_nested_markets: 'true' })}`,
     TTL.quote,
@@ -319,6 +337,7 @@ export function normaliseOrderBook(raw: RawOrderBook, ticker: string, depth = 12
   const bestYesAsk = yesAsks[0]?.price ?? null;
 
   return {
+    venue: 'kalshi',
     ticker,
     yes,
     no,
@@ -378,6 +397,7 @@ export async function getTrades(
       const yes = yesPrice ?? (noPrice !== null ? round4(1 - noPrice) : 0);
       const no = noPrice ?? round4(1 - yes);
       return {
+        venue: 'kalshi' as const,
         tradeId: t.trade_id,
         ticker: t.ticker,
         ts: Math.floor(new Date(t.created_time).getTime() / 1000),
@@ -397,6 +417,7 @@ export async function listSeries(category?: string): Promise<SeriesInfo[]> {
     series?: { ticker: string; title?: string; category?: string; frequency?: string; tags?: string[] }[];
   }>(`/series/${qs({ category })}`, TTL.catalogue);
   return (raw.series ?? []).map((s) => ({
+    venue: 'kalshi' as const,
     ticker: s.ticker,
     title: s.title ?? s.ticker,
     category: s.category ?? '',
@@ -420,13 +441,10 @@ export async function listSeries(category?: string): Promise<SeriesInfo[]> {
  * Held for {@link TTL.catalogue} and warmed at boot, so the first search a user
  * runs does not pay for the crawl. Prices inside the snapshot go stale, so
  * anything that renders a live quote re-fetches the individual market.
+ *
+ * Searching and ranking it is {@link searchCorpus}/{@link rankMarkets}' job, so
+ * all three venues score a query the same way.
  */
-interface Corpus {
-  events: KalshiEvent[];
-  markets: Market[];
-  builtAt: number;
-}
-
 const CORPUS_KEY = 'kalshi:corpus';
 
 /**
@@ -442,9 +460,10 @@ const CORPUS_KEY = 'kalshi:corpus';
 const CORPUS_MAX_PAGES = 60;
 
 async function buildCorpus(): Promise<Corpus> {
-  const events: KalshiEvent[] = [];
+  const events: VenueEvent[] = [];
   const markets: Market[] = [];
   let cursor: string | undefined;
+  let truncated = false;
 
   for (let page = 0; page < CORPUS_MAX_PAGES; page++) {
     const path = `/events${qs({
@@ -467,9 +486,10 @@ async function buildCorpus(): Promise<Corpus> {
 
     cursor = raw.cursor || undefined;
     if (!cursor || !raw.events?.length) break;
+    truncated = page === CORPUS_MAX_PAGES - 1;
   }
 
-  return { events, markets, builtAt: Date.now() };
+  return { venue: 'kalshi', events, markets, builtAt: Date.now(), truncated };
 }
 
 async function corpus(): Promise<Corpus> {
@@ -485,8 +505,6 @@ async function corpus(): Promise<Corpus> {
 export async function corpusSnapshot(): Promise<Corpus> {
   return corpus();
 }
-
-export type { Corpus };
 
 /**
  * Kick off the crawl without blocking startup.
@@ -506,110 +524,14 @@ export function warmCorpus(): void {
     });
 }
 
-export interface EventSearchHit {
-  event: Omit<KalshiEvent, 'markets'>;
-  /** Markets in the event, most liquid first. */
-  markets: Market[];
-  /** Summed 24h volume across the event's markets. */
-  volume24h: number;
-  score: number;
-}
-
-export interface SearchResponse {
-  query: string;
-  hits: EventSearchHit[];
-  /** How many events were searched. */
-  scanned: number;
-  /** Age of the snapshot in seconds — surfaced so the UI can say so. */
-  snapshotAgeSeconds: number;
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Rank open events against a free-text query.
- *
- * Every whitespace-separated term must appear somewhere in the haystack
- * (event ticker, title, sub-title, category, and its markets' strike labels).
- * Scoring rewards ticker hits, title-prefix hits and word-boundary hits, and a
- * whole-phrase match outranks scattered terms. Ties break on 24h volume so the
- * liquid event wins.
- */
+/** Rank open Kalshi events against a free-text query. */
 export async function search(query: string, limit = 25): Promise<SearchResponse> {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const snapshot = await corpus();
-  const hits: EventSearchHit[] = [];
-
-  for (const event of snapshot.events) {
-    const ticker = event.eventTicker.toLowerCase();
-    const title = event.title.toLowerCase();
-    const strikes = event.markets
-      .map((m) => m.yesSubTitle)
-      .join(' ')
-      .toLowerCase();
-    const haystack = `${ticker} ${title} ${event.subTitle.toLowerCase()} ${event.category.toLowerCase()} ${strikes}`;
-
-    let score = 0;
-    let matchedAll = true;
-
-    for (const term of terms) {
-      if (!haystack.includes(term)) {
-        matchedAll = false;
-        break;
-      }
-      score += 10;
-      if (ticker.includes(term)) score += 12;
-      if (title.startsWith(term)) score += 8;
-      if (new RegExp(`\\b${escapeRegExp(term)}`).test(haystack)) score += 6;
-    }
-    if (!matchedAll) continue;
-
-    if (terms.length > 1 && haystack.includes(terms.join(' '))) score += 25;
-
-    const volume24h = event.markets.reduce((sum, m) => sum + m.volume24h, 0);
-    if (volume24h > 0) score += 5;
-
-    const { markets, ...meta } = event;
-    hits.push({
-      event: meta,
-      markets: [...markets].sort((a, b) => b.volume24h - a.volume24h),
-      volume24h,
-      score,
-    });
-  }
-
-  hits.sort((a, b) => b.score - a.score || b.volume24h - a.volume24h);
-
-  return {
-    query,
-    hits: hits.slice(0, limit),
-    scanned: snapshot.events.length,
-    snapshotAgeSeconds: Math.round((Date.now() - snapshot.builtAt) / 1000),
-  };
+  return searchCorpus(await corpus(), query, limit);
 }
-
-export type MoverSort = 'volume' | 'gainers' | 'losers' | 'open_interest' | 'liquidity';
 
 /** Leaderboard over the snapshot. Powers the `TOP` command. */
 export async function topMarkets(sort: MoverSort, limit = 25): Promise<Market[]> {
-  const snapshot = await corpus();
-
-  const eligible = snapshot.markets.filter((m) => {
-    if (sort === 'gainers' || sort === 'losers') return m.change !== null && m.volume24h > 0;
-    return true;
-  });
-
-  const compare: Record<MoverSort, (a: Market, b: Market) => number> = {
-    volume: (a, b) => b.volume24h - a.volume24h,
-    open_interest: (a, b) => b.openInterest - a.openInterest,
-    liquidity: (a, b) => b.liquidity - a.liquidity,
-    gainers: (a, b) => (b.change ?? 0) - (a.change ?? 0),
-    losers: (a, b) => (a.change ?? 0) - (b.change ?? 0),
-  };
-
-  return eligible.sort(compare[sort]).slice(0, limit);
+  return rankMarkets((await corpus()).markets, sort, limit);
 }
 
 /**
@@ -701,5 +623,11 @@ export async function getCandles(
 
   const raw = await get<{ candlesticks?: RawCandle[] }>(path, TTL.candles);
 
-  return { ticker, seriesTicker, interval, candles: normaliseCandles(raw.candlesticks ?? []) };
+  return {
+    venue: 'kalshi',
+    ticker,
+    seriesTicker,
+    interval,
+    candles: normaliseCandles(raw.candlesticks ?? []),
+  };
 }

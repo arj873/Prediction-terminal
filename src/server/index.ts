@@ -18,12 +18,15 @@ import type { ApiError } from '../shared/types.js';
 import { cache } from './lib/cache.js';
 import { UpstreamError } from './lib/http.js';
 import { billboardRouter } from './routes/billboard.js';
+import { crossVenueRouter } from './routes/crossvenue.js';
 import { entertainmentRouter } from './routes/entertainment.js';
 import { fredRouter } from './routes/fred.js';
 import { impliedRouter } from './routes/implied.js';
 import { kalshiRouter } from './routes/kalshi.js';
 import { spotRouter } from './routes/spot.js';
-import { warmCorpus } from './sources/kalshi.js';
+import { venueRouter } from './routes/venue.js';
+import { warmIndexes } from './sources/crossvenue.js';
+import { warmAll } from './sources/venues.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);
@@ -77,6 +80,8 @@ export function createApp(): express.Express {
 
   // ---- routes ------------------------------------------------------------
   app.use('/api/kalshi', kalshiRouter);
+  app.use('/api/venue/:venue', venueRouter);
+  app.use('/api/xv', crossVenueRouter);
   app.use('/api/spot', spotRouter);
   app.use('/api/implied', impliedRouter);
   app.use('/api/fred', fredRouter);
@@ -118,9 +123,13 @@ export function createApp(): express.Express {
           ? 400
           : err.code === 'not_found'
             ? 404
-            : err.code === 'upstream_timeout'
-              ? 504
-              : 502;
+            : // The venue is reachable and the request is well formed; it simply
+              // does not publish this. A 501 says that and nothing else.
+              err.code === 'unsupported'
+              ? 501
+              : err.code === 'upstream_timeout'
+                ? 504
+                : 502;
       const body: ApiError = { error: err.message, code: err.code };
       if (err.hint) body.hint = err.hint;
       if (err.status) body.status = err.status;
@@ -147,6 +156,8 @@ if (invokedDirectly) {
   createApp().listen(PORT, HOST, () => {
     console.log(`PREDICTION TERMINAL api  http://${HOST}:${PORT}`);
     console.log(`  kalshi     /api/kalshi/{markets,events,search,top,series}`);
+    console.log(`  venues     /api/venue/{kalshi,polymarket,polymarket-us}/{markets,events,search,top}`);
+    console.log(`  xvenue     /api/xv/{series,compare}`);
     console.log(`  spot       /api/spot/{stock,crypto}/:symbol[/candles]`);
     console.log(`  implied    /api/implied/{underlyings,candidates,series}`);
     console.log(`  fred       /api/fred/{series/:id,search}`);
@@ -155,8 +166,9 @@ if (invokedDirectly) {
     if (!process.env.FRED_API_KEY?.trim()) {
       console.log(`  note: FRED_API_KEY unset — FRED uses scraping only (no fallback).`);
     }
-    // Crawl the Kalshi event universe in the background so the first `SRCH`
-    // does not pay the ~15s cold-start cost.
-    warmCorpus();
+    // Crawl all three catalogues in the background, then pair their series up,
+    // so the first `SRCH` or `XV` does not pay the cold-start cost.
+    warmAll();
+    warmIndexes();
   });
 }

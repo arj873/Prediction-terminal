@@ -1254,3 +1254,100 @@ button {
   scrollbar-width: thin;
   scrollbar-color: var(--border-bright) var(--bg);
 }
+
+/* ------------------------------------------------------------- cross-venue */
+
+/* Venue badges reuse the overlay palette rather than the up/down colours: a
+   broker is a series, not a direction, and a green KAL chip next to a red PMUS
+   one would read as a price move to anyone who has ever looked at a terminal. */
+.venue-badge {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: var(--size-tiny);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.venue-kalshi {
+  color: var(--overlay-1);
+  border-color: color-mix(in srgb, var(--overlay-1) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-1) 12%, transparent);
+}
+
+.venue-polymarket {
+  color: var(--overlay-2);
+  border-color: color-mix(in srgb, var(--overlay-2) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-2) 12%, transparent);
+}
+
+.venue-polymarket-us {
+  color: var(--overlay-3);
+  border-color: color-mix(in srgb, var(--overlay-3) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-3) 12%, transparent);
+}
+
+.venue-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* Confidence in a pairing, graded down to the colour the terminal uses for
+   "look at this before you trust it". */
+.match-chip {
+  padding: 0 4px;
+  font-size: var(--size-tiny);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.match-linked {
+  background: color-mix(in srgb, var(--up) 20%, transparent);
+  color: var(--up);
+}
+
+.match-strong {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.match-likely {
+  background: color-mix(in srgb, var(--fg-dim) 24%, transparent);
+  color: var(--fg);
+}
+
+.match-weak {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn);
+}
+
+.compare-legs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-leg {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--bg-raised);
+  font-size: var(--size-small);
+}
+
+.compare-leg:hover {
+  background: var(--bg-hover);
+}
+
+.compare-leg-ticker {
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}

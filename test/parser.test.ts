@@ -136,14 +136,25 @@ describe('isIsoDate / looksLikeTicker', () => {
 describe('parseChartArgs', () => {
   it('defaults to hourly bars over 30 days', () => {
     const result = parseChartArgs(['KXFED-1']);
-    assert.equal(result.ticker, 'KXFED-1');
+    assert.deepEqual(result.ref, { venue: 'kalshi', id: 'KXFED-1' });
     assert.equal(result.interval, 60);
     assert.equal(result.lookbackSeconds, 30 * 86400);
     assert.equal(result.style, 'candle');
   });
 
-  it('upper-cases the ticker', () => {
-    assert.equal(parseChartArgs(['kxfed-1']).ticker, 'KXFED-1');
+  it('reads an unprefixed ticker as Kalshi, upper-cased', () => {
+    assert.deepEqual(parseChartArgs(['kxfed-1']).ref, { venue: 'kalshi', id: 'KXFED-1' });
+  });
+
+  it('reads a venue prefix, and keeps a Polymarket slug lower-case', () => {
+    assert.deepEqual(parseChartArgs(['pm:Fed-Decision-In-October']).ref, {
+      venue: 'polymarket',
+      id: 'fed-decision-in-october',
+    });
+    assert.deepEqual(parseChartArgs(['pmus:usfed-fomc-2026-10-28']).ref, {
+      venue: 'polymarket-us',
+      id: 'usfed-fomc-2026-10-28',
+    });
   });
 
   it('reads interval, range and style in any order', () => {

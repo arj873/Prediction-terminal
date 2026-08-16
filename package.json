@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A Bloomberg-style terminal for Kalshi prediction markets, FRED economic data, and the Billboard charts.",
+  "description": "A Bloomberg-style terminal for Kalshi, Polymarket and Polymarket US prediction markets, FRED economic data, and the Billboard charts.",
   "engines": {
     "node": ">=20.11"
   },

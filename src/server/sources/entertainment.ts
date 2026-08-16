@@ -18,9 +18,10 @@
  * `settlement_sources`, which name the upstream Kalshi resolves against.
  */
 
-import type { EntEvent, EntGenre, EntResponse, KalshiEvent } from '../../shared/types.js';
+import type { EntEvent, EntGenre, EntResponse, VenueEvent } from '../../shared/types.js';
 import { ENT_GENRES } from '../../shared/types.js';
 import { UpstreamError } from '../lib/http.js';
+import { sumOrNull } from './corpus.js';
 import { corpusSnapshot } from './kalshi.js';
 
 const CATEGORY = 'entertainment';
@@ -225,9 +226,9 @@ export function assertGenre(raw: string): EntGenre | 'all' {
 }
 
 /** Shape one corpus event into the entertainment view. */
-export function toEntEvent(event: KalshiEvent): EntEvent {
+export function toEntEvent(event: VenueEvent): EntEvent {
   const genres = classify(event.seriesTicker, `${event.title} ${event.subTitle}`);
-  const markets = [...event.markets].sort((a, b) => b.volume24h - a.volume24h);
+  const markets = [...event.markets].sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0));
 
   // The soonest close is the one a trader is actually racing; an event whose
   // legs close on different days should show the nearest, not an arbitrary one.
@@ -242,8 +243,10 @@ export function toEntEvent(event: KalshiEvent): EntEvent {
     subTitle: event.subTitle,
     genres,
     markets,
-    volume24h: markets.reduce((sum, m) => sum + m.volume24h, 0),
-    openInterest: markets.reduce((sum, m) => sum + m.openInterest, 0),
+    // This view is Kalshi-only, and Kalshi publishes both figures on every
+    // market, so the fallback is unreachable rather than a silent zero.
+    volume24h: sumOrNull(markets, (m) => m.volume24h) ?? 0,
+    openInterest: sumOrNull(markets, (m) => m.openInterest) ?? 0,
     closeTime: closes[0] ?? '',
     ...(feed ? { feed } : {}),
   };

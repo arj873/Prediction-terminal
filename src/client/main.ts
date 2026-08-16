@@ -39,7 +39,7 @@ const header = el('header', { class: 'topbar' }, [
   ]),
   el('div', { class: 'status' }, [
     countEl,
-    el('span', { class: 'status-item', text: 'KALSHI · FRED · BILLBOARD' }),
+    el('span', { class: 'status-item', text: 'KALSHI · POLYMARKET · POLYMARKET US · FRED' }),
     linkEl,
     clockEl,
   ]),
@@ -188,7 +188,10 @@ window.setInterval(() => void pollHealth(), 30_000);
 
 /* --------------------------------------------------------------- opening */
 
-commandLine.log('PREDICTION TERMINAL — Kalshi · FRED · Billboard', 'info');
+commandLine.log(
+  'PREDICTION TERMINAL — Kalshi · Polymarket · Polymarket US · FRED · Billboard',
+  'info',
+);
 commandLine.log('Type HELP for commands, or click an example below.', 'info');
 
 tape.start();

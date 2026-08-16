@@ -1,11 +1,16 @@
 /**
- * Kalshi market panels: quote (DES), order book (OB), and time & sales (TAS).
+ * Market panels: quote (DES), order book (OB), and time & sales (TAS).
+ *
+ * Venue-agnostic. Each takes a {@link VenueRef}, so `DES KXFEDDECISION-26OCT`
+ * and `DES pm:fed-decision-in-october` are the same panel reading two brokers.
  */
 
 import type { Market, OrderBook, TradesResponse } from '../../shared/types.js';
-import { kalshi } from '../lib/api.js';
+import { formatRef, venueInfo, type VenueRef } from '../../shared/venue.js';
+import { venue } from '../lib/api.js';
 import { cell, el, field, row, table } from '../lib/dom.js';
 import {
+  EM_DASH,
   cents,
   compact,
   countdown,
@@ -24,31 +29,32 @@ import { Panel, type PanelContext } from './panel.js';
 export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }> {
   override readonly kind = 'DES';
 
-  readonly #ticker: string;
+  readonly #ref: VenueRef;
   #market: Market | undefined;
 
-  constructor(id: string, context: PanelContext, ticker: string) {
+  constructor(id: string, context: PanelContext, ref: VenueRef) {
     super(id, context);
-    this.#ticker = ticker;
+    this.#ref = ref;
     this.refreshMs = 5_000;
   }
 
-  static idFor(ticker: string): string {
-    return `des:${ticker.toUpperCase()}`;
+  static idFor(ref: VenueRef): string {
+    return `des:${ref.venue}:${ref.id}`;
   }
 
   protected override title(): string {
-    return this.#ticker;
+    return formatRef(this.#ref);
   }
 
   protected override subtitle(): string {
-    return this.#market ? truncate(this.#market.title, 64) : '';
+    const label = venueInfo(this.#ref.venue).label;
+    return this.#market ? `${label} · ${truncate(this.#market.title, 52)}` : label;
   }
 
   protected override async load(signal: AbortSignal): Promise<{ market: Market; book: OrderBook | null }> {
     const [market, book] = await Promise.all([
-      kalshi.market(this.#ticker, signal),
-      kalshi.orderBook(this.#ticker, 5, signal).catch(() => null),
+      venue.market(this.#ref, signal),
+      venue.orderBook(this.#ref, 5, signal).catch(() => null),
     ]);
     return { market, book };
   }
@@ -60,7 +66,13 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
 
     this.body.append(
       el('div', { class: 'quote-head' }, [
-        el('div', { class: 'quote-question', text: market.title }),
+        el('div', { class: 'quote-question' }, [
+          el('span', {
+            class: `venue-badge venue-${market.venue}`,
+            text: venueInfo(market.venue).code,
+          }),
+          el('span', { text: market.title }),
+        ]),
         el('div', { class: 'quote-strike' }, [
           el('span', { class: 'tag tag-yes', text: 'YES' }),
           el('span', { text: market.yesSubTitle || '—' }),
@@ -80,11 +92,12 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
         field('VOL', group(market.volume)),
         field('VOL 24H', group(market.volume24h)),
         field('OPEN INT', group(market.openInterest)),
-        field('LIQUIDITY', `$${group(market.liquidity, 2)}`),
+        // A venue that does not publish depth prints `--`, not `$0.00`.
+        field('LIQUIDITY', market.liquidity === null ? EM_DASH : `$${group(market.liquidity, 2)}`),
         field('CLOSES', stamp(market.closeTime)),
         field('IN', countdown(market.closeTime)),
-        field('EVENT', market.eventTicker),
-        field('SERIES', market.seriesTicker),
+        field('EVENT', market.eventTicker || EM_DASH),
+        field('SERIES', market.seriesTicker || EM_DASH),
         market.result ? field('RESULT', market.result.toUpperCase()) : el('span'),
       ]),
     );
@@ -98,13 +111,17 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
       );
     }
 
+    const ref = formatRef({ venue: market.venue, id: market.ticker });
+    const event = formatRef({ venue: market.venue, id: market.eventTicker });
+
     this.body.append(
       el('div', { class: 'panel-actions' }, [
-        this.#action('GP', `GP ${market.ticker}`),
-        this.#action('OB', `OB ${market.ticker}`),
-        this.#action('TAS', `TAS ${market.ticker}`),
-        this.#action('EVT', `EVT ${market.eventTicker}`),
-        this.#action('+WATCH', `W ADD ${market.ticker}`),
+        this.#action('GP', `GP ${ref}`),
+        this.#action('OB', `OB ${ref}`),
+        this.#action('TAS', `TAS ${ref}`),
+        market.eventTicker ? this.#action('EVT', `EVT ${event}`) : null,
+        market.eventTicker ? this.#action('XV', `XV ${event}`) : null,
+        this.#action('+WATCH', `W ADD ${ref}`),
       ]),
     );
   }
@@ -128,24 +145,28 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
 export class DepthPanel extends Panel<OrderBook> {
   override readonly kind = 'OB';
 
-  readonly #ticker: string;
+  readonly #ref: VenueRef;
 
-  constructor(id: string, context: PanelContext, ticker: string) {
+  constructor(id: string, context: PanelContext, ref: VenueRef) {
     super(id, context);
-    this.#ticker = ticker;
+    this.#ref = ref;
     this.refreshMs = 3_000;
   }
 
-  static idFor(ticker: string): string {
-    return `ob:${ticker.toUpperCase()}`;
+  static idFor(ref: VenueRef): string {
+    return `ob:${ref.venue}:${ref.id}`;
   }
 
   protected override title(): string {
-    return this.#ticker;
+    return formatRef(this.#ref);
+  }
+
+  protected override subtitle(): string {
+    return venueInfo(this.#ref.venue).label;
   }
 
   protected override load(signal: AbortSignal): Promise<OrderBook> {
-    return kalshi.orderBook(this.#ticker, 15, signal);
+    return venue.orderBook(this.#ref, 15, signal);
   }
 
   /**
@@ -208,24 +229,28 @@ export class DepthPanel extends Panel<OrderBook> {
 export class TradesPanel extends Panel<TradesResponse> {
   override readonly kind = 'TAS';
 
-  readonly #ticker: string;
+  readonly #ref: VenueRef;
 
-  constructor(id: string, context: PanelContext, ticker: string) {
+  constructor(id: string, context: PanelContext, ref: VenueRef) {
     super(id, context);
-    this.#ticker = ticker;
+    this.#ref = ref;
     this.refreshMs = 5_000;
   }
 
-  static idFor(ticker: string): string {
-    return `tas:${ticker.toUpperCase()}`;
+  static idFor(ref: VenueRef): string {
+    return `tas:${ref.venue}:${ref.id}`;
   }
 
   protected override title(): string {
-    return this.#ticker;
+    return formatRef(this.#ref);
+  }
+
+  protected override subtitle(): string {
+    return venueInfo(this.#ref.venue).label;
   }
 
   protected override load(signal: AbortSignal): Promise<TradesResponse> {
-    return kalshi.trades(this.#ticker, 100, signal);
+    return venue.trades(this.#ref, 100, signal);
   }
 
   protected override render(data: TradesResponse): void {

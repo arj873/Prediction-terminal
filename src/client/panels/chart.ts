@@ -1,14 +1,20 @@
 /**
- * GP — the Kalshi price chart.
+ * GP — the contract price chart, at any of the three venues.
  *
  * Candlesticks (or an area line) of the YES contract price, volume underneath,
  * and a crosshair legend that reads out the bar under the cursor. Prices are
  * drawn in dollars and labelled in cents, which is how a prediction market is
  * quoted.
+ *
+ * Not every venue publishes bars. Polymarket International publishes a price
+ * sample series, which the server buckets and labels as such; Polymarket US
+ * publishes nothing public at all, and the panel prints why rather than an
+ * empty pane.
  */
 
 import type { CandleInterval, CandlesResponse, Market } from '../../shared/types.js';
-import { kalshi } from '../lib/api.js';
+import { formatRef, venueInfo, type VenueRef } from '../../shared/venue.js';
+import { venue } from '../lib/api.js';
 import {
   TerminalChart,
   chartTheme,
@@ -25,7 +31,7 @@ import { Panel, type PanelContext } from './panel.js';
 export type ChartStyle = 'candle' | 'line';
 
 export interface ChartPanelOptions {
-  ticker: string;
+  ref: VenueRef;
   interval: CandleInterval;
   /** Look-back window in seconds. */
   lookbackSeconds: number;
@@ -58,19 +64,21 @@ export class ChartPanel extends Panel<ChartData> {
     this.refreshMs = options.interval === 1 ? 15_000 : 60_000;
   }
 
-  static idFor(ticker: string): string {
-    return `gp:${ticker.toUpperCase()}`;
+  static idFor(ref: VenueRef): string {
+    return `gp:${ref.venue}:${ref.id}`;
   }
 
   protected override title(): string {
-    return this.#options.ticker;
+    return formatRef(this.#options.ref);
   }
 
   protected override subtitle(): string {
-    const { interval, style } = this.#options;
+    const { interval, style, ref } = this.#options;
     const market = this.#latest?.market;
-    const label = `${INTERVAL_LABEL[interval]} · ${style}`;
-    return market ? `${label} · ${truncate(market.title, 60)}` : label;
+    const label = `${venueInfo(ref.venue).label} · ${INTERVAL_LABEL[interval]} · ${style}`;
+    const note = this.#latest?.candles.note;
+    if (market) return `${label} · ${truncate(market.title, 52)}`;
+    return note ? `${label} · ${truncate(note, 52)}` : label;
   }
 
   protected override async load(signal: AbortSignal): Promise<ChartData> {
@@ -79,8 +87,8 @@ export class ChartPanel extends Panel<ChartData> {
 
     // The quote header is a nicety; a market that 404s should not kill the chart.
     const [candles, market] = await Promise.all([
-      kalshi.candles(this.#options.ticker, this.#options.interval, start, end, signal),
-      kalshi.market(this.#options.ticker, signal).catch(() => null),
+      venue.candles(this.#options.ref, this.#options.interval, start, end, signal),
+      venue.market(this.#options.ref, signal).catch(() => null),
     ]);
 
     return { candles, market };
@@ -107,7 +115,9 @@ export class ChartPanel extends Panel<ChartData> {
           el('div', { text: 'No candles in this window.' }),
           el('div', {
             class: 'panel-empty-hint',
-            text: 'This market may not have traded yet. Try a wider range, e.g. `GP <ticker> 1d 1y`.',
+            text:
+              data.candles.note ??
+              'This market may not have traded yet. Try a wider range, e.g. `GP <ticker> 1d 1y`.',
           }),
         ]),
       );
@@ -205,7 +215,7 @@ export class ChartPanel extends Panel<ChartData> {
     high: number;
     low: number;
     close: number;
-    volume: number;
+    volume: number | null;
     traded: boolean;
   }): void {
     const legend = this.#legend;

@@ -2,22 +2,38 @@
  * Discovery panels: SRCH (event search), EVT (strike ladder), TOP (movers) and
  * W (watchlist). Every row is clickable and routes back through the command
  * bus, so the mouse and the keyboard drive the same code path.
+ *
+ * `SRCH` and `TOP` read every venue at once and label each row with the broker
+ * quoting it, because the first question about a market is usually "who else
+ * lists this, and at what?".
  */
 
-import type { KalshiEvent, Market } from '../../shared/types.js';
-import { kalshi, type SearchResponse } from '../lib/api.js';
+import type { Market, Venue, VenueEvent } from '../../shared/types.js';
+import { formatRef, parseRef, venueInfo, VENUE_IDS, type VenueRef } from '../../shared/venue.js';
+import { venue, type SearchResponse } from '../lib/api.js';
 import { cell, el, row, table } from '../lib/dom.js';
 import { cents, compact, countdown, direction, signedCents, truncate } from '../lib/format.js';
 import { Panel, type PanelContext } from './panel.js';
 import type { Workspace } from '../state.js';
 
 /** Shared column layout for any list of markets. */
-const MARKET_HEADERS = ['TICKER', 'CONTRACT', 'BID', 'ASK', 'LAST', 'CHG', 'VOL 24H', 'OI', 'CLOSES'];
+const MARKET_HEADERS = ['VEN', 'TICKER', 'CONTRACT', 'BID', 'ASK', 'LAST', 'CHG', 'VOL 24H', 'OI', 'CLOSES'];
 
-function marketRow(market: Market, onOpen: (ticker: string) => void): HTMLTableRowElement {
+/** The venue's short code as a coloured chip, for a table cell. */
+function venueCell(v: Venue): HTMLTableCellElement {
+  const td = cell('');
+  td.className = 'venue-cell';
+  td.title = venueInfo(v).label;
+  td.append(el('span', { class: `venue-badge venue-${v}`, text: venueInfo(v).code }));
+  return td;
+}
+
+function marketRow(market: Market, onOpen: (ref: string) => void): HTMLTableRowElement {
+  const ref = formatRef({ venue: market.venue, id: market.ticker });
   const tr = row([
-    cell(market.ticker, 'mono strong'),
-    cell(truncate(market.yesSubTitle || market.title, 46), undefined, 'td', market.title),
+    venueCell(market.venue),
+    cell(truncate(market.ticker, 28), 'mono strong', 'td', market.ticker),
+    cell(truncate(market.yesSubTitle || market.title, 42), undefined, 'td', market.title),
     cell(cents(market.yesBid), 'num price-bid'),
     cell(cents(market.yesAsk), 'num price-ask'),
     cell(cents(market.lastPrice), 'num'),
@@ -27,116 +43,172 @@ function marketRow(market: Market, onOpen: (ticker: string) => void): HTMLTableR
     cell(countdown(market.closeTime), 'num dim'),
   ]);
   tr.classList.add('clickable');
-  tr.title = `${market.title}\nClick to chart ${market.ticker}`;
-  tr.addEventListener('click', () => onOpen(market.ticker));
+  tr.title = `${market.title}\nClick to chart ${ref}`;
+  tr.addEventListener('click', () => onOpen(ref));
   return tr;
 }
 
 /* ------------------------------------------------------------------ SRCH */
 
-export class SearchPanel extends Panel<SearchResponse> {
+interface MultiSearch {
+  query: string;
+  results: { venue: Venue; response: SearchResponse | null; error: string | null }[];
+}
+
+export class SearchPanel extends Panel<MultiSearch> {
   override readonly kind = 'SRCH';
 
   readonly #query: string;
+  readonly #venues: readonly Venue[];
 
-  constructor(id: string, context: PanelContext, query: string) {
+  constructor(id: string, context: PanelContext, query: string, venues: readonly Venue[] = VENUE_IDS) {
     super(id, context);
     this.#query = query;
+    this.#venues = venues;
     this.refreshMs = 60_000;
   }
 
-  static idFor(query: string): string {
-    return `srch:${query.toLowerCase()}`;
+  static idFor(query: string, venues: readonly Venue[] = VENUE_IDS): string {
+    return `srch:${venues.join('+')}:${query.toLowerCase()}`;
   }
 
   protected override title(): string {
     return `"${this.#query}"`;
   }
 
-  protected override load(signal: AbortSignal): Promise<SearchResponse> {
-    return kalshi.search(this.#query, 25, signal);
+  protected override subtitle(): string {
+    return this.#venues.length === VENUE_IDS.length
+      ? 'all venues'
+      : this.#venues.map((v) => venueInfo(v).label).join(' · ');
   }
 
-  protected override render(data: SearchResponse): void {
-    if (data.hits.length === 0) {
+  protected override async load(signal: AbortSignal): Promise<MultiSearch> {
+    // One venue being down should cost that venue's rows, not the search.
+    const settled = await Promise.allSettled(
+      this.#venues.map((v) => venue.search(v, this.#query, 12, signal)),
+    );
+
+    return {
+      query: this.#query,
+      results: this.#venues.map((v, i) => {
+        const result = settled[i];
+        return result?.status === 'fulfilled'
+          ? { venue: v, response: result.value, error: null }
+          : {
+              venue: v,
+              response: null,
+              error: result?.reason instanceof Error ? result.reason.message : 'unavailable',
+            };
+      }),
+    };
+  }
+
+  protected override render(data: MultiSearch): void {
+    const hits = data.results.flatMap((r) =>
+      (r.response?.hits ?? []).map((hit) => ({ venue: r.venue, hit })),
+    );
+
+    const scanned = data.results.reduce((sum, r) => sum + (r.response?.scanned ?? 0), 0);
+    const failures = data.results.filter((r) => r.error !== null);
+
+    if (hits.length === 0) {
       this.body.append(
         el('div', { class: 'panel-empty' }, [
           el('div', { text: `Nothing open matches "${data.query}".` }),
           el('div', {
             class: 'panel-empty-hint',
-            text: `Searched ${data.scanned.toLocaleString()} open events. Try fewer or broader words.`,
+            text: `Searched ${scanned.toLocaleString()} open events across ${data.results.length} venues. Try fewer or broader words.`,
           }),
         ]),
       );
       return;
     }
 
+    // Interleaved by score, so the best answer is at the top whoever lists it.
+    hits.sort((a, b) => b.hit.score - a.hit.score || (b.hit.volume24h ?? 0) - (a.hit.volume24h ?? 0));
+
+    const counts = data.results
+      .filter((r) => r.response)
+      .map((r) => `${venueInfo(r.venue).code} ${r.response!.hits.length}`)
+      .join(' · ');
+
     this.body.append(
-      el('div', {
-        class: 'result-note',
-        text: `${data.hits.length} events of ${data.scanned.toLocaleString()} · snapshot ${data.snapshotAgeSeconds}s old`,
-      }),
+      el('div', { class: 'result-note' }, [
+        el('span', { text: `${hits.length} events · ${counts}` }),
+        el('span', {
+          class: 'dim',
+          text: ` · ${scanned.toLocaleString()} scanned`,
+        }),
+        ...failures.map((f) =>
+          el('span', { class: 'down', text: ` · ${venueInfo(f.venue).code} unavailable` }),
+        ),
+      ]),
     );
 
-    for (const hit of data.hits) {
+    for (const { venue: v, hit } of hits.slice(0, 24)) {
+      const eventRef = formatRef({ venue: v, id: hit.event.eventTicker });
+
       const header = el('div', { class: 'group-header' }, [
-        el('span', { class: 'group-ticker', text: hit.event.eventTicker }),
-        el('span', { class: 'group-title', text: truncate(hit.event.title, 72) }),
+        el('span', { class: `venue-badge venue-${v}`, text: venueInfo(v).code }),
+        el('span', { class: 'group-ticker', text: truncate(hit.event.eventTicker, 34) }),
+        el('span', { class: 'group-title', text: truncate(hit.event.title, 62) }),
         el('span', { class: 'group-meta', text: `${hit.markets.length} contracts` }),
         el('span', { class: 'group-meta', text: `24h ${compact(hit.volume24h)}` }),
       ]);
-      header.addEventListener('click', () => this.context.run(`EVT ${hit.event.eventTicker}`));
-      header.title = `Open the full ladder for ${hit.event.eventTicker}`;
+      header.addEventListener('click', () => this.context.run(`EVT ${eventRef}`));
+      header.title = `Open the full ladder for ${eventRef}`;
 
       // Show the liquid few inline; the ladder is one click away.
       const rows = hit.markets
         .slice(0, 4)
-        .map((market) => marketRow(market, (ticker) => this.context.run(`GP ${ticker}`)));
+        .map((market) => marketRow(market, (ref) => this.context.run(`GP ${ref}`)));
 
-      this.body.append(
-        el('div', { class: 'group' }, [header, table(MARKET_HEADERS, rows)]),
-      );
+      this.body.append(el('div', { class: 'group' }, [header, table(MARKET_HEADERS, rows)]));
     }
   }
 }
 
 /* ------------------------------------------------------------------- EVT */
 
-export class EventPanel extends Panel<KalshiEvent> {
+export class EventPanel extends Panel<VenueEvent> {
   override readonly kind = 'EVT';
 
-  readonly #eventTicker: string;
-  #event: KalshiEvent | undefined;
+  readonly #ref: VenueRef;
+  #event: VenueEvent | undefined;
 
-  constructor(id: string, context: PanelContext, eventTicker: string) {
+  constructor(id: string, context: PanelContext, ref: VenueRef) {
     super(id, context);
-    this.#eventTicker = eventTicker;
+    this.#ref = ref;
     this.refreshMs = 10_000;
   }
 
-  static idFor(eventTicker: string): string {
-    return `evt:${eventTicker.toUpperCase()}`;
+  static idFor(ref: VenueRef): string {
+    return `evt:${ref.venue}:${ref.id}`;
   }
 
   protected override title(): string {
-    return this.#eventTicker;
+    return formatRef(this.#ref);
   }
 
   protected override subtitle(): string {
-    return this.#event ? truncate(this.#event.title, 64) : '';
+    const label = venueInfo(this.#ref.venue).label;
+    return this.#event ? `${label} · ${truncate(this.#event.title, 52)}` : label;
   }
 
-  protected override load(signal: AbortSignal): Promise<KalshiEvent> {
-    return kalshi.event(this.#eventTicker, signal);
+  protected override load(signal: AbortSignal): Promise<VenueEvent> {
+    return venue.event(this.#ref, signal);
   }
 
-  protected override render(event: KalshiEvent): void {
+  protected override render(event: VenueEvent): void {
     this.#event = event;
 
-    const total = event.markets.reduce((sum, m) => sum + m.volume24h, 0);
+    const total = event.markets.reduce((sum, m) => sum + (m.volume24h ?? 0), 0);
     // On a mutually exclusive event the YES mids should sum to ~1; when they do
     // not, the gap is the arbitrage (or the width of the spreads).
     const midSum = event.markets.reduce((sum, m) => sum + (m.mid ?? 0), 0);
+
+    const compareButton = el('button', { class: 'action', type: 'button', text: 'XV COMPARE' });
+    compareButton.addEventListener('click', () => this.context.run(`XV ${formatRef(this.#ref)}`));
 
     this.body.append(
       el('div', { class: 'result-note' }, [
@@ -153,11 +225,12 @@ export class EventPanel extends Panel<KalshiEvent> {
     );
 
     const sorted = [...event.markets].sort((a, b) => (b.mid ?? 0) - (a.mid ?? 0));
-    const rows = sorted.map((market) =>
-      marketRow(market, (ticker) => this.context.run(`GP ${ticker}`)),
-    );
+    const rows = sorted.map((market) => marketRow(market, (ref) => this.context.run(`GP ${ref}`)));
 
-    this.body.append(table(MARKET_HEADERS, rows));
+    this.body.append(
+      table(MARKET_HEADERS, rows),
+      el('div', { class: 'panel-actions' }, [compareButton]),
+    );
   }
 }
 
@@ -171,19 +244,28 @@ const SORT_LABEL: Record<string, string> = {
   liquidity: 'liquidity',
 };
 
-export class TopPanel extends Panel<{ sort: string; markets: Market[] }> {
+interface TopData {
+  sort: string;
+  markets: Market[];
+  /** Venues that ranked nothing, and why — usually "publishes no such figure". */
+  silent: Venue[];
+}
+
+export class TopPanel extends Panel<TopData> {
   override readonly kind = 'TOP';
 
   readonly #sort: string;
+  readonly #venues: readonly Venue[];
 
-  constructor(id: string, context: PanelContext, sort: string) {
+  constructor(id: string, context: PanelContext, sort: string, venues: readonly Venue[] = VENUE_IDS) {
     super(id, context);
     this.#sort = sort;
+    this.#venues = venues;
     this.refreshMs = 30_000;
   }
 
-  static idFor(sort: string): string {
-    return `top:${sort}`;
+  static idFor(sort: string, venues: readonly Venue[] = VENUE_IDS): string {
+    return `top:${venues.join('+')}:${sort}`;
   }
 
   protected override title(): string {
@@ -191,23 +273,64 @@ export class TopPanel extends Panel<{ sort: string; markets: Market[] }> {
   }
 
   protected override subtitle(): string {
-    return `by ${SORT_LABEL[this.#sort] ?? this.#sort}`;
+    const scope =
+      this.#venues.length === VENUE_IDS.length
+        ? 'all venues'
+        : this.#venues.map((v) => venueInfo(v).label).join(' · ');
+    return `by ${SORT_LABEL[this.#sort] ?? this.#sort} · ${scope}`;
   }
 
-  protected override load(signal: AbortSignal): Promise<{ sort: string; markets: Market[] }> {
-    return kalshi.top(this.#sort, 30, signal);
+  protected override async load(signal: AbortSignal): Promise<TopData> {
+    const settled = await Promise.allSettled(
+      this.#venues.map((v) => venue.top(v, this.#sort, 30, signal)),
+    );
+
+    const markets: Market[] = [];
+    const silent: Venue[] = [];
+
+    settled.forEach((result, i) => {
+      const v = this.#venues[i]!;
+      if (result.status !== 'fulfilled' || result.value.markets.length === 0) silent.push(v);
+      if (result.status === 'fulfilled') markets.push(...result.value.markets);
+    });
+
+    const field = (m: Market): number =>
+      this.#sort === 'volume'
+        ? (m.volume24h ?? 0)
+        : this.#sort === 'open_interest'
+          ? (m.openInterest ?? 0)
+          : this.#sort === 'liquidity'
+            ? (m.liquidity ?? 0)
+            : (m.change ?? 0);
+
+    markets.sort((a, b) => (this.#sort === 'losers' ? field(a) - field(b) : field(b) - field(a)));
+
+    return { sort: this.#sort, markets: markets.slice(0, 30), silent };
   }
 
-  protected override render(data: { sort: string; markets: Market[] }): void {
+  protected override render(data: TopData): void {
     if (data.markets.length === 0) {
       this.body.append(el('div', { class: 'panel-empty', text: 'No markets to rank yet.' }));
       return;
     }
 
+    // A venue that publishes no volume cannot appear on a volume board, and
+    // that is a fact about its API rather than about its book. Say which.
+    if (data.silent.length > 0) {
+      this.body.append(
+        el('div', {
+          class: 'result-note dim',
+          text: `${data.silent.map((v) => venueInfo(v).label).join(', ')} publishes no ${SORT_LABEL[data.sort] ?? data.sort} and is not ranked here.`,
+        }),
+      );
+    }
+
     const rows = data.markets.map((market) => {
+      const ref = formatRef({ venue: market.venue, id: market.ticker });
       const tr = row([
-        cell(market.ticker, 'mono strong'),
-        cell(truncate(market.title, 52), undefined, 'td', market.title),
+        venueCell(market.venue),
+        cell(truncate(market.ticker, 26), 'mono strong', 'td', market.ticker),
+        cell(truncate(market.title, 46), undefined, 'td', market.title),
         cell(cents(market.yesBid), 'num price-bid'),
         cell(cents(market.yesAsk), 'num price-ask'),
         cell(signedCents(market.change), `num ${direction(market.change)}`),
@@ -215,13 +338,13 @@ export class TopPanel extends Panel<{ sort: string; markets: Market[] }> {
         cell(compact(market.openInterest), 'num dim'),
       ]);
       tr.classList.add('clickable');
-      tr.title = `Click to chart ${market.ticker}`;
-      tr.addEventListener('click', () => this.context.run(`GP ${market.ticker}`));
+      tr.title = `Click to chart ${ref}`;
+      tr.addEventListener('click', () => this.context.run(`GP ${ref}`));
       return tr;
     });
 
     this.body.append(
-      table(['TICKER', 'MARKET', 'BID', 'ASK', 'CHG', 'VOL 24H', 'OI'], rows),
+      table(['VEN', 'TICKER', 'MARKET', 'BID', 'ASK', 'CHG', 'VOL 24H', 'OI'], rows),
     );
   }
 }
@@ -246,12 +369,12 @@ export class WatchlistPanel extends Panel<Market[]> {
   }
 
   protected override async load(signal: AbortSignal): Promise<Market[]> {
-    const tickers = this.#workspace.watchlist;
-    if (tickers.length === 0) return [];
+    const entries = this.#workspace.watchlist;
+    if (entries.length === 0) return [];
 
-    // One failing ticker (settled, delisted) must not blank the whole list.
+    // One failing entry (settled, delisted, mistyped) must not blank the list.
     const settled = await Promise.allSettled(
-      tickers.map((ticker) => kalshi.market(ticker, signal)),
+      entries.map((entry) => venue.market(parseRef(entry), signal)),
     );
     return settled
       .filter((r): r is PromiseFulfilledResult<Market> => r.status === 'fulfilled')
@@ -263,17 +386,21 @@ export class WatchlistPanel extends Panel<Market[]> {
       this.body.append(
         el('div', { class: 'panel-empty' }, [
           el('div', { text: 'Watchlist is empty.' }),
-          el('div', { class: 'panel-empty-hint', text: 'Add with `W ADD <ticker>`.' }),
+          el('div', {
+            class: 'panel-empty-hint',
+            text: 'Add with `W ADD <ticker>` — prefix `pm:` or `pmus:` for a Polymarket slug.',
+          }),
         ]),
       );
       return;
     }
 
     const rows = markets.map((market) => {
+      const ref = formatRef({ venue: market.venue, id: market.ticker });
       const remove = el('button', { class: 'row-action', type: 'button', text: '×', title: 'Remove' });
       remove.addEventListener('click', (event) => {
         event.stopPropagation();
-        this.context.run(`W DEL ${market.ticker}`);
+        this.context.run(`W DEL ${ref}`);
       });
 
       const actionCell = cell('');
@@ -281,8 +408,9 @@ export class WatchlistPanel extends Panel<Market[]> {
       actionCell.append(remove);
 
       const tr = row([
-        cell(market.ticker, 'mono strong'),
-        cell(truncate(market.yesSubTitle || market.title, 40), undefined, 'td', market.title),
+        venueCell(market.venue),
+        cell(truncate(market.ticker, 26), 'mono strong', 'td', market.ticker),
+        cell(truncate(market.yesSubTitle || market.title, 36), undefined, 'td', market.title),
         cell(cents(market.yesBid), 'num price-bid'),
         cell(cents(market.yesAsk), 'num price-ask'),
         cell(signedCents(market.change), `num ${direction(market.change)}`),
@@ -291,12 +419,12 @@ export class WatchlistPanel extends Panel<Market[]> {
         actionCell,
       ]);
       tr.classList.add('clickable');
-      tr.addEventListener('click', () => this.context.run(`GP ${market.ticker}`));
+      tr.addEventListener('click', () => this.context.run(`GP ${ref}`));
       return tr;
     });
 
     this.body.append(
-      table(['TICKER', 'CONTRACT', 'BID', 'ASK', 'CHG', 'VOL 24H', 'CLOSES', ''], rows),
+      table(['VEN', 'TICKER', 'CONTRACT', 'BID', 'ASK', 'CHG', 'VOL 24H', 'CLOSES', ''], rows),
     );
   }
 }

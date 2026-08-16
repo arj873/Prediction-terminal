@@ -10,6 +10,7 @@
 import type {
   ApiError,
   AssetClass,
+  CompareResponse,
   BillboardChart,
   BillboardChartListItem,
   BoxOfficeDay,
@@ -22,7 +23,7 @@ import type {
   ImpliedCandidatesResponse,
   ImpliedMethod,
   ImpliedSeriesResponse,
-  KalshiEvent,
+  LinkedSeriesResponse,
   Market,
   NetflixTop10,
   OrderBook,
@@ -36,7 +37,10 @@ import type {
   StreamChartListItem,
   TradesResponse,
   TvSchedule,
+  Venue,
+  VenueEvent,
 } from '../../shared/types.js';
+import { formatRef, normaliseId, type VenueRef } from '../../shared/venue.js';
 
 export class ApiRequestError extends Error {
   readonly code: string;
@@ -90,13 +94,13 @@ function query(params: Record<string, string | number | undefined>): string {
   return s ? `?${s}` : '';
 }
 
-/* ------------------------------------------------------------------ kalshi */
+/* ------------------------------------------------------------------ venues */
 
 /** Mirrors the server's `EventSearchHit`. */
 export interface EventSearchHit {
-  event: Omit<KalshiEvent, 'markets'>;
+  event: Omit<VenueEvent, 'markets'>;
   markets: Market[];
-  volume24h: number;
+  volume24h: number | null;
   score: number;
 }
 
@@ -105,43 +109,77 @@ export interface SearchResponse {
   hits: EventSearchHit[];
   scanned: number;
   snapshotAgeSeconds: number;
+  truncated: boolean;
 }
 
-export const kalshi = {
-  market: (ticker: string, signal?: AbortSignal): Promise<Market> =>
-    request(`/kalshi/markets/${encodeURIComponent(ticker)}`, signal),
+export interface CatalogueInfo {
+  venue: Venue;
+  events: number;
+  markets: number;
+  truncated: boolean;
+  ageSeconds: number;
+}
 
-  orderBook: (ticker: string, depth = 12, signal?: AbortSignal): Promise<OrderBook> =>
-    request(`/kalshi/markets/${encodeURIComponent(ticker)}/orderbook${query({ depth })}`, signal),
+function at(ref: VenueRef, path = ''): string {
+  return `/venue/${ref.venue}/markets/${encodeURIComponent(ref.id)}${path}`;
+}
 
-  trades: (ticker: string, limit = 50, signal?: AbortSignal): Promise<TradesResponse> =>
-    request(`/kalshi/markets/${encodeURIComponent(ticker)}/trades${query({ limit })}`, signal),
+/**
+ * The market API, for any of the three brokers.
+ *
+ * Every call takes a {@link VenueRef} rather than a bare identifier, so a panel
+ * cannot ask one venue for another's ticker — the mistake that would otherwise
+ * surface as an unexplained 404.
+ */
+export const venue = {
+  market: (ref: VenueRef, signal?: AbortSignal): Promise<Market> => request(at(ref), signal),
+
+  orderBook: (ref: VenueRef, depth = 12, signal?: AbortSignal): Promise<OrderBook> =>
+    request(`${at(ref, '/orderbook')}${query({ depth })}`, signal),
+
+  trades: (ref: VenueRef, limit = 50, signal?: AbortSignal): Promise<TradesResponse> =>
+    request(`${at(ref, '/trades')}${query({ limit })}`, signal),
 
   candles: (
-    ticker: string,
+    ref: VenueRef,
     interval: CandleInterval,
     start?: number,
     end?: number,
     signal?: AbortSignal,
   ): Promise<CandlesResponse> =>
-    request(
-      `/kalshi/markets/${encodeURIComponent(ticker)}/candles${query({ interval, start, end })}`,
-      signal,
-    ),
+    request(`${at(ref, '/candles')}${query({ interval, start, end })}`, signal),
 
-  event: (eventTicker: string, signal?: AbortSignal): Promise<KalshiEvent> =>
-    request(`/kalshi/events/${encodeURIComponent(eventTicker)}`, signal),
+  event: (ref: VenueRef, signal?: AbortSignal): Promise<VenueEvent> =>
+    request(`/venue/${ref.venue}/events/${encodeURIComponent(ref.id)}`, signal),
 
-  search: (q: string, limit = 25, signal?: AbortSignal): Promise<SearchResponse> =>
-    request(`/kalshi/search${query({ q, limit })}`, signal),
+  search: (v: Venue, q: string, limit = 25, signal?: AbortSignal): Promise<SearchResponse> =>
+    request(`/venue/${v}/search${query({ q, limit })}`, signal),
 
   top: (
+    v: Venue,
     sort: string,
     limit = 25,
     signal?: AbortSignal,
-  ): Promise<{ sort: string; markets: Market[] }> =>
-    request(`/kalshi/top${query({ sort, limit })}`, signal),
+  ): Promise<{ venue: Venue; sort: string; markets: Market[] }> =>
+    request(`/venue/${v}/top${query({ sort, limit })}`, signal),
+
+  catalogue: (v: Venue, signal?: AbortSignal): Promise<CatalogueInfo> =>
+    request(`/venue/${v}/catalogue`, signal),
 };
+
+/* ------------------------------------------------------------- cross-venue */
+
+export const xv = {
+  series: (q = '', limit = 40, signal?: AbortSignal): Promise<LinkedSeriesResponse> =>
+    request(`/xv/series${query({ q, limit })}`, signal),
+
+  compare: (event: string, v?: Venue, signal?: AbortSignal): Promise<CompareResponse> =>
+    request(`/xv/compare${query({ event, venue: v })}`, signal),
+};
+
+/** Re-export so panels can build a ref without importing two modules. */
+export { formatRef, normaliseId };
+export type { VenueRef };
 
 /* -------------------------------------------------------------------- spot */
 

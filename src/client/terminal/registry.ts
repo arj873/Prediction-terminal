@@ -7,14 +7,16 @@
  * they open panels and report back, and never touch the DOM directly.
  */
 
-import type { AssetClass, CandleInterval, EntGenre, ImpliedMethod } from '../../shared/types.js';
+import type { AssetClass, CandleInterval, EntGenre, ImpliedMethod, Venue } from '../../shared/types.js';
 import { ENT_GENRES } from '../../shared/types.js';
+import { VENUE_IDS, formatRef, parseRef, parseVenue, type VenueRef } from '../../shared/venue.js';
 import type { PanelManager } from '../panels/manager.js';
 import type { Workspace } from '../state.js';
 import { THEMES, type ThemeName } from '../state.js';
 import { BillboardChartsPanel, BillboardPanel } from '../panels/billboard.js';
 import { ChartPanel, type ChartStyle } from '../panels/chart.js';
 import { EventPanel, SearchPanel, TopPanel, WatchlistPanel } from '../panels/browse.js';
+import { ComparePanel, LinkedSeriesPanel } from '../panels/crossvenue.js';
 import { EntPanel, RtPanel, RtSearchPanel } from '../panels/entertainment.js';
 import { FredPanel, FredSearchPanel } from '../panels/fred.js';
 import {
@@ -67,6 +69,36 @@ function requireArg(command: ParsedCommand, index: number, name: string): string
   return value;
 }
 
+/**
+ * Read `[venue:]identifier` from an argument.
+ *
+ * Unprefixed means Kalshi, so every command, example and habit that predates
+ * the other two venues still means what it always did. A bad prefix is a usage
+ * error rather than a request the terminal sends to the wrong exchange.
+ */
+function requireRef(command: ParsedCommand, index: number, name: string): VenueRef {
+  const raw = requireArg(command, index, name);
+  try {
+    return parseRef(raw);
+  } catch (err) {
+    throw new UsageError(err instanceof Error ? err.message : `Bad <${name}>`);
+  }
+}
+
+/** Pull venue names out of an argument list, leaving the rest untouched. */
+function takeVenues(args: string[]): { venues: readonly Venue[]; rest: string[] } {
+  const venues: Venue[] = [];
+  const rest: string[] = [];
+
+  for (const token of args) {
+    const venue = parseVenue(token);
+    if (venue && !venues.includes(venue)) venues.push(venue);
+    else if (!venue) rest.push(token);
+  }
+
+  return { venues: venues.length ? venues : VENUE_IDS, rest };
+}
+
 /* --------------------------------------------------------- GP argument parsing */
 
 const DEFAULT_LOOKBACK: Record<CandleInterval, number> = {
@@ -80,7 +112,7 @@ const DEFAULT_LOOKBACK: Record<CandleInterval, number> = {
  * ticker, because nobody remembers argument order under time pressure.
  */
 export function parseChartArgs(args: string[]): {
-  ticker: string;
+  ref: VenueRef;
   interval: CandleInterval;
   lookbackSeconds: number;
   style: ChartStyle;
@@ -122,7 +154,7 @@ export function parseChartArgs(args: string[]): {
 
   const resolvedInterval = interval ?? 60;
   return {
-    ticker: ticker.toUpperCase(),
+    ref: parseRef(ticker),
     interval: resolvedInterval,
     lookbackSeconds: lookbackSeconds ?? DEFAULT_LOOKBACK[resolvedInterval],
     style,
@@ -250,16 +282,17 @@ export const COMMANDS: Command[] = [
     verb: 'GP',
     aliases: ['CHART', 'GRAPH'],
     group: 'markets',
-    summary: 'Price chart for a Kalshi market',
-    usage: 'GP <ticker> [1m|1h|1d] [range] [candle|line]',
+    summary: 'Price chart for a market at any venue',
+    usage: 'GP [venue:]<ticker> [1m|1h|1d] [range] [candle|line]',
     examples: [
       'GP KXFEDDECISION-27JAN-H26',
       'GP KXFEDDECISION-27JAN-H26 1d 1y',
+      'GP pm:will-there-be-no-change-in-fed-interest-rates-after-the-september-2026-meeting-615 1h 7d',
       'GP KXHIGHNY-26AUG16-B82.5 1m 6h line',
     ],
     handler(command, { panels, panelContext }) {
       const options = parseChartArgs(command.args);
-      const id = ChartPanel.idFor(options.ticker);
+      const id = ChartPanel.idFor(options.ref);
       const existing = panels.find(id);
 
       // Re-issuing GP for an open chart re-configures it rather than stacking
@@ -277,12 +310,12 @@ export const COMMANDS: Command[] = [
     aliases: ['Q', 'QUOTE'],
     group: 'markets',
     summary: 'Quote and contract description',
-    usage: 'DES <ticker>',
-    examples: ['DES KXFEDDECISION-27JAN-H26'],
+    usage: 'DES [venue:]<ticker>',
+    examples: ['DES KXFEDDECISION-27JAN-H26', 'DES pmus:apdc-jerpowgov-2026-12-31'],
     handler(command, { panels, panelContext }) {
-      const ticker = requireArg(command, 0, 'ticker').toUpperCase();
-      const id = QuotePanel.idFor(ticker);
-      panels.open(id, () => new QuotePanel(id, panelContext, ticker));
+      const ref = requireRef(command, 0, 'ticker');
+      const id = QuotePanel.idFor(ref);
+      panels.open(id, () => new QuotePanel(id, panelContext, ref));
     },
   },
   {
@@ -290,12 +323,12 @@ export const COMMANDS: Command[] = [
     aliases: ['DEPTH', 'BOOK'],
     group: 'markets',
     summary: 'Order book ladder',
-    usage: 'OB <ticker>',
-    examples: ['OB KXFEDDECISION-27JAN-H26'],
+    usage: 'OB [venue:]<ticker>',
+    examples: ['OB KXFEDDECISION-27JAN-H26', 'OB pmus:tec-mlb-champ-2026-09-27-lad'],
     handler(command, { panels, panelContext }) {
-      const ticker = requireArg(command, 0, 'ticker').toUpperCase();
-      const id = DepthPanel.idFor(ticker);
-      panels.open(id, () => new DepthPanel(id, panelContext, ticker));
+      const ref = requireRef(command, 0, 'ticker');
+      const id = DepthPanel.idFor(ref);
+      panels.open(id, () => new DepthPanel(id, panelContext, ref));
     },
   },
   {
@@ -303,26 +336,27 @@ export const COMMANDS: Command[] = [
     aliases: ['TRADES', 'TAPE'],
     group: 'markets',
     summary: 'Time and sales tape',
-    usage: 'TAS <ticker>',
-    examples: ['TAS KXFEDDECISION-27JAN-H26'],
+    usage: 'TAS [venue:]<ticker>',
+    examples: ['TAS KXFEDDECISION-27JAN-H26', 'TAS pm:fed-decision-in-october'],
     handler(command, { panels, panelContext }) {
-      const ticker = requireArg(command, 0, 'ticker').toUpperCase();
-      const id = TradesPanel.idFor(ticker);
-      panels.open(id, () => new TradesPanel(id, panelContext, ticker));
+      const ref = requireRef(command, 0, 'ticker');
+      const id = TradesPanel.idFor(ref);
+      panels.open(id, () => new TradesPanel(id, panelContext, ref));
     },
   },
   {
     verb: 'SRCH',
     aliases: ['S', 'FIND'],
     group: 'markets',
-    summary: 'Search open Kalshi events',
-    usage: 'SRCH <words>',
-    examples: ['SRCH fed decision', 'SRCH bitcoin', 'SRCH nyc temperature'],
+    summary: 'Search open events across every venue',
+    usage: 'SRCH <words> [kalshi|pm|pmus]',
+    examples: ['SRCH fed decision', 'SRCH bitcoin pm', 'SRCH senate kalshi pmus'],
     handler(command, { panels, panelContext }) {
-      const query = command.args.join(' ').trim();
+      const { venues, rest } = takeVenues(command.args);
+      const query = rest.join(' ').trim();
       if (!query) throw new UsageError('Missing <words>');
-      const id = SearchPanel.idFor(query);
-      panels.open(id, () => new SearchPanel(id, panelContext, query));
+      const id = SearchPanel.idFor(query, venues);
+      panels.open(id, () => new SearchPanel(id, panelContext, query, venues));
     },
   },
   {
@@ -330,12 +364,12 @@ export const COMMANDS: Command[] = [
     aliases: ['EVENT', 'LADDER'],
     group: 'markets',
     summary: 'All contracts in an event',
-    usage: 'EVT <event-ticker>',
-    examples: ['EVT KXFEDDECISION-27JAN'],
+    usage: 'EVT [venue:]<event-ticker>',
+    examples: ['EVT KXFEDDECISION-27JAN', 'EVT pm:fed-decision-in-september-762'],
     handler(command, { panels, panelContext }) {
-      const ticker = requireArg(command, 0, 'event-ticker').toUpperCase();
-      const id = EventPanel.idFor(ticker);
-      panels.open(id, () => new EventPanel(id, panelContext, ticker));
+      const ref = requireRef(command, 0, 'event-ticker');
+      const id = EventPanel.idFor(ref);
+      panels.open(id, () => new EventPanel(id, panelContext, ref));
     },
   },
   {
@@ -343,18 +377,19 @@ export const COMMANDS: Command[] = [
     aliases: ['MOVERS'],
     group: 'markets',
     summary: 'Leaderboards: volume, movers, open interest',
-    usage: 'TOP [volume|gainers|losers|oi|liquidity]',
-    examples: ['TOP', 'TOP gainers', 'TOP oi'],
+    usage: 'TOP [volume|gainers|losers|oi|liquidity] [kalshi|pm|pmus]',
+    examples: ['TOP', 'TOP gainers', 'TOP oi kalshi', 'TOP volume pm'],
     handler(command, { panels, panelContext }) {
-      const raw = (command.args[0] ?? 'volume').toLowerCase();
+      const { venues, rest } = takeVenues(command.args);
+      const raw = (rest[0] ?? 'volume').toLowerCase();
       const sort =
         raw === 'oi' ? 'open_interest' : raw === 'liq' ? 'liquidity' : raw;
       const valid = ['volume', 'gainers', 'losers', 'open_interest', 'liquidity'];
       if (!valid.includes(sort)) {
         throw new UsageError(`Unknown sort "${raw}". Try: ${valid.join(', ')}`);
       }
-      const id = TopPanel.idFor(sort);
-      panels.open(id, () => new TopPanel(id, panelContext, sort));
+      const id = TopPanel.idFor(sort, venues);
+      panels.open(id, () => new TopPanel(id, panelContext, sort, venues));
     },
   },
   {
@@ -404,6 +439,38 @@ export const COMMANDS: Command[] = [
           `Pick a Kalshi expiry under the chart to overlay its implied price on ${options.symbol}.`,
         );
       }
+    },
+  },
+  {
+    verb: 'XV',
+    aliases: ['CROSS', 'CMP'],
+    group: 'markets',
+    summary: 'The same question, priced at every broker that lists it',
+    usage: 'XV [words] | XV [venue:]<event-ticker>',
+    examples: ['XV', 'XV fed', 'XV senate', 'XV KXFEDDECISION-26OCT', 'XV pm:fed-decision-in-october'],
+    handler(command, { panels, panelContext }) {
+      const first = command.args[0];
+
+      // An event ticker names one question to price; anything else is a search
+      // for questions. Telling them apart: an identifier carries a venue prefix
+      // or a hyphen, and a query does not — `XV fed` is words, `XV pm:fed-…`
+      // and `XV KXFEDDECISION-26OCT` are references.
+      const isReference =
+        command.args.length === 1 &&
+        first !== undefined &&
+        looksLikeTicker(first) &&
+        (first.includes(':') || first.includes('-'));
+
+      if (isReference) {
+        const ref = requireRef(command, 0, 'event-ticker');
+        const id = ComparePanel.idFor(ref);
+        panels.open(id, () => new ComparePanel(id, panelContext, ref));
+        return;
+      }
+
+      const query = command.args.join(' ').trim();
+      const id = LinkedSeriesPanel.idFor(query);
+      panels.open(id, () => new LinkedSeriesPanel(id, panelContext, query));
     },
   },
   {
@@ -638,8 +705,8 @@ export const COMMANDS: Command[] = [
     aliases: ['WATCH', 'WATCHLIST'],
     group: 'workspace',
     summary: 'Watchlist monitor',
-    usage: 'W | W ADD <ticker> | W DEL <ticker> | W CLEAR',
-    examples: ['W', 'W ADD KXFEDDECISION-27JAN-H26', 'W DEL KXFEDDECISION-27JAN-H26'],
+    usage: 'W | W ADD [venue:]<ticker> | W DEL [venue:]<ticker> | W CLEAR',
+    examples: ['W', 'W ADD KXFEDDECISION-27JAN-H26', 'W ADD pm:fed-decision-in-october'],
     handler(command, { panels, workspace, panelContext, log }) {
       const action = (command.args[0] ?? '').toUpperCase();
       const openPanel = (): void => {
@@ -650,7 +717,7 @@ export const COMMANDS: Command[] = [
       };
 
       if (action === 'ADD' || action === '+') {
-        const ticker = requireArg(command, 1, 'ticker').toUpperCase();
+        const ticker = formatRef(requireRef(command, 1, 'ticker'));
         log(
           workspace.addToWatchlist(ticker)
             ? `Added ${ticker} to the watchlist.`
@@ -662,7 +729,7 @@ export const COMMANDS: Command[] = [
       }
 
       if (action === 'DEL' || action === 'RM' || action === '-') {
-        const ticker = requireArg(command, 1, 'ticker').toUpperCase();
+        const ticker = formatRef(requireRef(command, 1, 'ticker'));
         log(
           workspace.removeFromWatchlist(ticker)
             ? `Removed ${ticker} from the watchlist.`

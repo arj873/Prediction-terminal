@@ -150,12 +150,14 @@ export function isIsoDate(token: string | undefined): boolean {
 }
 
 /**
- * A Kalshi ticker: upper-case alphanumerics and separators.
+ * A contract reference: an optional `venue:` prefix, then the identifier.
  *
  * Used to tell `GP KXBTC-26 1h` (ticker then interval) from `GP 1h` (a mistake)
- * without a lookup table.
+ * without a lookup table. The colon is allowed because a Polymarket slug is
+ * addressed as `pm:will-the-fed-…`; which prefixes are real is
+ * `parseRef`'s business, not this predicate's.
  */
-const TICKER = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const TICKER = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
 export function looksLikeTicker(token: string | undefined): token is string {
   return typeof token === 'string' && token.length >= 2 && TICKER.test(token);

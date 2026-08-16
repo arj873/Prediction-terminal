@@ -2,11 +2,18 @@
  * Wire contract shared by the server routes and the browser client.
  *
  * Everything the server hands back is already normalised: prices are plain
- * numbers in dollars (0..1 for a Kalshi binary contract), sizes and volumes are
- * plain numbers, and timestamps are unix seconds (UTC). The upstream Kalshi API
- * speaks in fixed-point decimal *strings* (`"0.6900"`, `"12645.98"`); none of
- * that leaks past the server boundary.
+ * numbers in dollars (0..1 for a binary contract), sizes and volumes are plain
+ * numbers, and timestamps are unix seconds (UTC). Each upstream has its own
+ * dialect — Kalshi speaks fixed-point decimal *strings* (`"0.6900"`,
+ * `"12645.98"`), Polymarket wraps prices in `{value, currency}` objects and
+ * ships JSON arrays as JSON *strings* — and none of that leaks past the server
+ * boundary. A normalised {@link Market} from Kalshi and one from either
+ * Polymarket are the same shape, and carry a {@link Venue} saying which.
  */
+
+import type { Venue } from './venue.js';
+
+export type { Venue } from './venue.js';
 
 /* ------------------------------------------------------------------ errors */
 
@@ -20,7 +27,7 @@ export interface ApiError {
   status?: number;
 }
 
-/* ------------------------------------------------------------------ kalshi */
+/* ----------------------------------------------------------------- markets */
 
 export type MarketStatus =
   | 'unopened'
@@ -32,6 +39,12 @@ export type MarketStatus =
   | string;
 
 export interface Market {
+  venue: Venue;
+  /**
+   * The contract's identifier at its venue: a Kalshi ticker
+   * (`KXFEDDECISION-26SEP-T3.75`) or a Polymarket market slug. Upper-case at
+   * Kalshi, lower-case at both Polymarkets — the venue decides, not the caller.
+   */
   ticker: string;
   eventTicker: string;
   seriesTicker: string;
@@ -52,10 +65,20 @@ export interface Market {
   previousPrice: number | null;
   /** `lastPrice - previousPrice`, in dollars. */
   change: number | null;
-  volume: number;
-  volume24h: number;
-  openInterest: number;
-  liquidity: number;
+  /**
+   * Contracts traded, ever and in the last 24h.
+   *
+   * `null` means *this venue does not publish the figure*, which is not the
+   * same as zero and must not render as one: Polymarket US's public catalogue
+   * carries no volume at all, and a `0` in that column would read as a dead
+   * market rather than an unanswered question. The same rule governs
+   * {@link openInterest} and {@link liquidity}.
+   */
+  volume: number | null;
+  volume24h: number | null;
+  openInterest: number | null;
+  /** Resting depth, in dollars. */
+  liquidity: number | null;
   openTime: string;
   closeTime: string;
   expirationTime: string;
@@ -80,7 +103,15 @@ export interface Market {
 
 export type StrikeType = 'greater' | 'greater_or_equal' | 'less' | 'less_or_equal' | 'between';
 
-export interface KalshiEvent {
+/**
+ * One question, with every contract that resolves it.
+ *
+ * All three venues group markets this way — Kalshi calls it an event, both
+ * Polymarkets call it an event too — so it is the unit the terminal compares
+ * across brokers.
+ */
+export interface VenueEvent {
+  venue: Venue;
   eventTicker: string;
   seriesTicker: string;
   title: string;
@@ -96,7 +127,7 @@ export interface MarketsResponse {
 }
 
 export interface EventsResponse {
-  events: KalshiEvent[];
+  events: VenueEvent[];
   cursor: string | null;
 }
 
@@ -107,6 +138,7 @@ export interface BookLevel {
 }
 
 export interface OrderBook {
+  venue: Venue;
   ticker: string;
   /** Resting YES bids, best (highest) first. */
   yes: BookLevel[];
@@ -125,6 +157,7 @@ export interface OrderBook {
 }
 
 export interface Trade {
+  venue: Venue;
   tradeId: string;
   ticker: string;
   ts: number;
@@ -141,7 +174,13 @@ export interface TradesResponse {
   cursor: string | null;
 }
 
-/** Candlestick period, in minutes. The only values Kalshi accepts. */
+/**
+ * Candlestick period, in minutes.
+ *
+ * The only values Kalshi accepts, and therefore the grid the whole terminal
+ * uses: an implied-price line, a spot chart and a Polymarket price history are
+ * only readable against each other if they sit on the same buckets.
+ */
 export type CandleInterval = 1 | 60 | 1440;
 
 export interface Candle {
@@ -151,11 +190,18 @@ export interface Candle {
   high: number;
   low: number;
   close: number;
-  volume: number;
-  openInterest: number;
   /**
-   * False when no trade printed in the period and the candle was synthesised
-   * from the previous close (Kalshi returns only `previous_dollars` there).
+   * Contracts traded in the period, and open interest at its end. `null` where
+   * the venue's history carries prices only — Polymarket International
+   * publishes a price series with no size attached, and drawing that as a zero
+   * volume bar would assert something the upstream never said.
+   */
+  volume: number | null;
+  openInterest: number | null;
+  /**
+   * False when nothing printed in the period and the candle was carried
+   * forward from the previous close (Kalshi returns only `previous_dollars`
+   * there; Polymarket simply has no sample in the bucket).
    */
   traded: boolean;
   bid: number | null;
@@ -163,18 +209,140 @@ export interface Candle {
 }
 
 export interface CandlesResponse {
+  venue: Venue;
   ticker: string;
   seriesTicker: string;
   interval: CandleInterval;
   candles: Candle[];
+  /**
+   * How the bars were obtained, when it is not the venue's own candle feed.
+   * Polymarket International publishes a price *sample* series rather than
+   * OHLC, so its bars are aggregated here and say so instead of implying a
+   * traded high and low that the upstream never stated.
+   */
+  note?: string;
 }
 
 export interface SeriesInfo {
+  venue: Venue;
   ticker: string;
   title: string;
   category: string;
   frequency: string;
   tags: string[];
+}
+
+/* ------------------------------------------------------------- cross-venue */
+
+/**
+ * How sure the terminal is that two venues are listing the same question.
+ *
+ * `linked` is the only band that is *stated* rather than inferred: it comes
+ * from the curated table of series identifiers, which is checked against live
+ * catalogues. Everything below it is a text match, and is labelled as one, so
+ * a trader never mistakes a guess for a fact.
+ */
+export type MatchConfidence = 'linked' | 'strong' | 'likely' | 'weak';
+
+export const MATCH_CONFIDENCES: readonly MatchConfidence[] = [
+  'linked',
+  'strong',
+  'likely',
+  'weak',
+] as const;
+
+/** One venue's listing of a series that at least one other venue also lists. */
+export interface SeriesLeg {
+  venue: Venue;
+  /** Series identifier at that venue: `KXFEDDECISION`, `fomc`, `fed-decision`. */
+  seriesTicker: string;
+  title: string;
+  /** Open events in the series. */
+  events: number;
+  /** Open contracts across those events. */
+  markets: number;
+  volume24h: number | null;
+  /** Soonest close across the series' open events, ISO. */
+  closeTime: string;
+  /** The event that stands for the series — what a click opens. */
+  sampleEvent: string;
+}
+
+/** A recurring question the terminal believes more than one broker lists. */
+export interface LinkedSeries {
+  /** Stable canonical key, e.g. `fed-decision`. */
+  key: string;
+  title: string;
+  /** The venues carrying it, busiest first. Always two or more. */
+  legs: SeriesLeg[];
+  confidence: MatchConfidence;
+  /** Why these were paired — a curated link, or the terms that matched. */
+  reason: string;
+  score: number;
+}
+
+export interface LinkedSeriesResponse {
+  query: string;
+  series: LinkedSeries[];
+  /** Series scanned, per venue. */
+  scanned: Record<string, number>;
+  /**
+   * Venues that did not answer. A board covering two of three brokers has to
+   * say which one is missing, or a "no match" reads as "no such market".
+   */
+  unavailable: { venue: Venue; error: string }[];
+  snapshotAgeSeconds: number;
+}
+
+/** One venue's quote for a contract in a side-by-side comparison. */
+export interface CompareLeg {
+  venue: Venue;
+  ticker: string;
+  eventTicker: string;
+  yesBid: number | null;
+  yesAsk: number | null;
+  mid: number | null;
+  volume24h: number | null;
+}
+
+/** One outcome, quoted at every venue that lists it. */
+export interface CompareRow {
+  /** The outcome, as the richest venue words it. */
+  label: string;
+  legs: CompareLeg[];
+  /** Richest mid minus cheapest mid, in dollars. `null` under two quotes. */
+  divergence: number | null;
+  /**
+   * Cheapest ask anywhere minus the richest bid anywhere. Positive means the
+   * books are crossed between brokers — buy the ask at one, sell the bid at the
+   * other — before fees, latency and the fact that both legs must fill.
+   */
+  edge: number | null;
+  /** The two venues that edge is between, cheap side first. */
+  edgeVenues: Venue[];
+}
+
+export interface CompareEventLeg {
+  venue: Venue;
+  eventTicker: string;
+  title: string;
+  closeTime: string;
+  /** Confidence that this event is the same question as the first leg's. */
+  confidence: MatchConfidence;
+  score: number;
+  reason: string;
+}
+
+export interface CompareResponse {
+  title: string;
+  /** The events being compared, the anchor first. */
+  events: CompareEventLeg[];
+  rows: CompareRow[];
+  /**
+   * Contracts only one venue lists. Named rather than dropped — a ladder that
+   * is finer at one broker is information, not noise.
+   */
+  unmatched: { venue: Venue; label: string; ticker: string }[];
 }
 
 /* -------------------------------------------------------------------- spot */

@@ -354,16 +354,26 @@ export function toCandleData(
   );
 }
 
+/**
+ * Volume bars, skipping periods with no size behind them.
+ *
+ * A `null` volume means the venue publishes prices without sizes, not that
+ * nothing traded — so those buckets are left out rather than drawn as bars of
+ * height zero. When no candle carries a volume the series is simply empty and
+ * the pane stays blank, which is the truthful picture.
+ */
 export function toVolumeData(
-  candles: { time: number; volume: number; close: number; open: number }[],
+  candles: { time: number; volume: number | null; close: number; open: number }[],
   theme = chartTheme(),
 ): HistogramData<Time>[] {
   return dedupeAscending(
-    candles.map((c) => ({
-      time: c.time as UTCTimestamp,
-      value: c.volume,
-      color: c.close >= c.open ? `${theme.up}55` : `${theme.down}55`,
-    })),
+    candles
+      .filter((c): c is typeof c & { volume: number } => c.volume !== null)
+      .map((c) => ({
+        time: c.time as UTCTimestamp,
+        value: c.volume,
+        color: c.close >= c.open ? `${theme.up}55` : `${theme.down}55`,
+      })),
   );
 }
 

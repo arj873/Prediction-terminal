@@ -27,12 +27,13 @@ import type {
   ImpliedMethod,
   ImpliedPoint,
   ImpliedSeriesResponse,
-  KalshiEvent,
   Market,
+  VenueEvent,
 } from '../../shared/types.js';
 import { impliedPrice, legFromStrike, quoteProbability, type ImpliedLeg } from '../../shared/implied.js';
 import { TTL, cache } from '../lib/cache.js';
 import { UpstreamError } from '../lib/http.js';
+import { sumOrNull } from './corpus.js';
 import { getCandles, getEvent, listEvents } from './kalshi.js';
 
 /* ---------------------------------------------------------------- registry */
@@ -108,7 +109,7 @@ export function listUnderlyings(): Underlying[] {
 /* ------------------------------------------------------------- ladder legs */
 
 /** Contracts with a numeric strike. Everything else cannot locate a price. */
-function ladderMarkets(event: KalshiEvent): Market[] {
+function ladderMarkets(event: VenueEvent): Market[] {
   return event.markets.filter(
     (m) => m.strikeType !== null && (m.floorStrike !== null || m.capStrike !== null),
   );
@@ -168,7 +169,7 @@ export async function getCandidates(symbol: string): Promise<ImpliedCandidatesRe
         underlying.series.map((series) =>
           listEvents({ seriesTicker: series, status: 'open', withNestedMarkets: true, limit: 200 })
             .then((response) => response.events)
-            .catch(() => [] as KalshiEvent[]),
+            .catch(() => [] as VenueEvent[]),
         ),
       );
 
@@ -205,7 +206,7 @@ export async function getCandidates(symbol: string): Promise<ImpliedCandidatesRe
   };
 }
 
-function describeCandidate(event: KalshiEvent, markets: Market[]): ImpliedCandidate {
+function describeCandidate(event: VenueEvent, markets: Market[]): ImpliedCandidate {
   const legs = liveLegs(markets);
   const result = impliedPrice(legs, 'median');
 
@@ -221,7 +222,7 @@ function describeCandidate(event: KalshiEvent, markets: Market[]): ImpliedCandid
     strikeDate: firstCloseTime(markets),
     strikes: markets.length,
     quoted: legs.length,
-    volume24h: markets.reduce((sum, m) => sum + m.volume24h, 0),
+    volume24h: sumOrNull(markets, (m) => m.volume24h) ?? 0,
     strikeLow: strikes.length ? Math.min(...strikes) : null,
     strikeHigh: strikes.length ? Math.max(...strikes) : null,
     implied: result.value,
@@ -260,7 +261,7 @@ const FAN_OUT = 6;
  * located by the strikes bracketing it, whichever they are.
  */
 export function selectStrikes(markets: Market[], centre: number | null): Market[] {
-  const active = markets.filter((m) => m.openInterest > 0 || m.volume > 0);
+  const active = markets.filter((m) => (m.openInterest ?? 0) > 0 || (m.volume ?? 0) > 0);
   const pool = active.length >= MIN_STRIKES ? active : markets;
   if (pool.length <= MAX_STRIKES) return pool;
 
