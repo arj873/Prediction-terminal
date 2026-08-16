@@ -56,7 +56,6 @@ export class NetflixPanel extends Panel<NetflixTop10> {
   override readonly kind = 'NFLX';
 
   readonly #options: NetflixPanelOptions;
-  #latest: NetflixTop10 | undefined;
 
   constructor(id: string, context: PanelContext, options: NetflixPanelOptions) {
     super(id, context);
@@ -74,7 +73,7 @@ export class NetflixPanel extends Panel<NetflixTop10> {
   }
 
   protected override subtitle(): string {
-    const data = this.#latest;
+    const data = this.latest;
     return data ? `${data.scopeLabel} · week of ${day(data.week)}` : '';
   }
 
@@ -83,8 +82,6 @@ export class NetflixPanel extends Panel<NetflixTop10> {
   }
 
   protected override render(data: NetflixTop10): void {
-    this.#latest = data;
-
     // Country feeds are rank-only; Netflix publishes views and hours globally.
     const hasViews = data.entries.some((e) => e.views !== null);
 
@@ -135,7 +132,6 @@ export class StreamChartPanel extends Panel<StreamChart> {
   override readonly kind: string;
 
   readonly #options: StreamPanelOptions;
-  #latest: StreamChart | undefined;
 
   constructor(id: string, context: PanelContext, options: StreamPanelOptions) {
     super(id, context);
@@ -155,7 +151,7 @@ export class StreamChartPanel extends Panel<StreamChart> {
   }
 
   protected override subtitle(): string {
-    return this.#latest ? truncate(this.#latest.title, 52) : '';
+    return this.latest ? truncate(this.latest.title, 52) : '';
   }
 
   protected override load(signal: AbortSignal): Promise<StreamChart> {
@@ -165,8 +161,6 @@ export class StreamChartPanel extends Panel<StreamChart> {
   }
 
   protected override render(data: StreamChart): void {
-    this.#latest = data;
-
     const risers = data.entries.filter((e) => (e.move ?? 0) > 0).length;
     const fallers = data.entries.filter((e) => (e.move ?? 0) < 0).length;
     const debuts = data.entries.filter((e) => e.isNew).length;
@@ -239,7 +233,6 @@ export class BoxOfficePanel extends Panel<BoxOfficeDay> {
   override readonly kind = 'BO';
 
   readonly #date: string | undefined;
-  #latest: BoxOfficeDay | undefined;
 
   constructor(id: string, context: PanelContext, date?: string) {
     super(id, context);
@@ -252,11 +245,11 @@ export class BoxOfficePanel extends Panel<BoxOfficeDay> {
   }
 
   protected override title(): string {
-    return this.#latest ? this.#latest.date : (this.#date ?? 'LATEST');
+    return this.latest ? this.latest.date : (this.#date ?? 'LATEST');
   }
 
   protected override subtitle(): string {
-    const data = this.#latest;
+    const data = this.latest;
     return data ? `${data.entries.length} releases · ${money(data.totalGross)} total` : '';
   }
 
@@ -265,8 +258,6 @@ export class BoxOfficePanel extends Panel<BoxOfficeDay> {
   }
 
   protected override render(data: BoxOfficeDay): void {
-    this.#latest = data;
-
     this.body.append(
       el('div', { class: 'result-note' }, [
         el('span', { text: data.title }),
@@ -307,7 +298,6 @@ export class SteamPanel extends Panel<SteamChart> {
   override readonly kind = 'STEAM';
 
   readonly #query: string;
-  #latest: SteamChart | undefined;
 
   constructor(id: string, context: PanelContext, query: string) {
     super(id, context);
@@ -325,7 +315,7 @@ export class SteamPanel extends Panel<SteamChart> {
   }
 
   protected override subtitle(): string {
-    const data = this.#latest;
+    const data = this.latest;
     if (!data) return '';
     if (data.view === 'game') return data.games[0]?.name ?? '';
     const total = data.games.reduce((sum, g) => sum + (g.currentPlayers ?? 0), 0);
@@ -337,8 +327,6 @@ export class SteamPanel extends Panel<SteamChart> {
   }
 
   protected override render(data: SteamChart): void {
-    this.#latest = data;
-
     this.body.append(
       el('div', {
         class: 'result-note',
@@ -380,7 +368,6 @@ export class TvPanel extends Panel<TvSchedule> {
   override readonly kind = 'TV';
 
   readonly #options: TvPanelOptions;
-  #latest: TvSchedule | undefined;
 
   constructor(id: string, context: PanelContext, options: TvPanelOptions) {
     super(id, context);
@@ -393,12 +380,12 @@ export class TvPanel extends Panel<TvSchedule> {
   }
 
   protected override title(): string {
-    const data = this.#latest;
+    const data = this.latest;
     return data ? `${data.country} ${data.date}` : (this.#options.date ?? 'TODAY');
   }
 
   protected override subtitle(): string {
-    return this.#latest ? `${this.#latest.episodes.length} airings` : '';
+    return this.latest ? `${this.latest.episodes.length} airings` : '';
   }
 
   protected override load(signal: AbortSignal): Promise<TvSchedule> {
@@ -406,8 +393,6 @@ export class TvPanel extends Panel<TvSchedule> {
   }
 
   protected override render(data: TvSchedule): void {
-    this.#latest = data;
-
     if (data.episodes.length === 0) {
       this.body.append(
         el('div', { class: 'panel-empty' }, [

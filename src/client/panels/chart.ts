@@ -53,7 +53,6 @@ export class ChartPanel extends Panel<ChartData> {
   #priceSeries: ISeriesApi<'Candlestick'> | ISeriesApi<'Area'> | undefined;
   #legend: HTMLElement | undefined;
   #stats: HTMLElement | undefined;
-  #latest: ChartData | undefined;
   /** Set once the user has scrolled, so a refresh does not yank the view back. */
   #userMovedView = false;
 
@@ -74,9 +73,9 @@ export class ChartPanel extends Panel<ChartData> {
 
   protected override subtitle(): string {
     const { interval, style, ref } = this.#options;
-    const market = this.#latest?.market;
+    const market = this.latest?.market;
     const label = `${venueInfo(ref.venue).label} · ${INTERVAL_LABEL[interval]} · ${style}`;
-    const note = this.#latest?.candles.note;
+    const note = this.latest?.candles.note;
     if (market) return `${label} · ${truncate(market.title, 52)}`;
     return note ? `${label} · ${truncate(note, 52)}` : label;
   }
@@ -95,7 +94,13 @@ export class ChartPanel extends Panel<ChartData> {
   }
 
   protected override render(data: ChartData): void {
-    this.#latest = data;
+    // The previous chart's canvases hung off the body that `refresh()` has
+    // just cleared. Drop it here, before any early return, or an empty window
+    // leaves it referenced-but-detached — still resized on every grid change,
+    // and still the thing `THEME` tries to restyle.
+    this.#chart?.destroy();
+    this.#chart = undefined;
+    this.#priceSeries = undefined;
 
     const host = el('div', { class: 'chart-host' });
     const legend = el('div', { class: 'chart-legend' });
@@ -125,8 +130,6 @@ export class ChartPanel extends Panel<ChartData> {
       return;
     }
 
-    // The old chart's canvases belong to the previous body; drop them first.
-    this.#chart?.destroy();
     const chart = new TerminalChart(host);
     this.#chart = chart;
 
@@ -145,15 +148,22 @@ export class ChartPanel extends Panel<ChartData> {
     chart.addVolume().setData(toVolumeData(candles, chartTheme()));
 
     chart.chart.subscribeCrosshairMove((param) => this.#updateLegend(param));
-    chart.chart
-      .timeScale()
-      .subscribeVisibleLogicalRangeChange(() => {
-        this.#userMovedView = true;
-      });
 
     if (!this.#userMovedView) chart.fit();
-    // The tile may not have its final size until after layout settles.
-    requestAnimationFrame(() => chart.resize());
+
+    // Subscribe to range changes only *after* our own fit has settled — the
+    // callback fires for programmatic moves as well as user ones, so
+    // subscribing first makes the panel believe the reader scrolled the moment
+    // it drew itself, and it then never re-fits again. The tile may also not
+    // have its final size until layout settles, so resize on the way through.
+    requestAnimationFrame(() => {
+      chart.resize();
+      requestAnimationFrame(() => {
+        chart.chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+          this.#userMovedView = true;
+        });
+      });
+    });
 
     this.#renderLegendFor(candles.at(-1)!);
     this.#renderStats(data);
@@ -196,16 +206,17 @@ export class ChartPanel extends Panel<ChartData> {
   }
 
   #updateLegend(param: MouseEventParams): void {
-    if (!this.#priceSeries || !this.#latest) return;
+    const latest = this.latest;
+    if (!this.#priceSeries || !latest) return;
 
     // Cursor left the pane — fall back to the most recent bar.
     if (!param.time || param.point === undefined) {
-      const last = this.#latest.candles.candles.at(-1);
+      const last = latest.candles.candles.at(-1);
       if (last) this.#renderLegendFor(last);
       return;
     }
 
-    const candle = this.#latest.candles.candles.find((c) => c.time === Number(param.time));
+    const candle = latest.candles.candles.find((c) => c.time === Number(param.time));
     if (candle) this.#renderLegendFor(candle);
   }
 
@@ -260,7 +271,7 @@ export class ChartPanel extends Panel<ChartData> {
   /** Re-configure in place — used by `GP` re-issued with different arguments. */
   reconfigure(options: Partial<ChartPanelOptions>): void {
     this.#options = { ...this.#options, ...options };
-    this.refreshMs = this.#options.interval === 1 ? 15_000 : 60_000;
+    this.setRefreshMs(this.#options.interval === 1 ? 15_000 : 60_000);
     this.#userMovedView = false;
     void this.refresh();
   }

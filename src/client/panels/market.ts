@@ -30,7 +30,6 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
   override readonly kind = 'DES';
 
   readonly #ref: VenueRef;
-  #market: Market | undefined;
 
   constructor(id: string, context: PanelContext, ref: VenueRef) {
     super(id, context);
@@ -48,7 +47,8 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
 
   protected override subtitle(): string {
     const label = venueInfo(this.#ref.venue).label;
-    return this.#market ? `${label} · ${truncate(this.#market.title, 52)}` : label;
+    const market = this.latest?.market;
+    return market ? `${label} · ${truncate(market.title, 52)}` : label;
   }
 
   protected override async load(signal: AbortSignal): Promise<{ market: Market; book: OrderBook | null }> {
@@ -60,8 +60,6 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
   }
 
   protected override render({ market, book }: { market: Market; book: OrderBook | null }): void {
-    this.#market = market;
-
     const mid = book?.mid ?? market.mid;
 
     this.body.append(

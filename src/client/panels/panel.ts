@@ -40,8 +40,15 @@ export abstract class Panel<T = unknown> {
   #controller: AbortController | undefined;
   #destroyed = false;
   #lastLoadedAt: number | undefined;
+  #lastData: T | undefined;
 
-  /** Poll interval in ms. `0` disables polling — for static content. */
+  /**
+   * Poll interval in ms. `0` disables polling — for static content.
+   *
+   * Assign freely in a constructor, which runs before {@link mount} arms the
+   * timer. After mounting, go through {@link setRefreshMs}: the timer is
+   * already running and a bare assignment would not be read again.
+   */
   protected refreshMs = 0;
 
   constructor(id: string, context: PanelContext) {
@@ -63,6 +70,18 @@ export abstract class Panel<T = unknown> {
   /** Optional dimmer text after the title. */
   protected subtitle(): string {
     return '';
+  }
+
+  /**
+   * The most recent successful load, or `undefined` before the first one.
+   *
+   * `title()` and `subtitle()` are called once from {@link mount} before any
+   * data exists, and again after every successful load — so both have to cope
+   * with having nothing. Holding the payload here saves every subclass from
+   * keeping its own copy just to answer those two questions.
+   */
+  protected get latest(): T | undefined {
+    return this.#lastData;
   }
 
   /* -------------------------------------------------------------- frame */
@@ -114,9 +133,27 @@ export abstract class Panel<T = unknown> {
     this.#updateHeader();
     this.body.append(el('div', { class: 'panel-loading', text: 'LOADING…' }));
     void this.refresh();
-    if (this.refreshMs > 0) {
-      this.#timer = window.setInterval(() => void this.refresh(), this.refreshMs);
-    }
+    this.#armTimer();
+  }
+
+  /**
+   * Change the poll interval on a panel that is already running.
+   *
+   * `mount()` reads `refreshMs` once, so a panel that re-cuts its own cadence
+   * when reconfigured — a chart moving between minute and daily bars — has to
+   * re-arm the timer rather than just assign the field.
+   */
+  protected setRefreshMs(ms: number): void {
+    if (this.refreshMs === ms) return;
+    this.refreshMs = ms;
+    this.#armTimer();
+  }
+
+  #armTimer(): void {
+    if (this.#timer !== undefined) window.clearInterval(this.#timer);
+    this.#timer = undefined;
+    if (this.#destroyed || this.refreshMs <= 0) return;
+    this.#timer = window.setInterval(() => void this.refresh(), this.refreshMs);
   }
 
   async refresh(): Promise<void> {
@@ -132,6 +169,10 @@ export abstract class Panel<T = unknown> {
     try {
       const data = await this.load(controller.signal);
       if (this.#destroyed || controller.signal.aborted) return;
+
+      // Recorded before `render()` so both it and the `title()`/`subtitle()`
+      // pair below read the same payload.
+      this.#lastData = data;
 
       this.body.replaceChildren();
       this.render(data);

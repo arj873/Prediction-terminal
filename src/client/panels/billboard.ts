@@ -21,7 +21,6 @@ export class BillboardPanel extends Panel<BillboardChart> {
   override readonly kind = 'BB';
 
   readonly #options: BillboardPanelOptions;
-  #latest: BillboardChart | undefined;
 
   constructor(id: string, context: PanelContext, options: BillboardPanelOptions) {
     super(id, context);
@@ -39,7 +38,7 @@ export class BillboardPanel extends Panel<BillboardChart> {
   }
 
   protected override subtitle(): string {
-    const chart = this.#latest;
+    const chart = this.latest;
     if (!chart) return '';
     return `${chart.title} · week of ${day(chart.date)}`;
   }
@@ -49,8 +48,6 @@ export class BillboardPanel extends Panel<BillboardChart> {
   }
 
   protected override render(data: BillboardChart): void {
-    this.#latest = data;
-
     const risers = data.entries.filter((e) => (e.move ?? 0) > 0).length;
     const fallers = data.entries.filter((e) => (e.move ?? 0) < 0).length;
     const debuts = data.entries.filter((e) => e.isNew).length;

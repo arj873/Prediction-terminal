@@ -25,7 +25,6 @@ export class FredPanel extends Panel<FredSeriesResponse> {
   readonly #options: FredPanelOptions;
   #chart: TerminalChart | undefined;
   #legend: HTMLElement | undefined;
-  #latest: FredSeriesResponse | undefined;
 
   constructor(id: string, context: PanelContext, options: FredPanelOptions) {
     super(id, context);
@@ -43,7 +42,7 @@ export class FredPanel extends Panel<FredSeriesResponse> {
   }
 
   protected override subtitle(): string {
-    const series = this.#latest?.series;
+    const series = this.latest?.series;
     if (!series) return '';
     return truncate(series.title, 70);
   }
@@ -53,7 +52,10 @@ export class FredPanel extends Panel<FredSeriesResponse> {
   }
 
   protected override render(data: FredSeriesResponse): void {
-    this.#latest = data;
+    // Drop the previous chart before any early return — see ChartPanel.
+    this.#chart?.destroy();
+    this.#chart = undefined;
+
     const { series, observations } = data;
 
     const withValues = observations.filter((o) => o.value !== null);
@@ -95,7 +97,6 @@ export class FredPanel extends Panel<FredSeriesResponse> {
       return;
     }
 
-    this.#chart?.destroy();
     const chart = new TerminalChart(host);
     this.#chart = chart;
 

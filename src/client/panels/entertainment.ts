@@ -36,7 +36,6 @@ export class EntPanel extends Panel<EntResponse> {
   override readonly kind = 'ENT';
 
   readonly #genre: EntGenre | 'all';
-  #latest: EntResponse | undefined;
 
   constructor(id: string, context: PanelContext, genre: EntGenre | 'all') {
     super(id, context);
@@ -53,7 +52,7 @@ export class EntPanel extends Panel<EntResponse> {
   }
 
   protected override subtitle(): string {
-    const data = this.#latest;
+    const data = this.latest;
     if (!data) return '';
     return `${data.events.length} events · ${GENRE_LABEL[data.genre] ?? data.genre}`;
   }
@@ -63,8 +62,6 @@ export class EntPanel extends Panel<EntResponse> {
   }
 
   protected override render(data: EntResponse): void {
-    this.#latest = data;
-
     // Genre chips double as the navigation: the counts say what is worth
     // opening, and clicking one re-runs `ENT <genre>`.
     const chips = el('div', { class: 'result-note' }, [
@@ -176,7 +173,6 @@ export class RtPanel extends Panel<RtTitle> {
   override readonly kind = 'RT';
 
   readonly #query: string;
-  #latest: RtTitle | undefined;
 
   constructor(id: string, context: PanelContext, query: string) {
     super(id, context);
@@ -190,11 +186,11 @@ export class RtPanel extends Panel<RtTitle> {
   }
 
   protected override title(): string {
-    return this.#latest ? truncate(this.#latest.title, 40) : this.#query.toUpperCase();
+    return this.latest ? truncate(this.latest.title, 40) : this.#query.toUpperCase();
   }
 
   protected override subtitle(): string {
-    const data = this.#latest;
+    const data = this.latest;
     if (!data) return '';
     return [data.year, data.mediaType].filter(Boolean).join(' · ');
   }
@@ -204,8 +200,6 @@ export class RtPanel extends Panel<RtTitle> {
   }
 
   protected override render(data: RtTitle): void {
-    this.#latest = data;
-
     this.body.append(
       el('div', { class: 'rt-meters' }, [
         meter(data.critics, 'TOMATOMETER'),

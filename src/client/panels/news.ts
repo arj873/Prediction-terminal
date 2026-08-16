@@ -71,7 +71,6 @@ export class NewsPanel extends Panel<NewsFeed> {
   override readonly kind = 'NEWS';
 
   #options: NewsPanelOptions;
-  #latest: NewsFeed | undefined;
 
   constructor(id: string, context: PanelContext, options: NewsPanelOptions) {
     super(id, context);
@@ -107,7 +106,7 @@ export class NewsPanel extends Panel<NewsFeed> {
   }
 
   protected override subtitle(): string {
-    const data = this.#latest;
+    const data = this.latest;
     if (!data) return '';
     return `${data.articles.length} headlines · ${data.days}d · ${data.source}`;
   }
@@ -117,8 +116,6 @@ export class NewsPanel extends Panel<NewsFeed> {
   }
 
   protected override render(data: NewsFeed): void {
-    this.#latest = data;
-
     if (data.articles.length === 0) {
       // An empty wire is a fact about a stated window, so the window is stated
       // and the command that widens it is spelled out.

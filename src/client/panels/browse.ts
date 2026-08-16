@@ -174,7 +174,6 @@ export class EventPanel extends Panel<VenueEvent> {
   override readonly kind = 'EVT';
 
   readonly #ref: VenueRef;
-  #event: VenueEvent | undefined;
 
   constructor(id: string, context: PanelContext, ref: VenueRef) {
     super(id, context);
@@ -192,7 +191,7 @@ export class EventPanel extends Panel<VenueEvent> {
 
   protected override subtitle(): string {
     const label = venueInfo(this.#ref.venue).label;
-    return this.#event ? `${label} · ${truncate(this.#event.title, 52)}` : label;
+    return this.latest ? `${label} · ${truncate(this.latest.title, 52)}` : label;
   }
 
   protected override load(signal: AbortSignal): Promise<VenueEvent> {
@@ -200,8 +199,6 @@ export class EventPanel extends Panel<VenueEvent> {
   }
 
   protected override render(event: VenueEvent): void {
-    this.#event = event;
-
     const total = event.markets.reduce((sum, m) => sum + (m.volume24h ?? 0), 0);
     // On a mutually exclusive event the YES mids should sum to ~1; when they do
     // not, the gap is the arbitrage (or the width of the spreads).

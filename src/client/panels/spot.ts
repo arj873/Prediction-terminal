@@ -90,7 +90,6 @@ export class SpotPanel extends Panel<SpotData> {
   #overlaySeries: { eventTicker: string; series: ISeriesApi<'Line'>; color: string }[] = [];
   #legend: HTMLElement | undefined;
   #stats: HTMLElement | undefined;
-  #latest: SpotData | undefined;
   #userMovedView = false;
 
   constructor(id: string, context: PanelContext, options: SpotPanelOptions) {
@@ -110,7 +109,7 @@ export class SpotPanel extends Panel<SpotData> {
   protected override subtitle(): string {
     const { interval, style, overlays } = this.#options;
     const parts = [`${INTERVAL_LABEL[interval]} · ${style}`];
-    const name = this.#latest?.quote?.name;
+    const name = this.latest?.quote?.name;
     if (name && name !== this.#options.symbol) parts.push(truncate(name, 44));
     if (overlays.length > 0) {
       parts.push(`${overlays.length} implied · ${this.#options.method}`);
@@ -172,7 +171,12 @@ export class SpotPanel extends Panel<SpotData> {
   }
 
   protected override render(data: SpotData): void {
-    this.#latest = data;
+    // Drop the previous chart before any early return: its canvases hung off
+    // the body `refresh()` has just cleared, and an empty window would
+    // otherwise leave it detached but still referenced.
+    this.#chart?.destroy();
+    this.#chart = undefined;
+    this.#priceSeries = undefined;
     this.#overlaySeries = [];
 
     const host = el('div', { class: 'chart-host' });
@@ -218,7 +222,6 @@ export class SpotPanel extends Panel<SpotData> {
       return;
     }
 
-    this.#chart?.destroy();
     const chart = new TerminalChart(host);
     this.#chart = chart;
 
@@ -438,7 +441,8 @@ export class SpotPanel extends Panel<SpotData> {
   /* -------------------------------------------------------------- legend */
 
   #updateLegend(param: MouseEventParams): void {
-    if (!this.#priceSeries || !this.#latest) return;
+    const latest = this.latest;
+    if (!this.#priceSeries || !latest) return;
 
     const impliedNow = new Map<string, number>();
     for (const overlay of this.#overlaySeries) {
@@ -447,12 +451,12 @@ export class SpotPanel extends Panel<SpotData> {
     }
 
     if (!param.time || param.point === undefined) {
-      const last = this.#latest.candles.candles.at(-1);
+      const last = latest.candles.candles.at(-1);
       if (last) this.#renderLegendFor(last, new Map());
       return;
     }
 
-    const candle = this.#latest.candles.candles.find((c) => c.time === Number(param.time));
+    const candle = latest.candles.candles.find((c) => c.time === Number(param.time));
     if (candle) this.#renderLegendFor(candle, impliedNow);
   }
 
@@ -505,7 +509,7 @@ export class SpotPanel extends Panel<SpotData> {
   reconfigure(options: Partial<SpotPanelOptions>): void {
     const before = this.#options;
     this.#options = { ...before, ...options };
-    this.refreshMs = this.#options.interval === 1 ? 15_000 : 60_000;
+    this.setRefreshMs(this.#options.interval === 1 ? 15_000 : 60_000);
     // A different window or interval is a different picture; a different set of
     // overlays is the same picture with another line on it.
     if (
