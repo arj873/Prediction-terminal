@@ -1115,6 +1115,42 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    verb: 'MENU',
+    aliases: ['M', 'BAR'],
+    group: 'workspace',
+    summary: 'The menu bar: every command, and the key that runs it',
+    usage: 'MENU [name|NEXT|PREV|CLOSE]',
+    examples: ['MENU', 'MENU markets', 'MENU learn', 'MENU CLOSE'],
+    handler(command, { menu }) {
+      const requested = command.args[0];
+      if (requested === undefined) {
+        menu.toggle();
+        return;
+      }
+
+      switch (requested.toUpperCase()) {
+        case 'CLOSE':
+        case 'OFF':
+          menu.close();
+          return;
+        case 'NEXT':
+        case '+':
+          menu.cycle(1);
+          return;
+        case 'PREV':
+        case '-':
+          menu.cycle(-1);
+          return;
+        default:
+          break;
+      }
+
+      if (!menu.open(requested)) {
+        throw new UsageError(`No menu called "${requested}". Try: ${menu.titles().join(', ')}`);
+      }
+    },
+  },
+  {
     verb: 'HELP',
     aliases: ['?', 'MAN'],
     group: 'workspace',

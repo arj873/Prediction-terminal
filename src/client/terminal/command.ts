@@ -18,12 +18,35 @@ import type { Workspace } from '../state.js';
 import type { KeyMode, Keymap } from './keys.js';
 import type { ParsedCommand } from './parser.js';
 
+/**
+ * The menu bar, as a command sees it.
+ *
+ * `MENU` drives the bar the same way `FOCUS` drives the panels, so the menus
+ * are reachable by typing, by key and by mouse without any of the three being
+ * a special case.
+ */
+export interface MenuControl {
+  /** True when the bar is showing a menu. */
+  readonly isOpen: boolean;
+  /** Open a menu by name, in full or by prefix. False when nothing goes by it. */
+  open(name: string): boolean;
+  /** Show the menus, or put them away if they are already down. */
+  toggle(): void;
+  close(): void;
+  /** Walk along the bar. */
+  cycle(delta: number): void;
+  /** Every menu title, for an error message that can name the alternatives. */
+  titles(): string[];
+}
+
 export interface CommandContext {
   panels: PanelManager;
   workspace: Workspace;
   panelContext: PanelContext;
   /** The live key map, for `KEYS`. */
   keys: Keymap;
+  /** The menu bar, for `MENU`. */
+  menu: MenuControl;
   log(message: string, level?: 'info' | 'warn' | 'error'): void;
   /** Wipe the message log. */
   clearLog(): void;

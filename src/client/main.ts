@@ -1,10 +1,10 @@
 /**
  * PREDICTION TERMINAL — application shell.
  *
- * Wires the four pieces together: a status header, the ticker tape, the tiled
- * workspace, and the command bar. Every user action — typed, clicked, or from a
- * key binding — funnels through `run()`, so there is exactly one dispatch path
- * to reason about.
+ * Wires the five pieces together: a status header, the menu bar, the ticker
+ * tape, the tiled workspace, and the command bar. Every user action — typed,
+ * clicked, chosen from a menu, or from a key binding — funnels through `run()`,
+ * so there is exactly one dispatch path to reason about.
  */
 
 import './styles.css';
@@ -17,6 +17,8 @@ import type { PanelContext } from './panels/panel.js';
 import { Workspace } from './state.js';
 import { CommandLine } from './terminal/commandline.js';
 import { KeyRouter, Keymap, type KeyMode } from './terminal/keys.js';
+import { MENUS } from './terminal/menu.js';
+import { MenuBar } from './terminal/menubar.js';
 import { parse } from './terminal/parser.js';
 import { COMMAND_INDEX, UsageError, type CommandContext } from './terminal/registry.js';
 import { TickerTape } from './terminal/tape.js';
@@ -28,6 +30,33 @@ const panels = new PanelManager();
 panels.setColumns(workspace.columns);
 
 const keys = new Keymap(workspace);
+
+/* ---------------------------------------------------------------- menu bar */
+
+/**
+ * The menu bar, built before everything it talks to.
+ *
+ * Nothing it needs is held: it dispatches through the same `run()` a typed line
+ * goes to, reads `$` off the same workspace a key binding reads it off, and
+ * hands the keyboard back to whichever half of the terminal had it. All of that
+ * arrives through a closure, so the bar can exist before the command line and
+ * the router do.
+ */
+const menubar = new MenuBar({
+  menus: MENUS,
+  keymap: keys,
+  run: (command) => run(command),
+  // A chosen command is echoed as though it had been typed, and remembered as
+  // though it had been: the menu is a way to learn the prompt, not to avoid it.
+  echo: (command) => {
+    commandLine.log(command, 'echo');
+    workspace.pushHistory(command);
+  },
+  log: (message, level) => log(message, level),
+  subject: () => panels.subject(),
+  mode: () => router.mode,
+  setMode: (mode) => router.setMode(mode),
+});
 
 /* ------------------------------------------------------------------ header */
 
@@ -53,6 +82,9 @@ const header = el('header', { class: 'topbar' }, [
 function tickClock(): void {
   const now = new Date();
   clockEl.textContent = `${clockUtc(now)} UTC  ${clockEt(now)} ET`;
+  // `$` follows the row cursor, which moves without the workspace changing
+  // shape, so the menu bar's reading of it rides along with the clock.
+  menubar.syncSubject();
 }
 tickClock();
 window.setInterval(tickClock, 1000);
@@ -84,6 +116,7 @@ const commandContext: CommandContext = {
   workspace,
   panelContext,
   keys,
+  menu: menubar,
   log,
   clearLog: () => commandLine.clearLog(),
   setMode: (mode) => router.setMode(mode),
@@ -149,7 +182,7 @@ const tape = new TickerTape((ticker) => run(`GP ${ticker}`));
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app not found');
 
-app.append(header, tape.root, panels.root, commandLine.root);
+app.append(header, menubar.root, tape.root, panels.root, commandLine.root);
 
 /* ------------------------------------------------------------- shortcuts */
 
@@ -167,6 +200,7 @@ router = new KeyRouter({
   focusPrompt: () => commandLine.focus(),
   blurPrompt: () => commandLine.blur(),
   focusWorkspace: () => panels.focusElement(),
+  keyboardClaimed: () => menubar.isOpen,
   onMode: (mode: KeyMode) => {
     modeEl.textContent = mode === 'nav' ? 'NAV' : 'CMD';
     modeEl.classList.toggle('is-nav', mode === 'nav');
@@ -202,6 +236,10 @@ commandLine.log(
   'info',
 );
 commandLine.log('Type HELP for commands, KEYS for the keyboard, or click an example below.', 'info');
+commandLine.log(
+  'New here? The menus above (Alt+M) carry every command, each with the key that runs it.',
+  'info',
+);
 
 tape.start();
 commandLine.focus();

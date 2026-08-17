@@ -24,6 +24,12 @@ and every table row is clickable so the mouse and the keyboard drive the same
 code path. It is meant to be driven without the mouse at all: see
 [Keys](#keys).
 
+Nobody starts out knowing any of that, so there is a
+[menu bar](#the-menu-bar) across the top. Every entry in it shows the command it
+runs and the key that runs it, and choosing one prints that command on the
+message log as though you had typed it — the menus are a way to learn the
+prompt rather than a way around it.
+
 ---
 
 ## Quick start
@@ -33,7 +39,8 @@ npm install
 npm run dev          # API on :8787, client on :5173 with proxying
 ```
 
-Open http://localhost:5173 and type `HELP`.
+Open http://localhost:5173 and type `HELP` — or press `Alt`+`M` and read the
+menus.
 
 For a single-process production build:
 
@@ -259,7 +266,55 @@ resolves against. Those pairings are read off each series' own
 | `REFRESH` | `REFRESH` · `REFRESH THIS` |
 | `CLR` | Clear the message log |
 | `KEYS` | `KEYS` · `KEYS <chord> <command>` · `KEYS DEL <chord>` · `KEYS RESET` |
+| `MENU` | `MENU` · `MENU <name>` · `MENU NEXT\|PREV\|CLOSE` — the menu bar |
 | `HELP` | `HELP [command]` |
+
+### The menu bar
+
+Five menus across the top — `MARKETS`, `PRICES`, `DATA`, `WORKSPACE`, `LEARN` —
+and everything the terminal does is under one of them. `Alt`+`M` opens the bar,
+`F10` does too, and `m` does in NAV mode; the arrow keys walk it, `Enter` runs
+an entry, a letter jumps to the entry it starts, and `Esc` gives the keyboard
+back to wherever it came from.
+
+Each entry is three columns: what it does, the command line it runs, and the
+key that runs it.
+
+```
+Order book                                    OB $              NAV B
+Leaderboard                                   TOP        Alt+T · NAV T
+Search every venue at once…                   SRCH …            Alt+S
+```
+
+That layout is the whole point. Choosing `Order book` runs `OB` for whatever
+you are looking at, prints `OB KXFEDDECISION-27JAN-H26` on the message log in
+the same shape a typed line takes, and pushes it onto the history where `↑`
+will find it — and mentions that `B` would have done the same in NAV mode. Use
+the menu for a week and you stop needing it, which is the intention.
+
+A few things follow from the columns being true rather than decorative:
+
+* **`NAV` marks a key that only fires in NAV mode.** A bare `B` at the prompt
+  types a letter; `NAV B` says where it works. Keys with no prefix — `Alt+S`,
+  `Ctrl+L` — fire anywhere, mid-word included.
+* **An entry ending in `…` types rather than runs.** `SRCH …` puts `SRCH ` on
+  the command line and leaves you there, because a search with no words is only
+  an error message. Which entries do this is read off each command's usage line,
+  not decided by hand.
+* **`$` is spelled out.** Entries that act on the market under the row cursor
+  show it — `OB $`, `W ADD $` — and grey out, with the reason underneath, when
+  there is nothing to fill it with. The right-hand end of the bar shows what `$`
+  currently stands for.
+* **The strip under the list is the usage line**, straight from `HELP`. `?`
+  opens the full help for the highlighted entry.
+* **Rebinding a key relabels the menu.** The chord column is read out of the
+  live key map, so `KEYS alt+b OB $` shows up in the menu the next time you open
+  it, and `KEYS DEL` takes it away again.
+
+The curated entries — which commands are worth a click, in what order — are the
+only hand-written part. `LEARN ▸ Every command` is generated from the command
+table itself, so a command added to the terminal is in the menus the same day,
+and a test fails if it somehow is not.
 
 ### Keys
 
@@ -280,6 +335,7 @@ interrupt what you are typing.
 | `Alt`+`↑`/`↓` | Move the row cursor inside the focused panel |
 | `Alt`+`Enter` | Open the row under the cursor · `Alt`+`Backspace` runs its second action |
 | `Alt`+`F` | Maximise the focused panel · `Alt`+`Q` closes it · `Alt`+`R` reloads them all |
+| `Alt`+`M` | The menu bar — or `F10`. Every command, with the key that runs it |
 | `Alt`+`W` `T` `N` `X` `K` `H` | Watchlist · leaderboard · news · cross-venue · key map · help |
 | `Alt`+`G` `S` `D` | Start a `GP`, `SRCH` or `DES` command without running it |
 | `Ctrl`+`L` | Clear the message log |
@@ -296,6 +352,7 @@ there, so the vim keys are free:
 | `c` `b` `q` `s` `v` `a` | Chart · book · quote · tape · cross-venue · add to watchlist, for the row under the cursor |
 | `f` `x` `r` | Maximise · close · reload this panel · `[` and `]` change the column count |
 | `w` `t` `n` `?` `H` | Watchlist · leaderboard · news · key map · help |
+| `m` | The menu bar, which lists all of the above with these keys beside them |
 | `/` or `Esc` | Back to the command line |
 
 An unbound letter in NAV mode is not swallowed: it takes you to the prompt with
@@ -368,12 +425,14 @@ v5. The chart theme is read from live CSS custom properties, so `THEME` restyles
 every open chart with no per-panel bookkeeping.
 
 There is one dispatch path in the client, and everything funnels into it. A
-typed line, a clicked row and a key press all end up in the same `run()`: a
-binding is a chord and a command string, and a row records the command it runs
-so the keyboard can read it back. That is what keeps the three in step — a
-shortcut can only do something you could also have typed, `KEYS` can only rebind
-what the router already fires, and a row that gains a click handler gains a
-keyboard cursor the same day.
+typed line, a clicked row, a menu entry and a key press all end up in the same
+`run()`: a binding is a chord and a command string, a menu entry is a label and
+a command string, and a row records the command it runs so the keyboard can
+read it back. That is what keeps them in step — a shortcut can only do
+something you could also have typed, `KEYS` can only rebind what the router
+already fires, a row that gains a click handler gains a keyboard cursor the same
+day, and the menu bar can show you the command because there is nothing else it
+could be doing.
 
 ### A few things worth knowing
 
@@ -669,7 +728,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 433 tests
+npm test             # 451 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```
@@ -684,6 +743,13 @@ for the news wire, which nothing in CI has a key for: it asserts that the key
 pair goes in the headers rather than the query string, that the request
 overrides the two upstream defaults that would otherwise cost headlines, and
 that a missing key and a rejected key are different, actionable errors.
+
+`test/menu.test.ts` guards the menu bar's only real claim, which is that what it
+prints is true. An entry naming a command the terminal does not have is the menu
+equivalent of a key bound to nothing; an entry running a bare verb that needs an
+argument can only ever produce a usage error; and "everything is reachable from
+the bar" is worth nothing as a promise and everything as an assertion, so a
+command added to the registry and left out of the menus fails the suite.
 
 The implied-price maths in `src/shared/implied.ts` is the most heavily tested
 part of the codebase, because it is the one piece whose output looks plausible

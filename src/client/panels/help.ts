@@ -96,6 +96,7 @@ export class HelpPanel extends Panel<Command[]> {
         table(
           ['KEY', 'ACTION'],
           [
+            keyRow('Alt+M', 'The menu bar — every command, with the key that runs it'),
             keyRow('Enter', 'Run the command'),
             keyRow('↑ / ↓', 'Previous / next command in history'),
             keyRow('Tab', 'Complete the verb'),

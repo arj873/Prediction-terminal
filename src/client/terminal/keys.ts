@@ -313,6 +313,8 @@ const PRESET_TABLE: readonly (readonly [KeyScope, string, string, string])[] = [
   ['global', 'alt+k', 'KEYS', 'This key map'],
   ['global', 'alt+h', 'HELP', 'Command reference'],
   ['global', 'f1', 'HELP', 'Command reference'],
+  ['global', 'alt+m', 'MENU', 'The menu bar — every command, with the key that runs it'],
+  ['global', 'f10', 'MENU', 'The menu bar'],
   ['global', 'alt+g', '>GP', 'Start a GP command'],
   ['global', 'alt+s', '>SRCH', 'Start a SRCH command'],
   ['global', 'alt+d', '>DES', 'Start a DES command'],
@@ -352,6 +354,7 @@ const PRESET_TABLE: readonly (readonly [KeyScope, string, string, string])[] = [
   ['panel', 't', 'TOP', 'Leaderboard'],
   ['panel', 'n', 'NEWS', 'News wire'],
   ['panel', 'shift+h', 'HELP', 'Command reference'],
+  ['panel', 'm', 'MENU', 'The menu bar'],
   ['panel', '?', 'KEYS', 'This key map'],
   ['panel', '/', 'FOCUS CMD', 'Back to the command line'],
   ['panel', ':', 'FOCUS CMD', 'Back to the command line'],
@@ -563,6 +566,15 @@ export class Keymap {
 /* ------------------------------------------------------------ substitution */
 
 /**
+ * What to say when a `$` command has nothing to act on.
+ *
+ * Shared with the menu bar, which greys out the same entries for the same
+ * reason: two wordings for one rule would read as two different rules.
+ */
+export const SUBJECT_HINT =
+  'needs a market: put the row cursor on one, or focus a panel that has one.';
+
+/**
  * Fill `$` from the focused panel — the row under the cursor, or the panel's
  * own subject.
  *
@@ -612,6 +624,12 @@ export interface KeyRouterOptions {
   blurPrompt(): void;
   /** Give the workspace keyboard focus. False when there is no panel to focus. */
   focusWorkspace(): boolean;
+  /**
+   * True when something else has taken the keyboard on purpose — the menu bar,
+   * while a menu is down. A command that claims the keyboard has to be allowed
+   * to keep it, or NAV mode snatches it back the instant the command returns.
+   */
+  keyboardClaimed?(): boolean;
   onMode?(mode: KeyMode): void;
 }
 
@@ -741,18 +759,18 @@ export class KeyRouter {
   #fire(command: string): void {
     const resolved = applySubject(command, this.#options.subject());
     if (resolved === null) {
-      this.#options.log(
-        `${command} needs a market: put the row cursor on one, or focus a panel that has one.`,
-        'warn',
-      );
+      this.#options.log(`${command} ${SUBJECT_HINT}`, 'warn');
       return;
     }
 
     this.#options.run(resolved);
 
     // Opening a panel from NAV mode should leave the keyboard in NAV mode, on
-    // the panel that just opened. A binding that types at the prompt is the one
-    // exception — it asked for the other mode.
-    if (this.#mode === 'nav' && !resolved.startsWith('>')) this.#options.focusWorkspace();
+    // the panel that just opened. The exceptions are the commands that wanted
+    // the keyboard elsewhere: one that types at the prompt, and one that opened
+    // a menu to be driven with the arrow keys.
+    if (this.#mode === 'nav' && !resolved.startsWith('>') && !this.#options.keyboardClaimed?.()) {
+      this.#options.focusWorkspace();
+    }
   }
 }
