@@ -1,0 +1,1029 @@
+<title>Prediction Terminal Audit</title>
+
+<style>
+  /* ── tokens: light is the base set ─────────────────────────────────────── */
+  :root {
+    --ground:      #F4F6F8;
+    --surface:     #FFFFFF;
+    --surface-alt: #EDF1F4;
+    --ink:         #11161C;
+    --ink-soft:    #46525E;
+    --ink-faint:   #6E7C89;
+    --rule:        #D9E0E7;
+    --rule-soft:   #E7ECF1;
+
+    /* accent — the terminal's "ice" theme */
+    --accent:      #0B6E7D;
+    --accent-soft: #E2F1F4;
+
+    /* severity ramp, deliberately separate from the accent */
+    --sev-high:    #A81E13;
+    --sev-high-bg: #FBE9E7;
+    --sev-med:     #8A5600;
+    --sev-med-bg:  #FBF0DC;
+    --sev-low:     #47586A;
+    --sev-low-bg:  #E9EEF3;
+    --sev-ok:      #17624A;
+    --sev-ok-bg:   #E1F1EA;
+
+    --shadow: 0 1px 2px rgb(17 22 28 / .04), 0 8px 24px -12px rgb(17 22 28 / .10);
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0C1015;
+      --surface:     #141A21;
+      --surface-alt: #1A222B;
+      --ink:         #E2E9F0;
+      --ink-soft:    #A6B3C0;
+      --ink-faint:   #7A8896;
+      --rule:        #26313C;
+      --rule-soft:   #1E2731;
+
+      --accent:      #5AD2E2;
+      --accent-soft: #12303650;
+
+      --sev-high:    #FF7A6B;
+      --sev-high-bg: #3A1A1650;
+      --sev-med:     #E8A33D;
+      --sev-med-bg:  #3A2C1150;
+      --sev-low:     #93A5B6;
+      --sev-low-bg:  #1F2833;
+      --sev-ok:      #5FCFA4;
+      --sev-ok-bg:   #122C2350;
+
+      --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px -12px rgb(0 0 0 / .6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0C1015;
+    --surface:     #141A21;
+    --surface-alt: #1A222B;
+    --ink:         #E2E9F0;
+    --ink-soft:    #A6B3C0;
+    --ink-faint:   #7A8896;
+    --rule:        #26313C;
+    --rule-soft:   #1E2731;
+
+    --accent:      #5AD2E2;
+    --accent-soft: #12303650;
+
+    --sev-high:    #FF7A6B;
+    --sev-high-bg: #3A1A1650;
+    --sev-med:     #E8A33D;
+    --sev-med-bg:  #3A2C1150;
+    --sev-low:     #93A5B6;
+    --sev-low-bg:  #1F2833;
+    --sev-ok:      #5FCFA4;
+    --sev-ok-bg:   #122C2350;
+
+    --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px -12px rgb(0 0 0 / .6);
+  }
+
+  /* ── base ──────────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0 24px 96px;
+  }
+
+  .wrap { max-width: 74ch; margin: 0 auto; }
+  .wide { max-width: 96ch; margin: 0 auto; }
+
+  a {
+    color: var(--accent);
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+  }
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: .875em;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule-soft);
+    border-radius: 3px;
+    padding: .08em .34em;
+    word-break: break-word;
+  }
+
+  pre {
+    font-family: var(--mono);
+    font-size: .8125rem;
+    line-height: 1.6;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0;
+  }
+  pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  /* ── masthead ──────────────────────────────────────────────────────────── */
+  header.masthead {
+    border-bottom: 1px solid var(--rule);
+    padding: 56px 0 28px;
+    margin-bottom: 44px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 18px;
+  }
+  .eyebrow b { color: var(--accent); font-weight: 500; }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.9rem, 5vw, 2.75rem);
+    font-weight: 600;
+    letter-spacing: -.03em;
+    line-height: 1.1;
+    text-wrap: balance;
+    margin: 0 0 16px;
+  }
+
+  .standfirst {
+    font-size: 1.0625rem;
+    color: var(--ink-soft);
+    margin: 0 0 32px;
+    max-width: 62ch;
+  }
+
+  /* ── stat strip ────────────────────────────────────────────────────────── */
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .stat {
+    flex: 1 1 118px;
+    padding: 13px 16px;
+    border-right: 1px solid var(--rule-soft);
+  }
+  .stat:last-child { border-right: 0; }
+  .stat dt {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 3px;
+  }
+  .stat dd {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    margin: 0;
+    line-height: 1.15;
+  }
+  .stat dd small {
+    font-size: .75rem;
+    font-weight: 400;
+    color: var(--ink-faint);
+    letter-spacing: 0;
+  }
+  .stat.is-high dd { color: var(--sev-high); }
+  .stat.is-med  dd { color: var(--sev-med); }
+  .stat.is-low  dd { color: var(--sev-low); }
+  .stat.is-ok   dd { color: var(--sev-ok); }
+
+  /* ── section headings ──────────────────────────────────────────────────── */
+  h2 {
+    font-family: var(--mono);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0 0 20px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  section { margin-bottom: 56px; }
+
+  p { margin: 0 0 16px; }
+  p:last-child { margin-bottom: 0; }
+
+  .lede { color: var(--ink-soft); }
+
+  /* ── tables ────────────────────────────────────────────────────────────── */
+  .scroller {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    background: var(--surface);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: .875rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  thead th {
+    font-family: var(--mono);
+    font-size: .625rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num, th.num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+  td.id {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+    width: 1%;
+    white-space: nowrap;
+  }
+  td.loc {
+    font-family: var(--mono);
+    font-size: .78rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  tbody tr td.peak {
+    color: var(--sev-high);
+    font-weight: 600;
+  }
+
+  /* ── severity chips ────────────────────────────────────────────────────── */
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: .625rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 2.5px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .chip.high { color: var(--sev-high); background: var(--sev-high-bg); border-color: color-mix(in srgb, var(--sev-high) 30%, transparent); }
+  .chip.med  { color: var(--sev-med);  background: var(--sev-med-bg);  border-color: color-mix(in srgb, var(--sev-med) 30%, transparent); }
+  .chip.low  { color: var(--sev-low);  background: var(--sev-low-bg);  border-color: color-mix(in srgb, var(--sev-low) 30%, transparent); }
+  .chip.ok   { color: var(--sev-ok);   background: var(--sev-ok-bg);   border-color: color-mix(in srgb, var(--sev-ok) 30%, transparent); }
+
+  /* ── findings ──────────────────────────────────────────────────────────── */
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .finding::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--stripe, var(--rule));
+  }
+  .finding.high { --stripe: var(--sev-high); }
+  .finding.med  { --stripe: var(--sev-med); }
+  .finding.low  { --stripe: var(--sev-low); }
+
+  .finding-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .finding-no {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--ink-faint);
+  }
+  .finding h3 {
+    font-family: var(--sans);
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -.015em;
+    line-height: 1.3;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 14ch;
+    text-wrap: balance;
+  }
+  .where {
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--ink-faint);
+    margin: 0 0 16px;
+  }
+  .finding > p { font-size: .9375rem; }
+  .finding .scroller { margin: 16px 0; }
+  .finding pre { margin: 16px 0; }
+
+  .fix {
+    margin-top: 18px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--rule);
+    font-size: .9375rem;
+  }
+  .fix b {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: 5px;
+    padding: 14px 16px;
+    margin: 16px 0;
+    font-size: .9375rem;
+  }
+  .callout p { margin: 0; }
+
+  /* ── low-severity list ─────────────────────────────────────────────────── */
+  .minor {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .minor li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 15px 18px;
+    font-size: .9375rem;
+  }
+  .minor .n {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--ink-faint);
+    margin-right: 8px;
+  }
+  .minor strong { font-weight: 650; }
+
+  /* ── verified sound ────────────────────────────────────────────────────── */
+  .sound {
+    background: var(--surface-alt);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 26px 28px;
+  }
+  .sound h3 {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    margin: 22px 0 6px;
+  }
+  .sound h3:first-of-type { margin-top: 0; }
+  .sound p { font-size: .9375rem; color: var(--ink-soft); }
+  .sound p strong { color: var(--ink); font-weight: 600; }
+
+  /* ── ordered fix list ──────────────────────────────────────────────────── */
+  ol.plan {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  ol.plan li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 13px 17px;
+    font-size: .9375rem;
+  }
+  ol.plan li::before {
+    content: counter(step);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--accent);
+    flex: 0 0 auto;
+  }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 22px;
+    margin-top: 20px;
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--ink-faint);
+    line-height: 1.8;
+  }
+
+  @media (max-width: 620px) {
+    body { padding: 0 16px 64px; font-size: 15px; }
+    .finding { padding: 20px 18px; }
+    .sound { padding: 20px 18px; }
+    .stat { flex-basis: 50%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="wide">
+    <p class="eyebrow">Security audit · <b>prediction-terminal</b> · 17 Aug 2026</p>
+    <h1>Prediction Terminal</h1>
+    <p class="standfirst">
+      A full review of the Express API server, the three venue clients, the seven scraped
+      feeds and the browser client — 25.6k lines. Every finding rated Medium or above was
+      reproduced against running code, not inferred from reading.
+    </p>
+
+    <dl class="stats">
+      <div class="stat is-high"><dt>High</dt><dd>2</dd></div>
+      <div class="stat is-med"><dt>Medium</dt><dd>3</dd></div>
+      <div class="stat is-low"><dt>Low</dt><dd>5</dd></div>
+      <div class="stat is-ok"><dt>npm audit</dt><dd>0 <small>/ 221 deps</small></dd></div>
+      <div class="stat is-ok"><dt>Secrets found</dt><dd>0</dd></div>
+      <div class="stat is-ok"><dt>Tests</dt><dd>433 <small>/ 433</small></dd></div>
+    </dl>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── summary ────────────────────────────────────────────────────────── -->
+  <section class="wide">
+    <h2>Findings</h2>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Severity</th>
+            <th>Finding</th>
+            <th>Location</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="id">1</td>
+            <td><span class="chip high">High</span></td>
+            <td>Unauthenticated event-loop DoS via search query terms</td>
+            <td class="loc">sources/corpus.ts:99</td>
+          </tr>
+          <tr>
+            <td class="id">2</td>
+            <td><span class="chip high">High</span></td>
+            <td>Rate limiter bypassable by a client header; its own bookkeeping degrades the server</td>
+            <td class="loc">index.ts:40, :56</td>
+          </tr>
+          <tr>
+            <td class="id">3</td>
+            <td><span class="chip med">Medium</span></td>
+            <td>Shared cache evictable by unvalidated attacker-controlled key material</td>
+            <td class="loc">lib/cache.ts</td>
+          </tr>
+          <tr>
+            <td class="id">4</td>
+            <td><span class="chip med">Medium</span></td>
+            <td>No security response headers anywhere</td>
+            <td class="loc">index.ts</td>
+          </tr>
+          <tr>
+            <td class="id">5</td>
+            <td><span class="chip med">Medium</span></td>
+            <td>Artwork proxy buffers unbounded bodies and admits <code>image/svg+xml</code></td>
+            <td class="loc">routes/billboard.ts:84</td>
+          </tr>
+          <tr>
+            <td class="id">6</td>
+            <td><span class="chip low">Low</span></td>
+            <td><code>/api/health</code> unauthenticated, reports which credentials are configured</td>
+            <td class="loc">index.ts:94</td>
+          </tr>
+          <tr>
+            <td class="id">7</td>
+            <td><span class="chip low">Low</span></td>
+            <td>Generic error handler returns internal <code>err.message</code> verbatim</td>
+            <td class="loc">index.ts:149</td>
+          </tr>
+          <tr>
+            <td class="id">8</td>
+            <td><span class="chip low">Low</span></td>
+            <td>16 MiB (Netflix: 96 MiB) responses buffered into a single JS string</td>
+            <td class="loc">lib/http.ts:52</td>
+          </tr>
+          <tr>
+            <td class="id">9</td>
+            <td><span class="chip low">Low</span></td>
+            <td><code>..</code> survives ticker encoding and is normalised into a different upstream path</td>
+            <td class="loc">sources/kalshi.ts:262</td>
+          </tr>
+          <tr>
+            <td class="id">10</td>
+            <td><span class="chip low">Low</span></td>
+            <td><code>/api/xv/series</code> runs the full cross-venue pairing per request, uncached</td>
+            <td class="loc">sources/crossvenue.ts:389</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px" class="lede">
+      Findings 1 and 2 compound: the second removes the only brake on the first.
+    </p>
+  </section>
+
+  <!-- ── finding 1 ──────────────────────────────────────────────────────── -->
+  <section class="wide">
+    <h2>The two that matter</h2>
+
+    <article class="finding high">
+      <div class="finding-head">
+        <span class="finding-no">01</span>
+        <h3>Unauthenticated event-loop DoS via search query terms</h3>
+        <span class="chip high">High</span>
+      </div>
+      <p class="where">src/server/sources/corpus.ts:99–108</p>
+
+      <p>
+        <code>searchCorpus</code> walks every event in the venue snapshot and, for each query
+        term, compiles a fresh regex and tests it against that event's haystack:
+      </p>
+
+<pre><code>for (const term of terms) {
+  if (!haystack.includes(term)) { matchedAll = false; break; }
+  score += 10;
+  if (ticker.includes(term))    score += 12;
+  if (title.startsWith(term))   score += 8;
+  if (new RegExp(`\b${escapeRegExp(term)}`).test(haystack)) score += 6;  // ← per event, per term
+}</code></pre>
+
+      <p>
+        Nothing caps the term count or the query length. The <code>break</code> on a
+        non-matching term is the only guard, and it is defeated by repeating a term that
+        matches everything: <code>q=a a a a …</code>. The corpus holds up to 12,000 events
+        and is warmed at boot, so the expensive path is the <em>default</em> state, not a
+        cold-start edge case.
+      </p>
+
+      <p>
+        Node runs one thread. While this loop runs, the whole terminal is frozen for every
+        connected user. Reachable from <code>/api/kalshi/search</code> and
+        <code>/api/venue/{kalshi,polymarket,polymarket-us}/search</code> — all
+        unauthenticated GETs.
+      </p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">Query terms</th>
+              <th class="num">Query bytes</th>
+              <th class="num">Event loop blocked</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="num">1</td><td class="num">1</td><td class="num">44 ms</td></tr>
+            <tr><td class="num">100</td><td class="num">199</td><td class="num">468 ms</td></tr>
+            <tr><td class="num">1,000</td><td class="num">1,999</td><td class="num">4,269 ms</td></tr>
+            <tr><td class="num">4,000</td><td class="num">7,999</td><td class="num peak">17,756 ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Measured against a synthetic 10,000-event corpus of realistic shape. Cost is linear
+        in term count, and Node's default 16 KB header limit allows roughly 8,000 terms in
+        one URL — so a single GET stalls the server for about 35 seconds. Repeat it and the
+        terminal never serves anyone again.
+      </p>
+
+      <div class="fix">
+        <b>Fix</b>
+        Cap query length and term count at the route boundary — a real search is under a
+        dozen words. Hoist the per-term regex out of the per-event loop by compiling each
+        term once up front, or replace it with an index-based word-boundary check on the
+        <code>includes</code> hit that already ran.
+      </div>
+    </article>
+
+    <!-- ── finding 2 ────────────────────────────────────────────────────── -->
+    <article class="finding high">
+      <div class="finding-head">
+        <span class="finding-no">02</span>
+        <h3>Rate limiter bypassable by a client header, and self-degrading</h3>
+        <span class="chip high">High</span>
+      </div>
+      <p class="where">src/server/index.ts:40 and :56–81</p>
+
+<pre><code>app.set('trust proxy', true);     // line 40
+...
+const key = req.ip ?? 'unknown';  // line 61 — now attacker-chosen</code></pre>
+
+      <p>
+        <code>trust proxy: true</code> tells Express to believe <code>X-Forwarded-For</code>
+        from <em>any</em> peer, so <code>req.ip</code> becomes whatever the client says it
+        is. Every request can claim a fresh address, and the per-IP bucket never fills.
+        Measured with <code>RATE_LIMIT=5</code>:
+      </p>
+
+<pre><code>same client, no header:      4 allowed,  8 rate-limited
+same client, rotating XFF:  12 allowed,  0 rate-limited</code></pre>
+
+      <div class="callout">
+        <p>
+          The comment on the limiter says it is “not a security boundary — just a stop on a
+          runaway client loop turning into an outbound flood.” That framing is right about
+          intent, but the limiter does not achieve even that: the flood it is meant to stop
+          is exactly the case that sets the header.
+        </p>
+      </div>
+
+      <p>
+        There is a second-order problem in the same block. The sweep only deletes
+        <em>expired</em> entries, and only once <code>hits.size &gt; 5000</code>. Under
+        rotating addresses every entry is fresh, so nothing is ever collected — the map grows
+        without bound <em>and</em> the O(n) scan then runs on every subsequent request.
+      </p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">Distinct IPs seen</th>
+              <th class="num">Time for that 5,000-request batch</th>
+              <th class="num">Heap growth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="num">5,000</td><td class="num">8,862 ms</td><td class="num">+20.7 MB</td></tr>
+            <tr><td class="num">10,000</td><td class="num">9,381 ms</td><td class="num">+28.0 MB</td></tr>
+            <tr><td class="num">15,000</td><td class="num">9,837 ms</td><td class="num">+49.2 MB</td></tr>
+            <tr><td class="num">20,000</td><td class="num">10,544 ms</td><td class="num">+39.2 MB</td></tr>
+            <tr><td class="num">25,000</td><td class="num peak">11,287 ms</td><td class="num">+43.2 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Latency degrades monotonically and memory never comes back. The mechanism meant to
+        bound work is itself unbounded work.
+      </p>
+
+      <div class="fix">
+        <b>Fix</b>
+        Make the proxy trust explicit rather than blanket — <code>trust proxy</code> should
+        name the hop count or the proxy's address and default to off, so <code>req.ip</code>
+        is the socket address unless an operator says otherwise. Separately, give the sweep
+        an unconditional bound (evict oldest when over a hard cap, not only when expired) so
+        the map stays bounded regardless of what the key space looks like.
+      </div>
+    </article>
+  </section>
+
+  <!-- ── medium ─────────────────────────────────────────────────────────── -->
+  <section class="wide">
+    <h2>Medium</h2>
+
+    <article class="finding med">
+      <div class="finding-head">
+        <span class="finding-no">03</span>
+        <h3>Shared cache evictable by attacker-controlled key material</h3>
+        <span class="chip med">Medium</span>
+      </div>
+      <p class="where">src/server/lib/cache.ts:22–56, and call sites</p>
+
+      <p>
+        One global <code>TtlCache</code> with <code>maxEntries = 1000</code> and LRU eviction
+        backs every source, and keys embed raw user input:
+      </p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Cache key</th><th>Attacker-controlled component</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="loc">kalshi:${path}</td><td><code>cursor</code>, <code>status</code>, <code>tickers</code>, <code>event_ticker</code>, <code>series_ticker</code></td></tr>
+            <tr><td class="loc">fred:search:${q}:${limit}</td><td>free text</td></tr>
+            <tr><td class="loc">rt:search:${q}</td><td>free text</td></tr>
+            <tr><td class="loc">steam:search:${q}</td><td>free text</td></tr>
+            <tr><td class="loc">billboard:${chart}:${date}</td><td>any 1–61 char slug × any valid date</td></tr>
+            <tr><td class="loc">polymarket:token:${slug}</td><td>slug</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        No component is length-bounded, and each distinct value is a new entry. The values
+        being evicted are not equal in cost: <code>kalshi:corpus</code> is a ~15-second,
+        60-page crawl. Seeding a warm corpus, then writing 1,200 entries differing only in a
+        <code>cursor</code> value:
+      </p>
+
+<pre><code>warm corpus present before flood:                        true
+warm corpus present after 1200 distinct cursors:         false
+cache stats: { hits: 0, misses: 1, entries: 1000, evictions: 201 }</code></pre>
+
+      <p>
+        1,200 cheap requests discard the expensive shared object, so the next
+        <code>SRCH</code> from any user pays the full cold-start crawl. Repeating the flood
+        keeps everyone cold.
+      </p>
+
+      <div class="fix">
+        <b>Fix</b>
+        Cap the length of user-derived key components, and keep crawl snapshots out of the
+        same eviction pool as per-query entries — a separate cache instance for catalogue
+        keys, or a pin for them.
+      </div>
+    </article>
+
+    <article class="finding med">
+      <div class="finding-head">
+        <span class="finding-no">04</span>
+        <h3>No security response headers</h3>
+        <span class="chip med">Medium</span>
+      </div>
+      <p class="where">src/server/index.ts</p>
+
+      <p>
+        Confirmed absent on every response, including the built client:
+        <code>Content-Security-Policy</code>, <code>X-Content-Type-Options</code>,
+        <code>X-Frame-Options</code> / <code>frame-ancestors</code>,
+        <code>Referrer-Policy</code>. Observed headers on <code>/api/health</code> are only
+        <code>connection</code>, <code>content-length</code>, <code>content-type</code>,
+        <code>date</code>, <code>etag</code>, <code>keep-alive</code>.
+      </p>
+
+      <div class="callout">
+        <p>
+          There is <strong>no XSS sink in the client today</strong> — the rendering layer is
+          genuinely disciplined about this. This is a defence-in-depth gap, not a live hole.
+          It matters because the page is framable as it stands, and because the one thing
+          standing between upstream text and the DOM is a convention that a future panel has
+          to keep choosing.
+        </p>
+      </div>
+
+      <div class="fix">
+        <b>Fix</b>
+        Set a CSP (<code>default-src 'self'</code>, <code>frame-ancestors 'none'</code>),
+        <code>nosniff</code>, and a <code>Referrer-Policy</code> on all responses.
+      </div>
+    </article>
+
+    <article class="finding med">
+      <div class="finding-head">
+        <span class="finding-no">05</span>
+        <h3>Artwork proxy: unbounded buffering, and <code>image/svg+xml</code> admitted</h3>
+        <span class="chip med">Medium</span>
+      </div>
+      <p class="where">src/server/routes/billboard.ts:79–91</p>
+
+      <p><strong>The size cap is advisory.</strong> The whole body is read into memory <em>before</em> the limit is checked:</p>
+
+<pre><code>const buffer = Buffer.from(await upstream.arrayBuffer());  // unbounded read
+if (buffer.byteLength &gt; MAX_ART_BYTES) { throw ... }       // checked too late</code></pre>
+
+      <p>
+        <code>MAX_ART_BYTES</code> is 3 MiB but nothing stops the process buffering far more
+        first. <code>lib/http.ts</code>'s <code>readCapped</code> already does this correctly
+        — check <code>content-length</code> up front, then cap while streaming — and that
+        pattern should be reused here.
+      </p>
+
+      <p>
+        <strong><code>image/svg+xml</code> passes the content-type check.</strong>
+        <code>type.startsWith('image/')</code> admits SVG, which carries script, and the
+        bytes are served back from the terminal's own origin with the upstream's
+        <code>Content-Type</code> and no <code>nosniff</code>. The host allowlist makes this
+        hard to reach, but the allowlist is doing all the work and the two-line fix does not
+        depend on it.
+      </p>
+
+      <div class="callout">
+        <p>
+          <strong>The SSRF control itself is sound and should be left alone.</strong> Four
+          bypass attempts, all correctly refused:
+        </p>
+      </div>
+
+<pre><code>http://169.254.169.254/latest/meta-data/         → 400  Refusing to fetch artwork from 169.254.169.254
+https://169.254.169.254/                        → 400  Refusing to fetch artwork from 169.254.169.254
+https://charts-static.billboard.com.evil.test/… → 400  Refusing to fetch artwork from charts-static.billboard.com.evil.test
+https://billboard.com@evil.test/x.png           → 400  Refusing to fetch artwork from evil.test</code></pre>
+
+      <p>
+        Exact-match host set, <code>https:</code> only, and <code>redirect: 'error'</code> to
+        stop an allowlisted host bouncing the request inward. The comments explaining
+        <em>why</em> each of those is there are accurate.
+      </p>
+
+      <div class="fix">
+        <b>Fix</b>
+        Check <code>content-length</code> and stream-cap before buffering; narrow the allowed
+        types to raster image types; send <code>X-Content-Type-Options: nosniff</code>.
+      </div>
+    </article>
+  </section>
+
+  <!-- ── low ────────────────────────────────────────────────────────────── -->
+  <section class="wide">
+    <h2>Low severity</h2>
+    <ul class="minor">
+      <li>
+        <span class="n">06</span><strong><code>/api/health</code> is unauthenticated</strong>
+        <span class="loc"></span> — <code>index.ts:94–103</code>. It reports uptime, cache
+        statistics, and — usefully to an attacker — <code>fredApiKey</code> and
+        <code>alpacaKeys</code> booleans saying which credentials this deployment holds.
+        Minor recon value; worth gating if the server is ever exposed beyond localhost.
+      </li>
+      <li>
+        <span class="n">07</span><strong>Internal error messages are returned verbatim</strong>
+        — <code>index.ts:149–152</code>. For anything that is not an <code>UpstreamError</code>,
+        the handler sends <code>err.message</code> to the client. <code>UpstreamError</code>
+        messages are carefully host-only, but an unanticipated throw is not held to that. Log
+        the detail; return a fixed string.
+      </li>
+      <li>
+        <span class="n">08</span><strong>Large responses are buffered as single JS strings</strong>
+        — <code>lib/http.ts:52</code>, <code>sources/netflix.ts:31</code>. The default ceiling
+        is 16 MiB; Netflix's country feed raises it to 96 MiB, which at UTF-16 is roughly
+        192 MB of heap for one request. It is the largest single allocation the process can
+        be made to perform.
+      </li>
+      <li>
+        <span class="n">09</span><strong><code>..</code> survives ticker encoding</strong>
+        — <code>sources/kalshi.ts:262</code>. <code>encodeURIComponent</code> does not encode
+        <code>.</code>, so a ticker of <code>..</code> produces
+        <code>…/trade-api/v2/markets/..</code>, which URL normalisation collapses to a
+        different path. It stays on the same allowlisted host — <code>/</code> is encoded, so
+        no traversal beyond one segment — but path segments should be rejected by a ticker
+        regex rather than normalised away.
+      </li>
+      <li>
+        <span class="n">10</span><strong><code>/api/xv/series</code> does its full pairing per request</strong>
+        — <code>crossvenue.ts:389</code>. The venue indexes are cached, but the cross-product
+        pairing, grouping and merging run on every call, with the query applied only as a
+        final filter. The route takes no required argument. Cost is fixed rather than
+        attacker-amplifiable, so this is a scaling concern rather than a DoS — but it is
+        uncached work on the shared event loop.
+      </li>
+    </ul>
+  </section>
+
+  <!-- ── verified sound ─────────────────────────────────────────────────── -->
+  <section class="wide">
+    <h2>Verified sound</h2>
+    <p class="lede" style="margin-bottom:20px">
+      Stated explicitly so these are not re-examined on the next pass.
+    </p>
+
+    <div class="sound">
+      <h3>The client has no XSS sink</h3>
+      <p>
+        No <code>innerHTML</code>, <code>outerHTML</code>, <code>insertAdjacentHTML</code>,
+        <code>document.write</code>, <code>eval</code>, or <code>new Function</code> anywhere
+        in <code>src/client</code>. <code>lib/dom.ts</code> builds every node with
+        <code>textContent</code> and <code>createTextNode</code>, and actively throws on an
+        <code>html:</code> attribute — <em>“el(): raw html is not supported by design”</em>.
+        <strong>This is the single best thing about the codebase's security posture.</strong>
+      </p>
+
+      <h3>Untrusted upstream URLs are scheme-filtered before they reach an anchor</h3>
+      <p>
+        <code>panels/news.ts:171</code> sets <code>href</code> from an Alpaca-supplied URL,
+        but <code>safeUrl</code> parses it and returns <code>''</code> for anything that is
+        not <code>http:</code>/<code>https:</code>, so a <code>javascript:</code> href cannot
+        reach the DOM. The anchors also carry <code>rel="noopener noreferrer"</code>.
+      </p>
+
+      <h3>Outbound URL construction is consistently safe</h3>
+      <p>
+        Every user-controlled value that reaches an upstream URL is either validated against a
+        strict allowlist regex — FRED series ids, Billboard slugs and dates, box-office dates,
+        TVmaze date/country, Netflix category/scope, Steam app ids, Alpaca symbols, RT slugs,
+        stream-chart country codes — or passed through <code>encodeURIComponent</code> /
+        <code>URLSearchParams</code>. <strong>No path lets a caller choose the destination
+        host.</strong>
+      </p>
+
+      <h3>No prototype-pollution reach</h3>
+      <p>
+        <code>isVenue</code> and <code>sourceFor</code> go through a <code>Map</code>, not
+        object indexing, so <code>__proto__</code> and <code>constructor</code> cannot select
+        a source module. Persisted keybindings are regex-gated on read
+        (<code>state.ts:46–58</code>), and <code>readStorage</code> validates every field's
+        type and bounds.
+      </p>
+
+      <h3>Credentials are handled correctly</h3>
+      <p>
+        Alpaca's key pair is sent only as request headers, only to
+        <code>data.alpaca.markets</code>, and is never echoed into a response body or a log
+        line; a 401/403 is explicitly re-explained as a credential problem rather than an IP
+        block. <code>FRED_API_KEY</code> does go into a query string, but every error message
+        derived from a failed fetch carries <code>hostOf(url)</code> only, never the URL — so
+        the key does not leak through error text or the provider-chain warning log.
+      </p>
+
+      <h3>Outbound HTTP is well-behaved</h3>
+      <p>
+        <code>lib/http.ts</code> enforces a per-attempt timeout, bounded jittered retries, a
+        streaming size cap, and a 1 KiB bounded <code>peek</code> on error bodies rather than
+        draining them.
+      </p>
+
+      <h3>Supply chain and secrets are clean</h3>
+      <p>
+        <code>npm audit</code> reports 0 vulnerabilities across 221 dependencies. No secrets
+        in the working tree and none in git history — only <code>.env.example</code> was ever
+        committed, and it holds no live values. Typecheck is clean and all 433 tests pass.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── plan ───────────────────────────────────────────────────────────── -->
+  <section class="wide">
+    <h2>Recommended order of work</h2>
+    <ol class="plan">
+      <li>Cap search query length and term count, and hoist the per-term regex out of the per-event loop. <span class="chip high" style="margin-left:auto">01</span></li>
+      <li>Make <code>trust proxy</code> explicit, and bound the rate-limiter map unconditionally. <span class="chip high" style="margin-left:auto">02</span></li>
+      <li>Add the security headers — smallest change on the list. <span class="chip med" style="margin-left:auto">04</span></li>
+      <li>Partition the cache and bound user-derived key components. <span class="chip med" style="margin-left:auto">03</span></li>
+      <li>Stream-cap the artwork proxy and narrow its content types. <span class="chip med" style="margin-left:auto">05</span></li>
+      <li>The Low findings as convenient. <span class="chip low" style="margin-left:auto">06–10</span></li>
+    </ol>
+  </section>
+
+  <footer class="wide">
+    Scope: whole tree at <code>claude/security-audit-ry08rx</code> — <code>main</code> is empty, so the branch is the codebase.<br>
+    Method: manual review of every server module and the client rendering path, plus live exercise of the running app.<br>
+    All measurements taken on the audit machine; Medium-and-above findings reproduced against running code.
+  </footer>
+
+</main>
