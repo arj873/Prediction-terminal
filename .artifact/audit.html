@@ -498,16 +498,18 @@
     <p class="standfirst">
       A full review of the Express API server, the three venue clients, the seven scraped
       feeds and the browser client — 25.6k lines. Every finding rated Medium or above was
-      reproduced against running code, not inferred from reading.
+      reproduced against running code, not inferred from reading. All ten are now fixed,
+      each with a regression test written against the exploit rather than the fix.
     </p>
 
     <dl class="stats">
+      <div class="stat is-ok"><dt>Fixed</dt><dd>10 <small>/ 10</small></dd></div>
       <div class="stat is-high"><dt>High</dt><dd>2</dd></div>
       <div class="stat is-med"><dt>Medium</dt><dd>3</dd></div>
       <div class="stat is-low"><dt>Low</dt><dd>5</dd></div>
       <div class="stat is-ok"><dt>npm audit</dt><dd>0 <small>/ 221 deps</small></dd></div>
       <div class="stat is-ok"><dt>Secrets found</dt><dd>0</dd></div>
-      <div class="stat is-ok"><dt>Tests</dt><dd>433 <small>/ 433</small></dd></div>
+      <div class="stat is-ok"><dt>Tests</dt><dd>452 <small>/ 452</small></dd></div>
     </dl>
   </div>
 </header>
@@ -592,7 +594,9 @@
       </table>
     </div>
     <p style="margin-top:16px" class="lede">
-      Findings 1 and 2 compound: the second removes the only brake on the first.
+      Findings 1 and 2 compound: the second removes the only brake on the first. Everything
+      below describes what was reachable <em>before</em> the fixes — that is what makes each
+      one legible. What changed, and the measurements taken after, are at the foot of the page.
     </p>
   </section>
 
@@ -1018,6 +1022,76 @@ https://billboard.com@evil.test/x.png           → 400  Refusing to fetch artwo
       <li>Stream-cap the artwork proxy and narrow its content types. <span class="chip med" style="margin-left:auto">05</span></li>
       <li>The Low findings as convenient. <span class="chip low" style="margin-left:auto">06–10</span></li>
     </ol>
+  </section>
+
+  <section class="wide">
+    <h2>Remediation</h2>
+    <p class="lede" style="margin-bottom:20px">
+      All ten fixed. Two new environment variables, both off by default:
+      <code>TRUST_PROXY</code> and <code>HEALTH_DETAIL</code>. Nothing else changes how the
+      terminal is run.
+    </p>
+
+    <div class="scroller" style="margin-bottom:24px">
+      <table>
+        <thead>
+          <tr><th class="num">#</th><th>What changed</th><th>Where</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="id">1</td><td>Query capped at 200 characters and 16 terms, refused rather than truncated; the per-term regex compiled once instead of per event</td><td class="loc">sources/corpus.ts</td></tr>
+          <tr><td class="id">2</td><td><code>trust proxy</code> reads <code>TRUST_PROXY</code> and defaults to off; the sweep evicts oldest-first to a low-water mark, so it is bounded and amortised</td><td class="loc">index.ts</td></tr>
+          <tr><td class="id">3</td><td>Catalogue crawls moved to a separate 64-entry pool; free-text key fragments clamped</td><td class="loc">lib/cache.ts</td></tr>
+          <tr><td class="id">4</td><td>CSP, <code>nosniff</code>, <code>X-Frame-Options</code>, <code>Referrer-Policy</code> on every response</td><td class="loc">index.ts</td></tr>
+          <tr><td class="id">5</td><td>Body stream-capped before allocation; content type narrowed to five raster formats</td><td class="loc">routes/billboard.ts</td></tr>
+          <tr><td class="id">6</td><td>Uptime and cache counters withheld unless <code>HEALTH_DETAIL=1</code>; capability flags stay</td><td class="loc">index.ts</td></tr>
+          <tr><td class="id">7</td><td>Unanticipated errors log in full, answer with a fixed string</td><td class="loc">index.ts</td></tr>
+          <tr><td class="id">8</td><td>Netflix country-feed ceiling 96 MiB → 48 MiB</td><td class="loc">sources/netflix.ts</td></tr>
+          <tr><td class="id">9</td><td>Identifiers must begin with a letter or digit, so <code>.</code> and <code>..</code> cannot reach an upstream path</td><td class="loc">shared/venue.ts</td></tr>
+          <tr><td class="id">10</td><td>Cross-venue pairing cached; the query now only narrows a prepared result</td><td class="loc">sources/crossvenue.ts</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-family:var(--sans);font-size:1rem;font-weight:650;margin:0 0 12px">Measured after</h3>
+    <div class="scroller" style="margin-bottom:20px">
+      <table>
+        <thead><tr><th></th><th>Before</th><th>After</th></tr></thead>
+        <tbody>
+          <tr><td>Worst single search request</td><td class="peak">17,756 ms</td><td><strong>43 ms</strong> at the new ceiling; longer refused with a 400</td></tr>
+          <tr><td>Spoofed <code>X-Forwarded-For</code>, limit of 5</td><td class="peak">12 of 12 allowed</td><td><strong>5 of 12 allowed</strong></td></tr>
+          <tr><td>Rate-limiter latency, 5k batches</td><td class="peak">8,862 → 11,287 ms, climbing</td><td><strong>flat</strong> — 9,276 → 8,799 ms across 30k addresses</td></tr>
+          <tr><td>Warm corpus after a 5,000-key flood</td><td class="peak">evicted</td><td><strong>survives</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p>
+        Two things the fixes were checked <em>against</em>, not just for.
+        <strong>Scoring is unchanged</strong> — the test re-implements the original ranking
+        loop, regex construction and all, and asserts the hoisted version agrees event for
+        event and point for point across nine queries, including one with regex
+        metacharacters. A faster search that ranked differently would not have been a fix.
+        <strong>A legitimate proxy still works</strong> — <code>TRUST_PROXY=1</code> has its
+        own test, where distinct real clients get distinct buckets and one client still hits
+        the limit.
+      </p>
+    </div>
+
+    <article class="finding low" style="margin-top:20px">
+      <div class="finding-head">
+        <span class="finding-no">08</span>
+        <h3>Not fully closed</h3>
+        <span class="chip low">Bounded</span>
+      </div>
+      <p>
+        The Netflix country feed is still decoded into one JS string before parsing, so the
+        worst-case allocation is now about 96 MB of heap rather than 192 MB. Removing the
+        class outright means parsing the TSV as a stream; that is a real change to the
+        parser, and the upstream is trusted, fixed and cached, so the ceiling was tightened
+        to what the data actually needs instead.
+      </p>
+    </article>
   </section>
 
   <footer class="wide">
