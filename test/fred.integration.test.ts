@@ -137,14 +137,20 @@ describe('getSeries against a fixture host', () => {
 });
 
 describe('searchSeries against a fixture host', () => {
-  it('parses results out of the search page', async () => {
-    const result = await fred.searchSeries('unemployment');
-    assert.equal(result.source, 'scrape');
+  it('parses results out of the search page, and says which arm answered', async () => {
+    // `searchSeries` returns `Attributed<…>` now that FRED is one of eight
+    // publishers behind `ECOS`: the results, plus which of its own two arms
+    // produced them.
+    const { value: results, source } = await fred.searchSeries('unemployment');
+    assert.equal(source, 'scrape');
     assert.deepEqual(
-      result.results.map((r) => r.id),
+      results.map((r) => r.id),
       ['UNRATE', 'U6RATE'],
     );
-    assert.equal(result.results[0]!.frequency, 'Monthly');
+    assert.equal(results[0]!.frequency, 'Monthly');
+    // Every result names its publisher, because the multi-source board merges
+    // them with seven other catalogues before anyone sees them.
+    assert.ok(results.every((r) => r.provider === 'fred'));
   });
 
   it('sends the query as the st parameter', async () => {

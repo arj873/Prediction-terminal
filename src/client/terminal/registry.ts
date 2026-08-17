@@ -9,6 +9,11 @@
 
 import type { AssetClass, CandleInterval, EntGenre, ImpliedMethod, Venue } from '../../shared/types.js';
 import { ENT_GENRES } from '../../shared/types.js';
+import {
+  SERIES_SOURCE_IDS,
+  parseDataSource,
+  type DataSourceId,
+} from '../../shared/dataset.js';
 import { VENUE_IDS, formatRef, parseRef, parseVenue, type VenueRef } from '../../shared/venue.js';
 import { THEMES, type ThemeName } from '../state.js';
 import { BillboardChartsPanel, BillboardPanel } from '../panels/billboard.js';
@@ -16,7 +21,15 @@ import { ChartPanel, type ChartStyle } from '../panels/chart.js';
 import { EventPanel, SearchPanel, TopPanel, WatchlistPanel } from '../panels/browse.js';
 import { ComparePanel, LinkedSeriesPanel } from '../panels/crossvenue.js';
 import { EntPanel, RtPanel, RtSearchPanel } from '../panels/entertainment.js';
-import { FredPanel, FredSearchPanel } from '../panels/fred.js';
+import { DataSearchPanel, DataSeriesPanel, SourcesPanel } from '../panels/data.js';
+import {
+  BillPanel,
+  BillsPanel,
+  CotPanel,
+  DataGovPanel,
+  SecConceptPanel,
+  SecFilingsPanel,
+} from '../panels/records.js';
 import {
   BoxOfficePanel,
   NetflixPanel,
@@ -93,6 +106,42 @@ function takeVenues(args: string[]): { venues: readonly Venue[]; rest: string[] 
   }
 
   return { venues: venues.length ? venues : VENUE_IDS, rest };
+}
+
+/**
+ * Pull publisher names out of an argument list, leaving the rest untouched.
+ *
+ * The same rule as {@link takeVenues}, and for the same reason: read in `word`
+ * context so aliases that are also ordinary English — `energy`, `labor`, `gov`
+ * — are not claimed out of a query. `ECOS government spending` searches for two
+ * words; `ECOS inflation ecb` searches one publisher.
+ */
+function takeSources(args: string[]): { sources: readonly DataSourceId[]; rest: string[] } {
+  const sources: DataSourceId[] = [];
+  const rest: string[] = [];
+
+  for (const token of args) {
+    const source = parseDataSource(token, 'word');
+    // Only the publishers `ECOS` can actually search: naming `sec` here would
+    // filter the board down to a source that never returns a series.
+    if (source && SERIES_SOURCE_IDS.includes(source) && !sources.includes(source)) {
+      sources.push(source);
+    } else {
+      rest.push(token);
+    }
+  }
+
+  return { sources, rest };
+}
+
+/**
+ * A start or end bound: a year, a month, or a date.
+ *
+ * `ECO` spans eight publishers whose periods are not all daily, and requiring
+ * `YYYY-MM-DD` would make a reader invent a day for an annual series.
+ */
+function isDateBound(value: string): boolean {
+  return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(value);
 }
 
 /* --------------------------------------------------------- GP argument parsing */
@@ -547,43 +596,178 @@ export const COMMANDS: Command[] = [
     },
   },
   {
-    verb: 'FRED',
-    aliases: ['ECO'],
+    verb: 'ECO',
+    aliases: ['FRED', 'MACRO'],
     group: 'data',
-    summary: 'FRED economic series (scraped from stlouisfed.org)',
-    usage: 'FRED <series-id> [start] [end]',
-    examples: ['FRED UNRATE', 'FRED CPIAUCSL 2015-01-01', 'FRED DGS10 2020-01-01 2024-12-31'],
+    summary: 'Economic series from any of eight publishers',
+    usage: 'ECO [source:]<series-id> [start] [end]',
+    examples: [
+      'ECO UNRATE',
+      'ECO bls:CUSR0000SA0L1E 2015',
+      'ECO fed:H15/RIFLGFCY10_N.B 2020-01-01',
+      'ECO ecb:ICP/M.U2.N.000000.4.ANR',
+      'ECO cftc:legacy/GOLD/noncomm_net',
+      'FRED DGS10 2020-01-01 2024-12-31',
+    ],
     handler(command, { panels, panelContext }) {
-      const seriesId = requireArg(command, 0, 'series-id').toUpperCase();
+      const ref = requireArg(command, 0, 'series-id');
       const start = command.args[1];
       const end = command.args[2];
 
-      if (start !== undefined && !isIsoDate(start)) {
-        throw new UsageError(`Start date must be YYYY-MM-DD, got "${start}"`);
+      // Looser than an ISO date on purpose: the BLS takes a year and SDMX takes
+      // a year or a month, so `ECO oecd:… 2015` has to be a legal thing to type.
+      if (start !== undefined && !isDateBound(start)) {
+        throw new UsageError(`Start must be YYYY, YYYY-MM or YYYY-MM-DD, got "${start}"`);
       }
-      if (end !== undefined && !isIsoDate(end)) {
-        throw new UsageError(`End date must be YYYY-MM-DD, got "${end}"`);
+      if (end !== undefined && !isDateBound(end)) {
+        throw new UsageError(`End must be YYYY, YYYY-MM or YYYY-MM-DD, got "${end}"`);
       }
 
-      const id = FredPanel.idFor(seriesId);
-      panels.open(
-        id,
-        () => new FredPanel(id, panelContext, { id: seriesId, start, end }),
-      );
+      const id = DataSeriesPanel.idFor(ref);
+      panels.open(id, () => new DataSeriesPanel(id, panelContext, { ref, start, end }));
     },
   },
   {
-    verb: 'FSRCH',
-    aliases: ['ECOS'],
+    verb: 'ECOS',
+    aliases: ['FSRCH', 'MACROS'],
     group: 'data',
-    summary: 'Search FRED for a series id',
-    usage: 'FSRCH <words>',
-    examples: ['FSRCH unemployment rate', 'FSRCH "real gdp"'],
+    summary: 'Search every economic publisher for a series id',
+    usage: `ECOS <words> [${SERIES_SOURCE_IDS.join('|')}]`,
+    examples: ['ECOS unemployment', 'ECOS inflation ecb oecd', 'ECOS oil eia', 'ECOS gold cftc'],
+    handler(command, { panels, panelContext }) {
+      const { sources, rest } = takeSources(command.args);
+      const query = rest.join(' ').trim();
+      if (!query) throw new UsageError('Missing <words>');
+      const id = DataSearchPanel.idFor(query, sources);
+      panels.open(id, () => new DataSearchPanel(id, panelContext, query, sources));
+    },
+  },
+  {
+    verb: 'SRC',
+    aliases: ['SOURCES'],
+    group: 'data',
+    summary: 'Which data publishers this deployment can serve',
+    usage: 'SRC',
+    handler(_command, { panels, panelContext }) {
+      panels.open(SourcesPanel.ID, () => new SourcesPanel(SourcesPanel.ID, panelContext));
+    },
+  },
+  {
+    verb: 'COT',
+    aliases: ['CFTC', 'POSITIONS'],
+    group: 'data',
+    summary: 'CFTC Commitments of Traders — who is long and who is short',
+    usage: 'COT <market> [legacy|disaggregated|financial]',
+    examples: ['COT gold', 'COT crude oil', 'COT e-mini s&p financial', 'COT natural gas disaggregated'],
+    handler(command, { panels, panelContext }) {
+      const REPORTS = ['legacy', 'disaggregated', 'disagg', 'financial', 'tff'];
+      const words: string[] = [];
+      let report = 'legacy';
+
+      for (const token of command.args) {
+        const lower = token.toLowerCase();
+        if (REPORTS.includes(lower)) {
+          report = lower === 'disagg' ? 'disaggregated' : lower === 'tff' ? 'financial' : lower;
+          continue;
+        }
+        words.push(token);
+      }
+
+      const market = words.join(' ').trim();
+      if (!market) throw new UsageError('Missing <market>');
+
+      const options = { market, report };
+      const id = CotPanel.idFor(options);
+      panels.open(id, () => new CotPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'CONG',
+    aliases: ['BILLS', 'CONGRESS'],
+    group: 'data',
+    summary: 'Congress.gov bills — search, or open one',
+    usage: 'CONG <words> [congress] | CONG BILL <congress> <type> <number>',
+    examples: ['CONG appropriations', 'CONG debt ceiling', 'CONG BILL 119 hr 1'],
+    handler(command, { panels, panelContext }) {
+      const first = (command.args[0] ?? '').toUpperCase();
+
+      if (first === 'BILL' || first === 'B') {
+        const congress = Number(requireArg(command, 1, 'congress'));
+        if (!Number.isInteger(congress) || congress < 1 || congress > 200) {
+          throw new UsageError(`"${command.args[1]}" is not a Congress number`);
+        }
+        const type = requireArg(command, 2, 'type').toLowerCase();
+        const number = requireArg(command, 3, 'number');
+        if (!/^\d{1,6}$/.test(number)) throw new UsageError(`"${number}" is not a bill number`);
+
+        const options = { congress, type, number };
+        const id = BillPanel.idFor(options);
+        panels.open(id, () => new BillPanel(id, panelContext, options));
+        return;
+      }
+
+      // A bare four-digit-ish number among the words is a Congress filter, not
+      // a search term: nobody searches bills for "119".
+      const words: string[] = [];
+      let congress: number | undefined;
+      for (const token of command.args) {
+        if (/^\d{2,3}$/.test(token)) {
+          congress = Number(token);
+          continue;
+        }
+        words.push(token);
+      }
+
+      const query = words.join(' ').trim();
+      const id = BillsPanel.idFor(query, congress);
+      panels.open(id, () => new BillsPanel(id, panelContext, query, congress));
+    },
+  },
+  {
+    verb: 'SEC',
+    aliases: ['EDGAR', 'FILINGS'],
+    group: 'data',
+    summary: 'SEC EDGAR filings, and any XBRL fact a filer has reported',
+    usage: 'SEC <ticker|CIK|name> [form] | SEC <ticker> FACT <tag>',
+    examples: ['SEC AAPL', 'SEC NVDA 8-K', 'SEC TSLA 10-K', 'SEC AAPL FACT Revenues'],
+    handler(command, { panels, panelContext }) {
+      const args = command.args;
+      const at = args.findIndex((a) => ['FACT', 'XBRL', 'CONCEPT'].includes(a.toUpperCase()));
+
+      if (at > 0) {
+        const query = args.slice(0, at).join(' ').trim();
+        const tag = args[at + 1];
+        if (!query) throw new UsageError('Missing <ticker>');
+        if (!tag) throw new UsageError('Missing <tag>, e.g. Revenues or NetIncomeLoss');
+        const id = SecConceptPanel.idFor(query, tag);
+        panels.open(id, () => new SecConceptPanel(id, panelContext, query, tag));
+        return;
+      }
+
+      // A form type is unmistakable — a digit-and-letter code with a hyphen, or
+      // a bare number like `4` — and a company name never looks like one.
+      const isForm = (token: string): boolean => /^\d{1,2}-[A-Za-z0-9/]+$|^\d{1,2}$/.test(token);
+      const form = args.find(isForm);
+      const query = args.filter((a) => a !== form).join(' ').trim();
+      if (!query) throw new UsageError('Missing <ticker|CIK|name>');
+
+      const options = { query, ...(form ? { form: form.toUpperCase() } : {}) };
+      const id = SecFilingsPanel.idFor(options);
+      panels.open(id, () => new SecFilingsPanel(id, panelContext, options));
+    },
+  },
+  {
+    verb: 'DGOV',
+    aliases: ['DATAGOV'],
+    group: 'data',
+    summary: "Search data.gov's federal dataset catalogue",
+    usage: 'DGOV <words>',
+    examples: ['DGOV unemployment insurance', 'DGOV crop yields', 'DGOV air quality'],
     handler(command, { panels, panelContext }) {
       const query = command.args.join(' ').trim();
       if (!query) throw new UsageError('Missing <words>');
-      const id = FredSearchPanel.idFor(query);
-      panels.open(id, () => new FredSearchPanel(id, panelContext, query));
+      const id = DataGovPanel.idFor(query);
+      panels.open(id, () => new DataGovPanel(id, panelContext, query));
     },
   },
   {

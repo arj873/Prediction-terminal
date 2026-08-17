@@ -136,4 +136,14 @@ export const TTL = {
   steam: 120_000,
   /** TV schedules: fixed a day ahead, occasionally amended. */
   tvSchedule: 30 * 60_000,
+  /** Commitments of Traders: published once a week, on Friday afternoons. */
+  cot: 60 * 60_000,
+  /** Congressional actions: a bill moves several times a day when it moves at all. */
+  congress: 10 * 60_000,
+  /** EDGAR filings: a new 8-K matters within minutes of being accepted. */
+  edgar: 5 * 60_000,
+  /** XBRL company facts: restated quarterly, and a 15 MB document per issuer. */
+  edgarFacts: 6 * 60 * 60_000,
+  /** The data.gov catalogue: dataset metadata, revised on a publication schedule. */
+  datagov: 60 * 60_000,
 } as const;

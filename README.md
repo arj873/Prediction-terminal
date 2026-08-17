@@ -3,9 +3,11 @@
 A Bloomberg-style terminal for three prediction markets — [Kalshi](https://kalshi.com),
 [Polymarket](https://polymarket.com) and [Polymarket US](https://polymarket.us) —
 plus live stock and crypto prices, the [Alpaca](https://alpaca.markets) news
-wire, [FRED](https://fred.stlouisfed.org) economic data, the
-[Billboard](https://www.billboard.com/charts/) charts, and the entertainment
-feeds these markets settle against, driven entirely from a command prompt.
+wire, twelve reference-data publishers — FRED, the BLS, the Federal Reserve, the
+ECB, the OECD, the IMF, the EIA, the CFTC, Congress.gov, SEC EDGAR, data.gov and
+Polygon.io — the [Billboard](https://www.billboard.com/charts/) charts, and the
+entertainment feeds these markets settle against, driven entirely from a command
+prompt.
 
 ```
 > GP KXFEDDECISION-27JAN-H26 1d 1y
@@ -15,7 +17,12 @@ feeds these markets settle against, driven entirely from a command prompt.
 > STK NVDA 1d 1y
 > IMP BTC                     # Kalshi's implied BTC price, over the real one
 > NEWS NVDA
-> FRED UNRATE
+> ECO UNRATE                  # FRED, unprefixed, as it always was
+> ECO bls:CUSR0000SA0L1E      # core CPI, from the BLS itself
+> ECO fed:H15/RIFLGFCY10_N.B  # the 10-year, from the Board's own release
+> COT gold                    # who is long and who is short
+> SEC NVDA 8-K                # what was filed this morning
+> CONG BILL 119 hr 1
 > BB hot-100
 ```
 
@@ -112,11 +119,21 @@ does exactly what naming its event ticker does.
 
 ### Data sources
 
+Twelve publishers, behind one set of commands. Eight of them publish **time
+series** and are charted by `ECO`, which takes a `[source:]id` reference the way
+every market command takes `[venue:]ticker` — unprefixed still means FRED, so
+every `FRED <id>` that ever worked still means exactly what it did.
+
 | Command | Usage | What it does |
 | --- | --- | --- |
+| `ECO` | `ECO [source:]<series-id> [start] [end]` | Any published series, charted, with units, frequency and vintage |
+| `ECOS` | `ECOS <words> [source…]` | Search every publisher's catalogue at once |
+| `SRC` | `SRC` | Which publishers this deployment can actually serve |
+| `COT` | `COT <market> [legacy\|disaggregated\|financial]` | CFTC Commitments of Traders — positioning by trader type |
+| `CONG` | `CONG <words>` · `CONG BILL <congress> <type> <number>` | Congress.gov bills, sponsors and action history |
+| `SEC` | `SEC <ticker> [form]` · `SEC <ticker> FACT <tag>` | EDGAR filings, and any XBRL fact a filer has reported |
+| `DGOV` | `DGOV <words>` | Search data.gov's federal dataset catalogue |
 | `NEWS` | `NEWS [symbol…] [count] [window]` | The news wire, for a symbol or the whole tape |
-| `FRED` | `FRED <series-id> [start] [end]` | Economic series chart plus units, frequency and vintage |
-| `FSRCH` | `FSRCH <words>` | Find a FRED series id |
 | `BB` | `BB [chart-slug] [YYYY-MM-DD]` | A Billboard chart as a ranked table |
 | `BB` | `BB CHARTS` | List the chart slugs |
 | `RT` | `RT <title>` · `RT SEARCH <words>` | Tomatometer and Popcornmeter, with review counts |
@@ -127,8 +144,81 @@ does exactly what naming its event ticker does.
 | `STEAM` | `STEAM [game\|appid]` | Live concurrent players, or the most-played leaderboard |
 | `TV` | `TV [YYYY-MM-DD] [country]` | What airs that day, by network |
 
-`NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
-and `NFLX gb films` are the same chart.
+`FRED` and `FSRCH` still work — they are aliases of `ECO` and `ECOS`.
+
+#### Naming a publisher
+
+| Prefix | Publisher | An id looks like | Key |
+| --- | --- | --- | --- |
+| *(none)* / `fred:` | FRED, St. Louis Fed | `UNRATE` | optional |
+| `bls:` | Bureau of Labor Statistics | `LNS14000000` | optional |
+| `fed:` | Federal Reserve Board | `H15/RIFLGFCY10_N.B` | — |
+| `ecb:` | European Central Bank | `EXR/D.USD.EUR.SP00.A` | — |
+| `oecd:` | OECD | `DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY` | — |
+| `imf:` | International Monetary Fund | `CPI/USA.CPI._T.IX.M` | — |
+| `cftc:` | CFTC | `legacy/GOLD/noncomm_net` | — |
+| `eia:` | US Energy Information Administration | `PET.RWTC.D` | **required** |
+| `sec:` | SEC EDGAR | `AAPL` | — |
+| `congress:` | Congress.gov | `119/hr/1` | optional |
+| `datagov:` | data.gov | `consumer-price-index` | optional |
+| `polygon:` | Polygon.io | `AAPL` | **required** |
+
+The last four publish records or prices rather than observations, so they have
+their own commands rather than being charted by `ECO`. `SRC` shows the same
+table with this deployment's credentials filled in, and says what each missing
+key would add.
+
+```
+> ECO UNRATE                          # FRED, as before
+> ECO bls:CUSR0000SA0L1E 2015         # core CPI from the BLS, since 2015
+> ECO fed:H15/RIFLGFCY10_N.B          # the 10-year, from the Board itself
+> ECO ecb:ICP/M.U2.N.000000.4.ANR     # euro-area HICP
+> ECO oecd:DSD_KEI@DF_KEI/GBR.M.UNEMP.PT_LF._T.Y._Z
+> ECO cftc:legacy/GOLD/noncomm_net    # speculative gold positioning since 1986
+> ECOS inflation ecb oecd             # search two publishers
+> ECOS oil eia
+```
+
+Start and end bounds are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, because these
+publishers do not all report daily and requiring a day would make you invent
+one.
+
+#### What each publisher is for
+
+- **FRED** re-publishes most of the others under one naming scheme, and is the
+  right first stop. The rest are worth reaching for when you want the number as
+  its publisher states it, on the publisher's own schedule.
+- **BLS** prints CPI, the unemployment rate, payrolls and average hourly
+  earnings *first*; FRED mirrors them hours later.
+- **Federal Reserve** is the Board's own H.15, H.4.1, H.6 and G.17 releases.
+- **ECB** covers the euro area's policy rates, HICP, M3 and the daily reference
+  exchange rates.
+- **OECD** gives the same statistic to one methodology across 38 countries,
+  which is what "will US inflation beat the euro area's" actually needs.
+- **IMF** covers nearly every country on earth to one methodology.
+- **EIA** is the settlement feed for energy markets: retail gasoline, Henry Hub,
+  WTI and Brent, crude inventories.
+- **CFTC** publishes who is long and who is short every US futures market,
+  weekly since 1986.
+
+#### Positioning, filings, bills and datasets
+
+```
+> COT gold                            # latest Commitments of Traders report
+> COT e-mini s&p financial            # dealers, asset managers, leveraged funds
+> SEC AAPL                            # everything Apple has filed recently
+> SEC NVDA 8-K                        # …one form type
+> SEC AAPL FACT Revenues              # every revenue figure Apple has reported
+> CONG debt ceiling                   # bills matching two words
+> CONG BILL 119 hr 1                  # one bill, with its full action history
+> DGOV crop yields                    # find a federal dataset
+```
+
+A `COT` row is clickable and charts that category's net position back to 1986,
+so the table and the history are one keystroke apart. `SEC … FACT` charts every
+value a company has reported for an XBRL tag and keeps restatements: the same
+period reported twice, by two filings, is the company changing its mind, and the
+table beside the chart shows both with the form and filing date.
 
 ```
 > NEWS                        # the whole wire
@@ -137,12 +227,15 @@ and `NFLX gb films` are the same chart.
 > NEWS BTCUSD 30d             # crypto is tagged as a pair
 ```
 
-`NEWS` is the one command that needs a key — see
+`NEWS` is the one command that needs a key to work at all — see
 [About the news wire](#about-the-news-wire-and-its-key). Its arguments are
 order-independent and told apart by shape: a bare integer is a headline count, a
 duration is the look-back window, anything else is a symbol. Each headline links
 to the publisher, and the rest of the row opens the chart of what the story is
 about.
+
+`NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
+and `NFLX gb films` are the same chart.
 
 ### Cross-venue: lining the brokers up
 
@@ -472,6 +565,18 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
 | `ALPACA_DATA_BASE` | `https://data.alpaca.markets/v1beta1` | Override the news upstream |
+| `BLS_API_BASE` | `https://api.bls.gov/publicAPI` | Override the BLS upstream |
+| `ECB_API_BASE` | `https://data-api.ecb.europa.eu/service` | Override the ECB SDMX service |
+| `OECD_API_BASE` | `https://sdmx.oecd.org/public/rest` | Override the OECD SDMX service |
+| `IMF_API_BASE` | `https://api.imf.org/external/sdmx/2.1` | Override the IMF SDMX service |
+| `FED_DDP_BASE` | `https://www.federalreserve.gov/datadownload` | Override the Fed Data Download Program |
+| `EIA_API_BASE` | `https://api.eia.gov/v2` | Override the EIA upstream |
+| `CFTC_API_BASE` | `https://publicreporting.cftc.gov/resource` | Override the CFTC portal |
+| `CONGRESS_API_BASE` | `https://api.congress.gov/v3` | Override the Congress.gov upstream |
+| `DATAGOV_API_BASE` | `https://api.gsa.gov/technology/datagov/v4` | Override the data.gov Catalog API |
+| `SEC_DATA_BASE` | `https://data.sec.gov` | Override the EDGAR data host |
+| `SEC_WWW_BASE` | `https://www.sec.gov` | Override the EDGAR document host |
+| `POLYGON_API_BASE` | `https://api.polygon.io` | Override the Polygon upstream |
 
 ### About FRED and `FRED_API_KEY`
 
@@ -490,6 +595,45 @@ Setting `FRED_API_KEY` (free, from
 [fred.stlouisfed.org/docs/api/api_key.html](https://fred.stlouisfed.org/docs/api/api_key.html))
 makes the server fall back to `api.stlouisfed.org`, which does answer from those
 networks. The scrape is always tried first; the key is only a safety net.
+
+### About the other publishers' keys
+
+Ten of the twelve publishers work with no configuration at all. Run `SRC` to see
+what this deployment can actually serve; the board says what each missing key
+would add, and the same list is on `/api/health`.
+
+| Variable | Publisher | Without it |
+| --- | --- | --- |
+| `EIA_API_KEY` | US EIA | **Nothing.** The EIA publishes no anonymous tier, so the source declares itself unavailable rather than failing at request time. [Free, instant.](https://www.eia.gov/opendata/register.php) |
+| `POLYGON_API_KEY` | Polygon.io | Prices still work; Polygon simply is not used. With it, a licensed tape goes in *front* of Yahoo and Nasdaq — see below. |
+| `BLS_API_KEY` | BLS | 25 queries per IP per day and 10 years of history per call. With it: 500 a day, 20 years, and the series title and units come from the BLS's own catalogue. [Free.](https://data.bls.gov/registrationEngine/) |
+| `CONGRESS_API_KEY` | Congress.gov | The shared `DEMO_KEY`, throttled per IP. [Free.](https://api.congress.gov/sign-up/) |
+| `DATAGOV_API_KEY` | data.gov | The shared `DEMO_KEY`, throttled per IP. [Free.](https://api.data.gov/signup/) |
+| `SEC_USER_AGENT` | SEC EDGAR | A default contact string. EDGAR's fair-access policy asks callers to declare themselves as `Name contact@domain`; an operator running this publicly should use their own. |
+
+Two things about these are worth knowing before you meet them as an error:
+
+* **The OECD sheds load with HTTP 500 as often as with 429.** That reads as a
+  broken dataset and is not one — the key is fine. The terminal names it as a
+  throttle, retries with a longer backoff than the other hosts get, and caches
+  the answer for thirty minutes once a request lands.
+* **EDGAR 403s a browser-shaped User-Agent.** A UA containing parentheses or a
+  semicolon is refused outright, which is why `SEC_USER_AGENT` is two tokens.
+
+### About Polygon.io, and what it fixes
+
+`POLYGON_API_KEY` is the one key here that improves something already working.
+`STK`, `CRY` and the true-price half of `IMP` run through a provider chain, and
+Polygon slots in ahead of Yahoo and Nasdaq when a key is set, because it fixes
+the two failures those two actually have from a hosted deployment: Yahoo 429s
+shared datacentre addresses, and Nasdaq answers from them but carries no S&P 500
+or Dow. Polygon is authenticated rather than IP-reputation based, and `I:SPX` is
+the index itself.
+
+The free tier's limits are real and the terminal states them rather than showing
+an empty chart: end-of-day aggregates only, so a `1m` or `1h` request is
+answered with a 403 that says daily bars work on every plan, and five requests a
+minute, so a burst is answered with a 429 that says so.
 
 ### About equity prices from a datacentre
 
@@ -570,7 +714,19 @@ Everything else in the terminal keeps working with no key at all.
 | `GET /api/implied/candidates?symbol=` | Ladders pricing a symbol, each with its live implied price |
 | `GET /api/implied/series?event=&interval=&start=&end=&method=` | Implied price through time for one ladder |
 | `GET /api/news?symbols=&limit=&days=` | Headlines, newest first (needs Alpaca keys) |
-| `GET /api/fred/series/:id?start=&end=` | Series metadata + observations |
+| `GET /api/data/sources` | Every publisher, with what this deployment can serve |
+| `GET /api/data/series?ref=&start=&end=` | Any publisher's series (`ref` is `[source:]id`) |
+| `GET /api/data/search?q=&sources=&limit=` | Catalogue search across every usable publisher |
+| `GET /api/data/cot?market=&report=` | Latest Commitments of Traders report |
+| `GET /api/data/cot/markets?q=&report=&limit=` | COT markets matching words |
+| `GET /api/data/cot/reports` | The three COT report families |
+| `GET /api/data/congress/bills?q=&congress=&limit=` | Bills matching words |
+| `GET /api/data/congress/bill/:congress/:type/:number` | One bill, with summary and action history |
+| `GET /api/data/sec/filings?q=&form=&limit=` | EDGAR filings for a ticker, CIK or name |
+| `GET /api/data/sec/concept?q=&tag=&taxonomy=` | Every value reported for one XBRL tag |
+| `GET /api/data/sec/search?q=&limit=` | Filers matching a ticker or name |
+| `GET /api/data/gov?q=&limit=&cursor=` | data.gov dataset catalogue search |
+| `GET /api/fred/series/:id?start=&end=` | Series metadata + observations (FRED only) |
 | `GET /api/fred/search?q=&limit=` | FRED series search |
 | `GET /api/billboard/chart/:slug?date=` | Chart entries |
 | `GET /api/billboard/charts` | Known chart slugs |
@@ -585,7 +741,13 @@ Everything else in the terminal keeps working with no key at all.
 | `GET /api/ent/boxoffice?date=` | Domestic daily box office |
 | `GET /api/ent/steam?q=&limit=` | Steam leaderboard, or one game's live count |
 | `GET /api/ent/tv?date=&country=` | TV schedule for a day |
-| `GET /api/health` | Liveness, cache stats, whether the FRED and Alpaca keys are set |
+| `GET /api/health` | Liveness, cache stats, and which publishers' credentials are set |
+
+`/api/data/series` takes its reference as a query parameter rather than a path
+segment because half of these ids contain slashes — `EXR/D.USD.EUR.SP00.A`,
+`H15/RIFLGFCY10_N.B`, `legacy/GOLD/noncomm_net` — and a path segment cannot hold
+one without double-encoding that Express then decodes back into route
+boundaries.
 
 Errors are JSON: `{ error, code, hint? }`. The `hint` is written to be shown to
 a person and is surfaced verbatim in the panel.

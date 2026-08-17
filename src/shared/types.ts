@@ -481,16 +481,34 @@ export interface ImpliedSeriesResponse {
   points: ImpliedPoint[];
 }
 
-/* -------------------------------------------------------------------- fred */
+/* ------------------------------------------------------------ economic data */
 
-export interface FredObservation {
-  /** `YYYY-MM-DD`. */
+/**
+ * One observation of a published statistic.
+ *
+ * Eight publishers feed this shape and every one of them marks a missing
+ * reading differently — FRED writes `.`, the BLS omits the month, SDMX sends an
+ * empty `OBS_VALUE`. All of them arrive here as `null`, because a gap in a
+ * series is a fact about the series and dropping the row would silently
+ * compress the time axis.
+ */
+export interface DataObservation {
+  /** `YYYY-MM-DD`. A quarter or a year is dated to the day it begins. */
   date: string;
-  /** `null` for FRED's `.` missing-value marker. */
   value: number | null;
 }
 
-export interface FredSeries {
+/**
+ * What a series *is*, in enough detail to read the numbers.
+ *
+ * A statistic without its units, frequency and vintage is noise: 333.918 is a
+ * CPI index level, a percent or billions of dollars depending on facts that
+ * live here and nowhere else in the payload.
+ */
+export interface DataSeries {
+  /** Which publisher, as a {@link DataSourceId}. */
+  provider: string;
+  /** The identifier at that publisher — `UNRATE`, `LNS14000000`, `EXR/D.USD.EUR.SP00.A`. */
   id: string;
   title: string;
   units: string;
@@ -501,16 +519,24 @@ export interface FredSeries {
   observationStart: string;
   observationEnd: string;
   notes: string;
-  /** Where the payload came from — the terminal shows this in the panel header. */
-  source: 'scrape' | 'api';
+  /**
+   * Which arm of the provider answered — `scrape`, `api`, `v1`, `v2`. Shown in
+   * the panel header, because how much to trust a number depends on whether it
+   * came from the source of record or a fallback behind it.
+   */
+  source: string;
+  /** The publisher's own page for this series, so a reader can check it. */
+  sourceUrl: string;
 }
 
-export interface FredSeriesResponse {
-  series: FredSeries;
-  observations: FredObservation[];
+export interface DataSeriesResponse {
+  series: DataSeries;
+  observations: DataObservation[];
 }
 
-export interface FredSearchResult {
+export interface DataSearchResult {
+  /** Which publisher, as a {@link DataSourceId}. */
+  provider: string;
   id: string;
   title: string;
   units?: string;
@@ -519,10 +545,247 @@ export interface FredSearchResult {
   observationRange?: string;
 }
 
-export interface FredSearchResponse {
+export interface DataSearchResponse {
   query: string;
-  results: FredSearchResult[];
-  source: 'scrape' | 'api';
+  results: DataSearchResult[];
+  /**
+   * Providers that were asked and did not answer. A board covering six of eight
+   * publishers has to say which two are missing, or "no match" reads as "no such
+   * series anywhere".
+   */
+  unavailable: { provider: string; error: string }[];
+  /** Providers that were skipped for want of a credential, and what to set. */
+  skipped: { provider: string; hint: string }[];
+}
+
+/** What a deployment can currently serve, for the `SRC` board and `/health`. */
+export interface DataSourceStatus {
+  id: string;
+  label: string;
+  code: string;
+  prefix: string;
+  kind: string;
+  covers: string;
+  site: string;
+  idExample: string;
+  /** False when a required credential is unset. */
+  available: boolean;
+  /** Why it is unavailable, or what a key would add when one is optional. */
+  note: string;
+}
+
+/* -------------------------------------------------------------------- fred */
+
+// FRED is one of the eight series publishers rather than a shape of its own.
+// The aliases keep the older, FRED-specific names meaning what they always did.
+export type FredObservation = DataObservation;
+export type FredSeries = DataSeries;
+export type FredSeriesResponse = DataSeriesResponse;
+export type FredSearchResult = DataSearchResult;
+export type FredSearchResponse = DataSearchResponse;
+
+/* -------------------------------------------------------- cftc: commitments */
+
+/** One trader category's position in a Commitments of Traders report. */
+export interface CotCategory {
+  /** e.g. `Non-commercial`, `Dealer/Intermediary`, `Managed money`. */
+  name: string;
+  long: number | null;
+  short: number | null;
+  /** Spreading contracts, where the report breaks them out. `null` where it does not. */
+  spreading: number | null;
+  /** `long - short`. */
+  net: number | null;
+  /** Week-on-week change in {@link net}, when the prior report is available. */
+  netChange: number | null;
+  /** Share of open interest held long, 0..100. */
+  percentLong: number | null;
+  percentShort: number | null;
+  traderCount: number | null;
+}
+
+export interface CotReport {
+  /** `legacy`, `disaggregated` or `financial`. */
+  report: string;
+  reportLabel: string;
+  /** CFTC's own market name, e.g. `GOLD - COMMODITY EXCHANGE INC.`. */
+  market: string;
+  exchange: string;
+  /** CFTC contract market code — the stable identity behind the name. */
+  contractCode: string;
+  /** Report Tuesday, `YYYY-MM-DD`. */
+  date: string;
+  openInterest: number | null;
+  openInterestChange: number | null;
+  categories: CotCategory[];
+  sourceUrl: string;
+}
+
+export interface CotMarket {
+  contractCode: string;
+  market: string;
+  exchange: string;
+  /** Most recent report date for this market, `YYYY-MM-DD`. */
+  latest: string;
+  openInterest: number | null;
+}
+
+export interface CotMarketsResponse {
+  query: string;
+  report: string;
+  markets: CotMarket[];
+}
+
+/* ---------------------------------------------------------------- congress */
+
+/** One action in a bill's legislative history. */
+export interface BillAction {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  text: string;
+  /** `House`, `Senate` or `` when Congress.gov states none. */
+  chamber: string;
+}
+
+export interface Bill {
+  /** Congress number, e.g. `119`. */
+  congress: number;
+  /** `hr`, `s`, `hjres`, `sjres`, `hconres`, `sconres`, `hres`, `sres`. */
+  type: string;
+  number: string;
+  title: string;
+  /** `HR 1 (119th)` — what a reader would say out loud. */
+  label: string;
+  originChamber: string;
+  introducedDate: string;
+  /** The most recent action, which is what "where is this bill" means. */
+  latestAction: BillAction | null;
+  sponsor: string;
+  sponsorParty: string;
+  sponsorState: string;
+  cosponsors: number | null;
+  policyArea: string;
+  /** Whether the bill has become law, as Congress.gov's own action text states it. */
+  becameLaw: boolean;
+  url: string;
+}
+
+export interface BillDetail extends Bill {
+  /** Congress.gov's plain-language summary, newest version. Empty when none is filed. */
+  summary: string;
+  /** Full action history, newest first. */
+  actions: BillAction[];
+  committees: string[];
+}
+
+export interface BillSearchResponse {
+  query: string;
+  congress: number | null;
+  bills: Bill[];
+  source: string;
+}
+
+/* --------------------------------------------------------------- sec edgar */
+
+export interface SecCompany {
+  /** Zero-padded 10-digit CIK, as EDGAR writes it. */
+  cik: string;
+  name: string;
+  tickers: string[];
+  exchanges: string[];
+  /** Standard Industrial Classification code and its description. */
+  sic: string;
+  sicDescription: string;
+  fiscalYearEnd: string;
+  url: string;
+}
+
+export interface SecFiling {
+  /** EDGAR accession number, e.g. `0000320193-24-000123`. */
+  accession: string;
+  /** `10-K`, `8-K`, `4`, `13F-HR`… */
+  form: string;
+  /** `YYYY-MM-DD`. */
+  filed: string;
+  /** Period the filing reports on, `YYYY-MM-DD`. Empty for forms with no period. */
+  reportDate: string;
+  /** Items cited on an 8-K, e.g. `2.02,9.01`. Empty for other forms. */
+  items: string;
+  primaryDocument: string;
+  description: string;
+  size: number | null;
+  url: string;
+}
+
+export interface SecFilingsResponse {
+  company: SecCompany;
+  filings: SecFiling[];
+  /** Forms present in the response, so a panel can offer a filter. */
+  forms: string[];
+}
+
+/** One reported value of an XBRL fact — the unit of SEC financial history. */
+export interface SecFact {
+  /** Period end, `YYYY-MM-DD`. */
+  end: string;
+  /** Period start for a duration fact; empty for an instant. */
+  start: string;
+  value: number;
+  /** Fiscal year and period the issuer filed it under, e.g. `2024` / `Q3`. */
+  fiscalYear: number | null;
+  fiscalPeriod: string;
+  form: string;
+  filed: string;
+  accession: string;
+  /** Unit of measure, e.g. `USD`, `shares`. */
+  unit: string;
+}
+
+export interface SecConceptResponse {
+  company: SecCompany;
+  /** `us-gaap`, `ifrs-full`, `dei`. */
+  taxonomy: string;
+  /** The XBRL tag, e.g. `Revenues`. */
+  tag: string;
+  label: string;
+  description: string;
+  unit: string;
+  /** Every reported value, oldest first. Restatements included and dated. */
+  facts: SecFact[];
+}
+
+export interface SecSearchResult {
+  cik: string;
+  ticker: string;
+  name: string;
+}
+
+/* ---------------------------------------------------------------- data.gov */
+
+export interface DataGovDataset {
+  id: string;
+  title: string;
+  description: string;
+  /** Publishing organisation, e.g. `Bureau of Labor Statistics`. */
+  publisher: string;
+  /** Subject tags the publisher filed it under. */
+  themes: string[];
+  /** Last modified, `YYYY-MM-DD`. */
+  modified: string;
+  /** How often it is updated, in plain words. */
+  frequency: string;
+  /** Downloadable distributions, richest format first. */
+  formats: string[];
+  /** The dataset's landing page, or its first distribution when it has none. */
+  url: string;
+}
+
+export interface DataGovSearchResponse {
+  query: string;
+  datasets: DataGovDataset[];
+  /** Opaque cursor for the next page, or `null` at the end. */
+  cursor: string | null;
+  source: string;
 }
 
 /* --------------------------------------------------------------- billboard */

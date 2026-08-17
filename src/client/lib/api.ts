@@ -10,6 +10,15 @@
 import type {
   ApiError,
   AssetClass,
+  Bill,
+  BillDetail,
+  BillSearchResponse,
+  CotMarketsResponse,
+  CotReport,
+  DataGovSearchResponse,
+  DataSearchResponse,
+  DataSeriesResponse,
+  DataSourceStatus,
   CompareResponse,
   BillboardChart,
   BillboardChartListItem,
@@ -32,6 +41,9 @@ import type {
   RtTitle,
   SpotCandlesResponse,
   SpotQuote,
+  SecConceptResponse,
+  SecFilingsResponse,
+  SecSearchResult,
   SpotSearchResult,
   SteamChart,
   StreamChart,
@@ -255,6 +267,102 @@ export const fred = {
     request(`/fred/search${query({ q, limit })}`, signal),
 };
 
+/* --------------------------------------------------- reference data (ECO) */
+
+/**
+ * The twelve publishers, behind one client.
+ *
+ * `series` and `search` take a `[source:]id` reference and a source filter
+ * respectively, matching what the command line accepts, so a panel never has to
+ * know which of the eight series publishers it is talking to.
+ */
+export const data = {
+  sources: (signal?: AbortSignal): Promise<{ sources: DataSourceStatus[] }> =>
+    request('/data/sources', signal),
+
+  series: (
+    ref: string,
+    start?: string,
+    end?: string,
+    signal?: AbortSignal,
+  ): Promise<DataSeriesResponse> => request(`/data/series${query({ ref, start, end })}`, signal),
+
+  search: (
+    q: string,
+    sources: string[] = [],
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<DataSearchResponse> =>
+    request(`/data/search${query({ q, sources: sources.join(','), limit })}`, signal),
+
+  /* ---- CFTC Commitments of Traders ---- */
+  cot: (market: string, report = 'legacy', signal?: AbortSignal): Promise<CotReport> =>
+    request(`/data/cot${query({ market, report })}`, signal),
+
+  cotMarkets: (
+    q: string,
+    report = 'legacy',
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<CotMarketsResponse> =>
+    request(`/data/cot/markets${query({ q, report, limit })}`, signal),
+
+  /* ---- Congress.gov ---- */
+  bills: (
+    q: string,
+    congress?: number,
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<BillSearchResponse> =>
+    request(`/data/congress/bills${query({ q, congress, limit })}`, signal),
+
+  bill: (
+    congress: number,
+    type: string,
+    number: string,
+    signal?: AbortSignal,
+  ): Promise<BillDetail> =>
+    request(
+      `/data/congress/bill/${congress}/${encodeURIComponent(type)}/${encodeURIComponent(number)}`,
+      signal,
+    ),
+
+  /* ---- SEC EDGAR ---- */
+  secFilings: (
+    q: string,
+    form?: string,
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<SecFilingsResponse> =>
+    request(`/data/sec/filings${query({ q, form, limit })}`, signal),
+
+  secConcept: (
+    q: string,
+    tag = 'Revenues',
+    taxonomy = 'us-gaap',
+    signal?: AbortSignal,
+  ): Promise<SecConceptResponse> =>
+    request(`/data/sec/concept${query({ q, tag, taxonomy })}`, signal),
+
+  secSearch: (
+    q: string,
+    limit = 25,
+    signal?: AbortSignal,
+  ): Promise<{ query: string; results: SecSearchResult[] }> =>
+    request(`/data/sec/search${query({ q, limit })}`, signal),
+
+  /* ---- data.gov ---- */
+  gov: (
+    q: string,
+    limit = 30,
+    cursor?: string,
+    signal?: AbortSignal,
+  ): Promise<DataGovSearchResponse> => request(`/data/gov${query({ q, limit, cursor })}`, signal),
+};
+
+/** Re-exported so a panel can render a bill row without a second import. */
+export type { Bill };
+
 /* --------------------------------------------------------------- billboard */
 
 export const billboard = {
@@ -326,6 +434,8 @@ export interface Health {
   fredApiKey: boolean;
   /** Whether this deployment can serve `NEWS` — the feed needs a key pair. */
   alpacaKeys: boolean;
+  /** Which reference-data publishers this deployment holds credentials for. */
+  sources: { id: string; available: boolean }[];
   time: string;
 }
 

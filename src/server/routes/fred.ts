@@ -18,11 +18,23 @@ function dateParam(raw: unknown, label: string): string | undefined {
   return raw;
 }
 
+/**
+ * FRED-only search, kept for callers that predate the multi-source board.
+ *
+ * `fred.searchSeries` now returns the results and which arm produced them,
+ * because it is one arm of the eight-provider fan-out behind
+ * `/api/data/search`. The fan-out fields are empty here and truthfully so:
+ * nothing else was asked, so nothing else could have failed or been skipped.
+ */
 fredRouter.get(
   '/search',
   asyncRoute(async (req) => {
     const q = typeof req.query['q'] === 'string' ? req.query['q'] : '';
-    return fred.searchSeries(q, intParam(req.query['limit'], 25, 1, 100));
+    const { value: results, source } = await fred.searchSeries(
+      q,
+      intParam(req.query['limit'], 25, 1, 100),
+    );
+    return { query: q.trim(), results, source, unavailable: [], skipped: [] };
   }),
 );
 

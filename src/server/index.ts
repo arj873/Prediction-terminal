@@ -19,6 +19,7 @@ import { cache } from './lib/cache.js';
 import { UpstreamError } from './lib/http.js';
 import { billboardRouter } from './routes/billboard.js';
 import { crossVenueRouter } from './routes/crossvenue.js';
+import { dataRouter } from './routes/data.js';
 import { entertainmentRouter } from './routes/entertainment.js';
 import { fredRouter } from './routes/fred.js';
 import { impliedRouter } from './routes/implied.js';
@@ -27,6 +28,7 @@ import { newsRouter } from './routes/news.js';
 import { spotRouter } from './routes/spot.js';
 import { venueRouter } from './routes/venue.js';
 import { hasCredentials as hasAlpacaCredentials } from './sources/alpaca.js';
+import { sourceStatuses } from './sources/datasources.js';
 import { warmIndexes } from './sources/crossvenue.js';
 import { warmAll } from './sources/venues.js';
 
@@ -87,6 +89,7 @@ export function createApp(): express.Express {
   app.use('/api/spot', spotRouter);
   app.use('/api/implied', impliedRouter);
   app.use('/api/fred', fredRouter);
+  app.use('/api/data', dataRouter);
   app.use('/api/billboard', billboardRouter);
   app.use('/api/ent', entertainmentRouter);
   app.use('/api/news', newsRouter);
@@ -98,6 +101,9 @@ export function createApp(): express.Express {
       cache: cache.stats(),
       fredApiKey: Boolean(process.env.FRED_API_KEY?.trim()),
       alpacaKeys: hasAlpacaCredentials(),
+      // What each reference-data publisher can serve here, so an operator can
+      // see which credentials are missing without reading the source table.
+      sources: sourceStatuses().map((s) => ({ id: s.id, available: s.available })),
       time: new Date().toISOString(),
     });
   });
@@ -169,6 +175,7 @@ if (invokedDirectly) {
     console.log(`  spot       /api/spot/{stock,crypto}/:symbol[/candles]`);
     console.log(`  implied    /api/implied/{underlyings,candidates,series}`);
     console.log(`  fred       /api/fred/{series/:id,search}`);
+    console.log(`  data       /api/data/{sources,series,search,cot,congress,sec,gov}`);
     console.log(`  billboard  /api/billboard/{charts,chart/:slug}`);
     console.log(`  ent        /api/ent/{markets,rt,netflix,spotify,youtube,boxoffice,steam,tv}`);
     console.log(`  news       /api/news?symbols=&limit=&days=`);
@@ -177,6 +184,13 @@ if (invokedDirectly) {
     }
     if (!hasAlpacaCredentials()) {
       console.log(`  note: ALPACA_API_KEY_ID/SECRET unset — NEWS is unavailable until they are.`);
+    }
+    // Named on the way up rather than discovered on the way to an error: an
+    // operator who can see which publishers are dark can fix it before a
+    // reader types the command that would have told them.
+    const dark = sourceStatuses().filter((s) => !s.available);
+    if (dark.length > 0) {
+      console.log(`  note: ${dark.map((s) => s.id).join(', ')} unavailable — run \`SRC\` for why.`);
     }
     // Crawl all three catalogues in the background, then pair their series up,
     // so the first `SRCH` or `XV` does not pay the cold-start cost.

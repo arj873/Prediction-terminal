@@ -42,11 +42,31 @@ export interface FetchOptions {
   timeoutMs?: number;
   /** Additional attempts after the first. Default 2. */
   retries?: number;
+  /**
+   * First retry delay, doubling thereafter. Default 400ms.
+   *
+   * Worth raising for a host whose throttle is measured in seconds. The OECD's
+   * SDMX service sheds a burst with HTTP 500 and recovers in about four
+   * seconds, so retrying it on the default 400/800/1600ms ladder simply fails
+   * three times faster.
+   */
+  retryBaseMs?: number;
   /** Send browser-shaped headers. Default true. */
   browserHeaders?: boolean;
   /** Reject bodies larger than this. Default 16 MiB. */
   maxBytes?: number;
   signal?: AbortSignal;
+  /**
+   * HTTP method. Default `GET`.
+   *
+   * Retrying is safe for every `POST` this server sends because all of them are
+   * *queries* — the BLS asks for a list of series ids in a body because the
+   * list would not fit in a URL, not because anything changes at the other end.
+   * Nothing here posts a side effect, and nothing should.
+   */
+  method?: 'GET' | 'POST';
+  /** Request body, for a `POST` query. */
+  body?: string;
 }
 
 const DEFAULT_MAX_BYTES = 16 * 1024 * 1024;
@@ -115,6 +135,9 @@ export async function fetchText(url: string, options: FetchOptions = {}): Promis
     maxBytes = DEFAULT_MAX_BYTES,
     headers = {},
     signal,
+    method = 'GET',
+    body,
+    retryBaseMs = 400,
   } = options;
 
   const merged: Record<string, string> = browserHeaders
@@ -125,15 +148,21 @@ export async function fetchText(url: string, options: FetchOptions = {}): Promis
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (attempt > 0) {
-      // 400ms, 800ms, 1600ms … plus jitter, so parallel panels don't sync up.
-      await sleep(400 * 2 ** (attempt - 1) + Math.floor(Math.random() * 250));
+      // Doubling, plus jitter so parallel panels don't sync up.
+      await sleep(retryBaseMs * 2 ** (attempt - 1) + Math.floor(Math.random() * 250));
     }
 
     const timeout = AbortSignal.timeout(timeoutMs);
     const composite = signal ? AbortSignal.any([signal, timeout]) : timeout;
 
     try {
-      const res = await fetch(url, { headers: merged, redirect: 'follow', signal: composite });
+      const res = await fetch(url, {
+        method,
+        headers: merged,
+        ...(body === undefined ? {} : { body }),
+        redirect: 'follow',
+        signal: composite,
+      });
 
       if (!res.ok) {
         // A 502/503 can be the origin being down *or* an egress proxy reporting

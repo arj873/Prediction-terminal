@@ -15,6 +15,11 @@
  * Nasdaq's own indices (`COMP`, `NDX`) but *not* the S&P 500 or the Dow, so it
  * narrows coverage rather than replacing it. The terminal says which provider
  * answered rather than leaving that invisible.
+ *
+ * **Polygon.io** goes in front of both, but only when `POLYGON_API_KEY` is set.
+ * It is licensed and authenticated rather than IP-reputation based, so it has
+ * neither provider's failure: it answers from a datacentre and it carries the
+ * cash indices. A deployment without a key sees the chain exactly as it was.
  */
 
 import type {
@@ -27,6 +32,7 @@ import type {
 import { TTL, cache } from '../lib/cache.js';
 import { UpstreamError, fetchJson } from '../lib/http.js';
 import { firstAnswer, type ChainOptions, type Provider } from '../lib/providers.js';
+import * as polygon from './polygon.js';
 
 const YAHOO_BASE = process.env.YAHOO_API_BASE ?? 'https://query1.finance.yahoo.com';
 const NASDAQ_BASE = process.env.NASDAQ_API_BASE ?? 'https://api.nasdaq.com';
@@ -420,19 +426,33 @@ async function nasdaqCandles(
  * wrong" and "this host is blocking your network".
  */
 /**
- * Yahoo first, Nasdaq behind it.
+ * Polygon if configured, then Yahoo, then Nasdaq.
  *
  * A 429 from Yahoo is the signature of a shared datacentre IP rather than a bad
  * symbol, and it is worth naming: it is the difference between "your symbol is
- * wrong" and "this host is blocking your network".
+ * wrong" and "this host is blocking your network". When that is the failure and
+ * no Polygon key is set, the chain says so on the way out, because a key is the
+ * fix and nothing else in the response would mention it.
  */
 function priceProviders<T>(
   symbol: string,
+  viaPolygon: () => Promise<T>,
   viaYahoo: () => Promise<T>,
   viaNasdaq: () => Promise<T>,
 ): { providers: Provider<T>[]; options: ChainOptions } {
   return {
     providers: [
+      {
+        id: 'polygon',
+        label: 'Polygon.io',
+        available: () => polygon.hasCredentials(),
+        skippedHint: (cause) =>
+          cause?.status === 429 || cause?.code === 'upstream_blocked'
+            ? `${cause.hint ?? ''} Setting POLYGON_API_KEY adds a licensed feed that ` +
+              `answers from datacentre addresses and carries the cash indices.`.trim()
+            : undefined,
+        run: viaPolygon,
+      },
       { id: 'yahoo', label: 'Yahoo Finance', run: viaYahoo },
       { id: 'nasdaq', label: 'Nasdaq', run: viaNasdaq },
     ],
@@ -463,6 +483,7 @@ export async function getQuote(symbol: string): Promise<SpotQuote> {
 
   const { providers, options } = priceProviders<SpotQuote>(
     upper,
+    () => polygon.getQuote(upper),
     async () => (await yahooChart(upper, 1440, now - 7 * 86400, now)).quote,
     async () => {
       const plain = nasdaqSymbol(upper);
@@ -490,6 +511,7 @@ export async function getCandles(
 
   const { providers, options } = priceProviders(
     upper,
+    () => polygon.getCandles(upper, interval, startTs, endTs),
     async () => {
       const chart = await yahooChart(upper, interval, startTs, endTs);
       return {

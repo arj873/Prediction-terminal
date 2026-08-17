@@ -21,15 +21,19 @@
 
 import * as cheerio from 'cheerio';
 import type {
-  FredObservation,
-  FredSearchResponse,
-  FredSearchResult,
-  FredSeries,
-  FredSeriesResponse,
+  DataObservation as FredObservation,
+  DataSearchResult as FredSearchResult,
+  DataSeries as FredSeries,
+  DataSeriesResponse as FredSeriesResponse,
 } from '../../shared/types.js';
 import { TTL, cache } from '../lib/cache.js';
 import { UpstreamError, fetchJson, fetchText } from '../lib/http.js';
-import { firstAnswer, type ChainOptions, type Provider } from '../lib/providers.js';
+import {
+  firstAnswer,
+  type Attributed,
+  type ChainOptions,
+  type Provider,
+} from '../lib/providers.js';
 
 /**
  * Overridable so the scrape path can be exercised against a fixture server.
@@ -47,6 +51,14 @@ function escapeRegExp(s: string): string {
 
 /** FRED series IDs are alphanumerics plus `_` and `.` — reject anything else. */
 const SERIES_ID = /^[A-Za-z0-9_.\-]{1,64}$/;
+
+/** The descriptive half of a series: everything not decided by which arm answered. */
+type FredMeta = Omit<FredSeries, 'provider' | 'source' | 'sourceUrl'>;
+
+/** FRED's own page for a series — the thing a reader clicks to check a number. */
+export function seriesUrl(id: string): string {
+  return `https://fred.stlouisfed.org/series/${encodeURIComponent(id)}`;
+}
 
 export function assertSeriesId(id: string): string {
   const trimmed = id.trim().toUpperCase();
@@ -134,7 +146,7 @@ async function scrapeObservations(id: string, start?: string, end?: string): Pro
  * the primary strategy is label-text matching over the whole document, with
  * class-based selectors as a backstop.
  */
-export function parseSeriesPage(html: string, id: string): Omit<FredSeries, 'source'> {
+export function parseSeriesPage(html: string, id: string): FredMeta {
   const $ = cheerio.load(html);
 
   const clean = (s: string | undefined | null): string =>
@@ -247,7 +259,7 @@ export function parseSeriesPage(html: string, id: string): Omit<FredSeries, 'sou
   };
 }
 
-async function scrapeSeriesMeta(id: string): Promise<Omit<FredSeries, 'source'>> {
+async function scrapeSeriesMeta(id: string): Promise<FredMeta> {
   const html = await fetchText(`${WEB_BASE}/series/${encodeURIComponent(id)}`, {
     timeoutMs: 30_000,
     retries: 1,
@@ -270,7 +282,7 @@ interface ApiSeries {
   notes?: string;
 }
 
-function fromApiSeries(s: ApiSeries): Omit<FredSeries, 'source'> {
+function fromApiSeries(s: ApiSeries): FredMeta {
   return {
     id: s.id,
     title: s.title,
@@ -309,7 +321,7 @@ async function apiSeries(id: string, start?: string, end?: string): Promise<Fred
   if (!s) throw new UpstreamError(`No FRED series called ${id}`, { code: 'not_found' });
 
   return {
-    series: { ...fromApiSeries(s), source: 'api' },
+    series: { ...fromApiSeries(s), provider: 'fred', source: 'api', sourceUrl: seriesUrl(id) },
     observations: (obs.observations ?? []).map((o) => ({
       date: o.date,
       value: o.value === '.' || o.value === '' ? null : Number(o.value),
@@ -355,7 +367,7 @@ export function parseSearchPage(html: string): FredSearchResult[] {
       .replace(/\s+/g, ' ')
       .trim();
 
-    const entry: FredSearchResult = { id, title };
+    const entry: FredSearchResult = { provider: 'fred', id, title };
     if (meta) {
       const parts = meta.split(',').map((p) => p.trim());
       if (parts[0]) entry.units = parts[0];
@@ -386,6 +398,7 @@ async function apiSearch(query: string, limit: number): Promise<FredSearchResult
     }),
   );
   return (data.seriess ?? []).map((s) => ({
+    provider: 'fred',
     id: s.id,
     title: s.title,
     units: s.units_short || s.units,
@@ -457,8 +470,9 @@ export async function getSeries(
           }),
         ]);
 
+        const stamp = { provider: 'fred', source: 'scrape', sourceUrl: seriesUrl(id) } as const;
         const series: FredSeries = meta
-          ? { ...meta, source: 'scrape' }
+          ? { ...meta, ...stamp }
           : {
               id,
               title: id,
@@ -470,7 +484,7 @@ export async function getSeries(
               observationStart: observations[0]?.date ?? '',
               observationEnd: observations.at(-1)?.date ?? '',
               notes: '',
-              source: 'scrape',
+              ...stamp,
             };
 
         if (!series.observationStart) series.observationStart = observations[0]?.date ?? '';
@@ -485,7 +499,19 @@ export async function getSeries(
   });
 }
 
-export async function searchSeries(query: string, limit = 25): Promise<FredSearchResponse> {
+/**
+ * Search FRED's catalogue, saying which arm answered.
+ *
+ * Returns {@link Attributed} rather than the old response envelope. FRED is one
+ * of eight publishers `ECOS` asks, and *that* envelope — which providers
+ * failed, which were skipped for want of a key — describes the whole fan-out
+ * rather than FRED. Which arm answered still describes FRED, so it stays, and
+ * `/api/fred/search` rebuilds the shape its callers expect from both halves.
+ */
+export async function searchSeries(
+  query: string,
+  limit = 25,
+): Promise<Attributed<FredSearchResult[]>> {
   const q = query.trim();
   if (!q) {
     throw new UpstreamError('Search needs at least one word', { code: 'bad_request' });
@@ -499,9 +525,6 @@ export async function searchSeries(query: string, limit = 25): Promise<FredSearc
       () => scrapeSearch(q, capped),
       () => apiSearch(q, capped),
     );
-    // Which arm answered is reported by the chain rather than by a variable the
-    // fallback reassigned on its way past.
-    const { value: results, source } = await firstAnswer(providers, options);
-    return { query: q, results, source: source as 'scrape' | 'api' };
+    return firstAnswer(providers, options);
   });
 }
