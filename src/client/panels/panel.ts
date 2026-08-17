@@ -11,10 +11,16 @@
  * Subclasses implement `load()` and `render()`. They never touch timers or
  * AbortControllers themselves — `refresh()` cancels any previous request before
  * starting a new one, so a slow response can never overwrite a newer one.
+ *
+ * The row cursor lives here too, for the same reason the frame does: every
+ * panel renders rows that run a command when clicked, so every panel gets a
+ * keyboard cursor over them for free, and `Enter` reaches whatever the mouse
+ * could.
  */
 
 import { el } from '../lib/dom.js';
 import { ApiRequestError } from '../lib/api.js';
+import { looksLikeTicker, parse } from '../terminal/parser.js';
 
 export interface PanelContext {
   /** Run a terminal command as if typed — used by clickable rows. */
@@ -22,6 +28,18 @@ export interface PanelContext {
   /** Print a line to the message log. */
   log(message: string, level?: 'info' | 'warn' | 'error'): void;
 }
+
+/**
+ * Everything a keyboard can land on inside a panel body.
+ *
+ * Deliberately the same set the mouse can click, matched by the classes the
+ * panels already put on those elements — a row that gained a click handler is
+ * navigable the day it gains it, with nothing else to remember.
+ */
+const NAVIGABLE = '.clickable, .group-header, .picker-chip, .example, .action, .notes > summary';
+
+/** How far `ROW NEXT` scrolls a panel that has no rows to move through. */
+const SCROLL_STEP = 56;
 
 export abstract class Panel<T = unknown> {
   /** Stable id, used for focus and the `CLS` command. */
@@ -36,11 +54,14 @@ export abstract class Panel<T = unknown> {
   #titleEl!: HTMLElement;
   #subtitleEl!: HTMLElement;
   #statusEl!: HTMLElement;
+  #indexEl!: HTMLElement;
   #timer: number | undefined;
   #controller: AbortController | undefined;
   #destroyed = false;
   #lastLoadedAt: number | undefined;
   #lastData: T | undefined;
+  /** Row under the keyboard cursor, as an index into {@link #navigable}. */
+  #cursor = -1;
 
   /**
    * Poll interval in ms. `0` disables polling — for static content.
@@ -84,12 +105,25 @@ export abstract class Panel<T = unknown> {
     return this.#lastData;
   }
 
+  /**
+   * What `$` means in a key binding while this panel is focused — its ticker,
+   * symbol or series id.
+   *
+   * Panels built around one market override this; the list panels do not need
+   * to, because their rows answer the question themselves (see
+   * {@link cursorSubject}).
+   */
+  subject(): string | undefined {
+    return undefined;
+  }
+
   /* -------------------------------------------------------------- frame */
 
   #buildFrame(): HTMLElement {
     this.#titleEl = el('span', { class: 'panel-title' });
     this.#subtitleEl = el('span', { class: 'panel-subtitle' });
     this.#statusEl = el('span', { class: 'panel-status' });
+    this.#indexEl = el('span', { class: 'panel-index' });
 
     const close = el('button', {
       class: 'panel-close',
@@ -104,6 +138,7 @@ export abstract class Panel<T = unknown> {
     });
 
     const header = el('div', { class: 'panel-header' }, [
+      this.#indexEl,
       this.#titleEl,
       this.#subtitleEl,
       el('span', { class: 'panel-spacer' }),
@@ -111,10 +146,28 @@ export abstract class Panel<T = unknown> {
       close,
     ]);
 
+    // Clicking a row moves the keyboard cursor to it, so a reader who reaches
+    // for the mouse once does not then have to walk the cursor back down.
+    this.body.addEventListener('click', (event) => {
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(NAVIGABLE);
+      if (!target) return;
+      const index = this.#navigable().indexOf(target);
+      if (index !== -1) this.#setCursor(index, { scroll: false });
+    });
+
     return el('section', { class: 'panel', tabindex: '-1', 'data-panel-id': this.id }, [
       header,
       this.body,
     ]);
+  }
+
+  /**
+   * The panel's position in the workspace, shown in its header and typed as
+   * `FOCUS <n>` — which is what `Alt+3` runs.
+   */
+  setIndex(index: number): void {
+    this.#indexEl.textContent = String(index);
+    this.root.dataset['index'] = String(index);
   }
 
   #setStatus(text: string, className = ''): void {
@@ -176,6 +229,10 @@ export abstract class Panel<T = unknown> {
 
       this.body.replaceChildren();
       this.render(data);
+      // The rows are new DOM, so the cursor has to be re-drawn onto them. It
+      // survives by index rather than identity: a watchlist re-polls every six
+      // seconds and losing your place that often would make the cursor useless.
+      this.#setCursor(this.#cursor, { scroll: false });
       this.#updateHeader();
       this.#lastLoadedAt = Date.now();
       this.#setStatus(this.#stamp(), 'ok');
@@ -217,6 +274,91 @@ export abstract class Panel<T = unknown> {
         hint ? el('div', { class: 'panel-error-hint', text: hint }) : null,
       ]),
     );
+  }
+
+  /* ---------------------------------------------------------- row cursor */
+
+  #navigable(): HTMLElement[] {
+    return [...this.body.querySelectorAll<HTMLElement>(NAVIGABLE)];
+  }
+
+  #setCursor(index: number, options: { scroll?: boolean } = {}): void {
+    const targets = this.#navigable();
+    for (const target of targets) target.classList.remove('is-cursor');
+
+    if (targets.length === 0 || index < 0) {
+      this.#cursor = targets.length === 0 ? -1 : Math.min(Math.max(index, -1), targets.length - 1);
+      return;
+    }
+
+    this.#cursor = Math.min(index, targets.length - 1);
+    const target = targets[this.#cursor];
+    if (!target) return;
+    target.classList.add('is-cursor');
+    if (options.scroll !== false) target.scrollIntoView({ block: 'nearest' });
+  }
+
+  /**
+   * Move the row cursor, or scroll the body when there is nothing to move
+   * through — a chart has no rows, and `j` should still take you down the
+   * panel rather than doing nothing at all.
+   */
+  moveCursor(step: number | 'top' | 'end'): boolean {
+    const targets = this.#navigable();
+
+    if (targets.length === 0) {
+      const body = this.body;
+      if (step === 'top') body.scrollTop = 0;
+      else if (step === 'end') body.scrollTop = body.scrollHeight;
+      else body.scrollTop += step * SCROLL_STEP;
+      return false;
+    }
+
+    if (step === 'top') this.#setCursor(0);
+    else if (step === 'end') this.#setCursor(targets.length - 1);
+    // From nowhere, a step up lands on the last row rather than refusing.
+    else if (this.#cursor === -1) this.#setCursor(step > 0 ? 0 : targets.length - 1);
+    else this.#setCursor(Math.min(Math.max(this.#cursor + step, 0), targets.length - 1));
+
+    return true;
+  }
+
+  /** Activate the row under the cursor — the same code path a click takes. */
+  activateCursor(): boolean {
+    const target = this.#navigable()[this.#cursor];
+    if (!target) return false;
+    target.click();
+    return true;
+  }
+
+  /**
+   * The row's second action: the `×` on a watchlist row, the feed link on a
+   * market row. Nothing happens on a row that has none.
+   */
+  activateRowAction(): boolean {
+    const target = this.#navigable()[this.#cursor];
+    const action = target?.querySelector<HTMLElement>('.row-action');
+    if (!action) return false;
+    action.click();
+    return true;
+  }
+
+  /**
+   * What `$` means with the cursor on a row.
+   *
+   * Rows record the command they run, and the first argument of that command is
+   * the thing the row is about — so `OB $` on a leaderboard row means the book
+   * for *that* market. A row whose command takes words rather than a reference
+   * (a Billboard entry searching for its own title) answers nothing, and `$`
+   * falls back to the panel.
+   */
+  cursorSubject(): string | undefined {
+    const target = this.#navigable()[this.#cursor];
+    const command = target?.dataset['command'];
+    if (!command) return undefined;
+
+    const argument = parse(command).args[0];
+    return looksLikeTicker(argument) ? argument : undefined;
   }
 
   destroy(): void {

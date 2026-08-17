@@ -29,6 +29,7 @@ export class CommandLine {
   /** Cycles through candidates on repeated Tab presses. */
   #completionIndex = 0;
   #completionPrefix: string | null = null;
+  #onEscape: (() => void) | undefined;
 
   constructor(workspace: Workspace, onSubmit: (command: string) => void) {
     this.#workspace = workspace;
@@ -68,6 +69,21 @@ export class CommandLine {
     this.#input.focus();
   }
 
+  blur(): void {
+    this.#input.blur();
+  }
+
+  /**
+   * What `Esc` does once the line is already empty.
+   *
+   * Clearing is the first meaning of the key; with nothing left to clear it
+   * means "I am done typing", which is how the keyboard reaches the panels
+   * without a mouse or a second shortcut to remember.
+   */
+  onEscape(handler: () => void): void {
+    this.#onEscape = handler;
+  }
+
   /** Put text on the line without running it — used by "click to fill". */
   setValue(value: string): void {
     this.#input.value = value;
@@ -100,6 +116,12 @@ export class CommandLine {
   /* ------------------------------------------------------------- keyboard */
 
   #onKeyDown(event: KeyboardEvent): void {
+    // A modified key belongs to the key map, not to the line editor. Without
+    // this, `Alt+Enter` — "open the row under the cursor" — also submitted
+    // whatever was half-typed here, and `Alt+↓` walked history on its way past.
+    // Shift is not a modifier in that sense: `Shift+Tab` cycles completions.
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+
     switch (event.key) {
       case 'Enter': {
         event.preventDefault();
@@ -123,6 +145,10 @@ export class CommandLine {
       }
       case 'Escape': {
         event.preventDefault();
+        if (this.#input.value === '') {
+          this.#onEscape?.();
+          return;
+        }
         this.#input.value = '';
         this.#historyCursor = 0;
         this.#completionPrefix = null;
@@ -131,11 +157,6 @@ export class CommandLine {
       }
       default:
         break;
-    }
-
-    if (event.ctrlKey && event.key.toLowerCase() === 'l') {
-      event.preventDefault();
-      this.clearLog();
     }
   }
 

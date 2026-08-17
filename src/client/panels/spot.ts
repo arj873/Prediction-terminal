@@ -106,6 +106,10 @@ export class SpotPanel extends Panel<SpotData> {
     return this.#options.symbol;
   }
 
+  override subject(): string {
+    return this.#options.symbol;
+  }
+
   protected override subtitle(): string {
     const { interval, style, overlays } = this.#options;
     const parts = [`${INTERVAL_LABEL[interval]} · ${style}`];

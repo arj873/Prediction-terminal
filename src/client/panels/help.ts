@@ -5,6 +5,7 @@
 
 import { cell, el, row, table } from '../lib/dom.js';
 import { Panel, type PanelContext } from './panel.js';
+import { bindRow } from './table.js';
 import { COMMANDS, COMMAND_INDEX, type Command } from '../terminal/registry.js';
 
 const GROUP_TITLES: Record<Command['group'], string> = {
@@ -71,9 +72,7 @@ export class HelpPanel extends Panel<Command[]> {
             cell(command.summary),
             cell((command.aliases ?? []).join(' '), 'mono dim'),
           ]);
-          tr.classList.add('clickable');
-          tr.title = `HELP ${command.verb}`;
-          tr.addEventListener('click', () => this.context.run(`HELP ${command.verb}`));
+          bindRow(tr, `HELP ${command.verb}`, (line) => this.context.run(line));
           return tr;
         });
 
@@ -85,20 +84,28 @@ export class HelpPanel extends Panel<Command[]> {
       );
     }
 
+    // The key map is generated from the bindings themselves, in its own panel —
+    // duplicating it here is how the two would come to disagree. What is left
+    // is the handful worth knowing before you have read it.
+    const keyRow = (key: string, action: string): HTMLTableRowElement =>
+      row([cell(key, 'mono strong'), cell(action)]);
+
     this.body.append(
       el('div', { class: 'help-group' }, [
-        el('h3', { class: 'help-group-title', text: 'KEYS' }),
+        el('h3', { class: 'help-group-title', text: 'KEYS — run KEYS for the whole map' }),
         table(
           ['KEY', 'ACTION'],
           [
-            row([cell('Enter', 'mono strong'), cell('Run the command')]),
-            row([cell('↑ / ↓', 'mono strong'), cell('Previous / next command in history')]),
-            row([cell('Tab', 'mono strong'), cell('Complete the verb')]),
-            row([cell('Esc', 'mono strong'), cell('Clear the command line')]),
-            row([cell('Ctrl+←/→', 'mono strong'), cell('Move focus between panels')]),
-            row([cell('Ctrl+W', 'mono strong'), cell('Close the focused panel')]),
-            row([cell('Ctrl+L', 'mono strong'), cell('Clear the message log')]),
-            row([cell('/', 'mono strong'), cell('Focus the command line from anywhere')]),
+            keyRow('Enter', 'Run the command'),
+            keyRow('↑ / ↓', 'Previous / next command in history'),
+            keyRow('Tab', 'Complete the verb'),
+            keyRow('Esc', 'Clear the line — again on an empty line hands the keyboard to the panels'),
+            keyRow('Alt+1…9', 'Focus that panel'),
+            keyRow('Alt+↑/↓', 'Move the row cursor · Alt+Enter opens the row'),
+            keyRow('Ctrl+←/→', 'Move focus between panels'),
+            keyRow('Alt+F', 'Maximise the focused panel'),
+            keyRow('Alt+Q', 'Close the focused panel · Ctrl+L clears the log'),
+            keyRow('Alt+K', 'The key map, where all of this can be rebound'),
           ],
         ),
       ]),

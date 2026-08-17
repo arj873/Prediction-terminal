@@ -169,6 +169,25 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Which half of the keyboard is live. CMD types; NAV drives the panels — and
+ * since NAV changes what every letter does, it has to be visible without
+ * looking for it.
+ */
+.status-mode {
+  border: 1px solid var(--border-bright);
+  color: var(--fg-muted);
+  padding: 0 6px;
+  letter-spacing: 0.12em;
+  font-size: var(--size-tiny);
+}
+
+.status-mode.is-nav {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--fg-bright);
+}
+
 .status-link.ok {
   color: var(--up);
 }
@@ -275,6 +294,20 @@ button {
   }
 }
 
+/*
+ * ZOOM: one tile takes the workspace. The column count is left alone — this is
+ * a look, not a re-layout, and it is one keystroke from being undone.
+ */
+.workspace.is-zoomed {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.workspace.is-zoomed > .panel:not(.is-zoomed) {
+  display: none;
+}
+
 /* ------------------------------------------------------------------- panel */
 
 .panel {
@@ -289,6 +322,26 @@ button {
 
 .panel.is-focused {
   border-color: var(--fg);
+}
+
+/* In NAV mode the focused tile is the one the keyboard is talking to. */
+.workspace.is-nav .panel.is-focused {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+}
+
+.panel-index {
+  color: var(--fg-muted);
+  font-size: var(--size-tiny);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-bright);
+  padding: 0 3px;
+  line-height: 1.3;
+}
+
+.panel.is-focused .panel-index {
+  color: var(--fg-bright);
+  border-color: var(--fg-dim);
 }
 
 .panel-header {
@@ -446,6 +499,36 @@ button {
 
 .data-table tr.clickable {
   cursor: pointer;
+}
+
+/*
+ * The row cursor — where Enter would land.
+ *
+ * A left bar rather than a fill, so it reads as a position and not as a
+ * selected state, and so it stays legible on the rows that already carry a
+ * colour of their own. It dims on an unfocused panel: the cursor is still
+ * there, but it is not the one the keyboard is driving.
+ */
+.data-table tr.is-cursor > td {
+  background: var(--accent-soft);
+}
+
+.data-table tr.is-cursor > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.group-header.is-cursor,
+.compare-leg.is-cursor,
+.picker-chip.is-cursor,
+.example.is-cursor,
+.action.is-cursor,
+.notes > summary.is-cursor {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.panel:not(.is-focused) .is-cursor {
+  opacity: 0.6;
 }
 
 .num {
@@ -995,6 +1078,28 @@ button {
   color: var(--fg-dim);
   font-size: var(--size-small);
   line-height: 1.7;
+}
+
+/*
+ * KEYS: the chord and the command it runs are the two columns being read
+ * together, so both hug their content and the description takes what is left —
+ * a zoomed panel would otherwise strand them at opposite ends of the tile.
+ */
+.keys-table td:first-child,
+.keys-table th:first-child,
+.keys-table td:nth-child(2),
+.keys-table th:nth-child(2) {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.keys-table td:first-child {
+  color: var(--fg-bright);
+}
+
+.keys-table td:nth-child(2) {
+  color: var(--accent);
+  padding-right: 24px;
 }
 
 .help-detail {

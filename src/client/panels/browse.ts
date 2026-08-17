@@ -22,6 +22,7 @@ import { venue, type SearchResponse } from '../lib/api.js';
 import { cell, el, row, table } from '../lib/dom.js';
 import { cents, compact, countdown, direction, signedCents, truncate } from '../lib/format.js';
 import { Panel, type PanelContext } from './panel.js';
+import { bindRow } from './table.js';
 import type { Workspace } from '../state.js';
 
 /** Shared column layout for any list of markets. */
@@ -36,7 +37,7 @@ function venueCell(v: Venue): HTMLTableCellElement {
   return td;
 }
 
-function marketRow(market: Market, onOpen: (ref: string) => void): HTMLTableRowElement {
+function marketRow(market: Market, run: (command: string) => void): HTMLTableRowElement {
   const ref = formatRef({ venue: market.venue, id: market.ticker });
   const tr = row([
     venueCell(market.venue),
@@ -50,9 +51,7 @@ function marketRow(market: Market, onOpen: (ref: string) => void): HTMLTableRowE
     cell(compact(market.openInterest), 'num dim'),
     cell(countdown(market.closeTime), 'num dim'),
   ]);
-  tr.classList.add('clickable');
-  tr.title = `${market.title}\nClick to chart ${ref}`;
-  tr.addEventListener('click', () => onOpen(ref));
+  bindRow(tr, `GP ${ref}`, run, `${market.title}\nClick to chart ${ref}`);
   return tr;
 }
 
@@ -163,13 +162,17 @@ export class SearchPanel extends Panel<MultiSearch> {
         el('span', { class: 'group-meta', text: `${hit.markets.length} contracts` }),
         el('span', { class: 'group-meta', text: `24h ${compact(hit.volume24h)}` }),
       ]);
-      header.addEventListener('click', () => this.context.run(`EVT ${eventRef}`));
-      header.title = `Open the full ladder for ${eventRef}`;
+      bindRow(
+        header,
+        `EVT ${eventRef}`,
+        (command) => this.context.run(command),
+        `Open the full ladder for ${eventRef}`,
+      );
 
       // Show the liquid few inline; the ladder is one click away.
       const rows = hit.markets
         .slice(0, 4)
-        .map((market) => marketRow(market, (ref) => this.context.run(`GP ${ref}`)));
+        .map((market) => marketRow(market, (command) => this.context.run(command)));
 
       this.body.append(el('div', { class: 'group' }, [header, table(MARKET_HEADERS, rows)]));
     }
@@ -194,6 +197,10 @@ export class EventPanel extends Panel<VenueEvent> {
   }
 
   protected override title(): string {
+    return formatRef(this.#ref);
+  }
+
+  override subject(): string {
     return formatRef(this.#ref);
   }
 
@@ -230,7 +237,7 @@ export class EventPanel extends Panel<VenueEvent> {
     );
 
     const sorted = [...event.markets].sort((a, b) => (b.mid ?? 0) - (a.mid ?? 0));
-    const rows = sorted.map((market) => marketRow(market, (ref) => this.context.run(`GP ${ref}`)));
+    const rows = sorted.map((market) => marketRow(market, (command) => this.context.run(command)));
 
     this.body.append(
       table(MARKET_HEADERS, rows),
@@ -365,9 +372,7 @@ export class TopPanel extends Panel<TopData> {
         cell(compact(market.volume24h), 'num'),
         cell(compact(market.openInterest), 'num dim'),
       ]);
-      tr.classList.add('clickable');
-      tr.title = `Click to chart ${ref}`;
-      tr.addEventListener('click', () => this.context.run(`GP ${ref}`));
+      bindRow(tr, `GP ${ref}`, (command) => this.context.run(command), `Click to chart ${ref}`);
       return tr;
     });
 
@@ -446,8 +451,7 @@ export class WatchlistPanel extends Panel<Market[]> {
         cell(countdown(market.closeTime), 'num dim'),
         actionCell,
       ]);
-      tr.classList.add('clickable');
-      tr.addEventListener('click', () => this.context.run(`GP ${ref}`));
+      bindRow(tr, `GP ${ref}`, (command) => this.context.run(command), `Click to chart ${ref}`);
       return tr;
     });
 

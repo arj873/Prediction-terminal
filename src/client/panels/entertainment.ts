@@ -19,6 +19,7 @@ import { ent } from '../lib/api.js';
 import { append, cell, el, field, row, table } from '../lib/dom.js';
 import { compact, countdown, truncate } from '../lib/format.js';
 import { Panel, type PanelContext } from './panel.js';
+import { bindRow } from './table.js';
 
 /* ------------------------------------------------------------------- ENT */
 
@@ -130,9 +131,12 @@ export class EntPanel extends Panel<EntResponse> {
       cell(countdown(event.closeTime), 'num dim'),
       feedCell,
     ]);
-    tr.classList.add('clickable');
-    tr.title = `${event.title}\nClick to open the ladder for ${event.eventTicker}`;
-    tr.addEventListener('click', () => this.context.run(`EVT ${event.eventTicker}`));
+    bindRow(
+      tr,
+      `EVT ${event.eventTicker}`,
+      (command) => this.context.run(command),
+      `${event.title}\nClick to open the ladder for ${event.eventTicker}`,
+    );
     return tr;
   }
 }
@@ -297,9 +301,7 @@ export class RtSearchPanel extends Panel<RtSearchResponse> {
         cell(result.mediaType, 'dim'),
         cell(result.slug, 'mono dim'),
       ]);
-      tr.classList.add('clickable');
-      tr.title = `Open ${result.slug}`;
-      tr.addEventListener('click', () => this.context.run(`RT ${result.slug}`));
+      bindRow(tr, `RT ${result.slug}`, (command) => this.context.run(command), `Open ${result.slug}`);
       return tr;
     });
 

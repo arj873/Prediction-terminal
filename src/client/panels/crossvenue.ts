@@ -24,6 +24,7 @@ import { xv } from '../lib/api.js';
 import { cell, el, row, table } from '../lib/dom.js';
 import { cents, compact, countdown, signedCents, truncate } from '../lib/format.js';
 import { Panel, type PanelContext } from './panel.js';
+import { bindRow } from './table.js';
 
 /** Confidence as a chip. `linked` is stated; the rest are the matcher reading. */
 function confidenceChip(confidence: MatchConfidence, reason: string): HTMLElement {
@@ -126,9 +127,12 @@ export class LinkedSeriesPanel extends Panel<LinkedSeriesResponse> {
         cell(compact(leg.volume24h), 'num'),
         cell(countdown(leg.closeTime), 'num dim'),
       ]);
-      tr.classList.add('clickable');
-      tr.title = `Compare ${formatRef(ref)} across venues`;
-      tr.addEventListener('click', () => this.context.run(`XV ${formatRef(ref)}`));
+      bindRow(
+        tr,
+        `XV ${formatRef(ref)}`,
+        (command) => this.context.run(command),
+        `Compare ${formatRef(ref)} across venues`,
+      );
       return tr;
     });
 
@@ -161,6 +165,10 @@ export class ComparePanel extends Panel<CompareResponse> {
     return formatRef(this.#ref);
   }
 
+  override subject(): string {
+    return formatRef(this.#ref);
+  }
+
   protected override subtitle(): string {
     return this.#title ? truncate(this.#title, 64) : 'cross-venue quote';
   }
@@ -184,11 +192,12 @@ export class ComparePanel extends Panel<CompareResponse> {
         confidenceChip(event.confidence, event.reason),
         el('span', { class: 'dim', text: countdown(event.closeTime) }),
       ]);
-      node.title = `${event.title}\n${event.reason}`;
-      node.addEventListener('click', () =>
-        this.context.run(`EVT ${formatRef({ venue: event.venue, id: event.eventTicker })}`),
+      bindRow(
+        node,
+        `EVT ${formatRef({ venue: event.venue, id: event.eventTicker })}`,
+        (command) => this.context.run(command),
+        `${event.title}\n${event.reason}`,
       );
-      node.classList.add('clickable');
       legs.append(node);
     }
     this.body.append(legs);

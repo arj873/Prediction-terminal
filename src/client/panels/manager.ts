@@ -17,11 +17,12 @@ export class PanelManager {
   readonly root: HTMLElement;
   readonly #panels: Panel[] = [];
   #focusedId: string | undefined;
+  #zoomedId: string | undefined;
   #columns = 2;
   #onChange: (() => void) | undefined;
 
   constructor() {
-    this.root = el('div', { class: 'workspace', 'data-columns': '2' });
+    this.root = el('div', { class: 'workspace', 'data-columns': '2', tabindex: '-1' });
 
     // Focus follows the click, anywhere inside a panel.
     this.root.addEventListener('mousedown', (event) => {
@@ -90,6 +91,7 @@ export class PanelManager {
       this.close(evicted.id, { silent: true });
     }
 
+    this.#renumber();
     this.#onChange?.();
     return panel;
   }
@@ -100,6 +102,7 @@ export class PanelManager {
 
     const [panel] = this.#panels.splice(index, 1);
     panel!.destroy();
+    if (this.#zoomedId === id) this.#applyZoom(undefined);
 
     if (this.#focusedId === id) {
       const next = this.#panels[Math.min(index, this.#panels.length - 1)];
@@ -107,6 +110,7 @@ export class PanelManager {
       if (next) this.focus(next.id);
     }
 
+    this.#renumber();
     if (!options.silent) this.#onChange?.();
     return true;
   }
@@ -115,8 +119,14 @@ export class PanelManager {
     const count = this.#panels.length;
     for (const panel of this.#panels.splice(0)) panel.destroy();
     this.#focusedId = undefined;
+    this.#applyZoom(undefined);
     this.#onChange?.();
     return count;
+  }
+
+  /** Number the tiles 1..n, left to right, so `FOCUS 3` names something. */
+  #renumber(): void {
+    this.#panels.forEach((panel, index) => panel.setIndex(index + 1));
   }
 
   focus(id: string): void {
@@ -135,6 +145,72 @@ export class PanelManager {
     const current = this.#panels.findIndex((p) => p.id === this.#focusedId);
     const next = (current + delta + this.#panels.length) % this.#panels.length;
     this.focus(this.#panels[next]!.id);
+  }
+
+  /** Focus the nth tile, counting from 1 as the header badges do. */
+  focusAt(position: number): boolean {
+    const panel = this.#panels[position - 1];
+    if (!panel) return false;
+    this.focus(panel.id);
+    return true;
+  }
+
+  /**
+   * Hand the browser's keyboard focus to the focused tile.
+   *
+   * NAV mode needs a real focus target: without one the prompt keeps it and
+   * every letter meant for the workspace lands in the command line instead.
+   * False when there is no panel to hand it to.
+   */
+  focusElement(): boolean {
+    const panel = this.focused ?? this.#panels[0];
+    if (!panel) return false;
+    this.focus(panel.id);
+    panel.root.focus({ preventScroll: true });
+    return true;
+  }
+
+  /* ---------------------------------------------------------------- zoom */
+
+  get zoomed(): Panel | undefined {
+    return this.#panels.find((p) => p.id === this.#zoomedId);
+  }
+
+  /**
+   * Give one tile the whole workspace, or hand the grid back.
+   *
+   * The grid keeps its column count while zoomed — restoring is a keystroke
+   * away and re-laying everything out twice is more disruptive than the tile
+   * that is temporarily hidden.
+   */
+  toggleZoom(id?: string): boolean {
+    const target = id ?? this.#focusedId;
+    if (!target || !this.find(target)) return false;
+    this.#applyZoom(this.#zoomedId === target ? undefined : target);
+    this.#onChange?.();
+    return true;
+  }
+
+  #applyZoom(id: string | undefined): void {
+    this.#zoomedId = id;
+    this.root.classList.toggle('is-zoomed', id !== undefined);
+    for (const panel of this.#panels) {
+      panel.root.classList.toggle('is-zoomed', panel.id === id);
+    }
+    // The tile changed size without the grid template changing, so nothing else
+    // will tell the charts to re-measure.
+    requestAnimationFrame(() => {
+      for (const panel of this.#panels) panel.onResize();
+    });
+  }
+
+  /**
+   * What `$` stands for right now: the row under the cursor in the focused
+   * panel, or failing that whatever the panel itself is about.
+   */
+  subject(): string | undefined {
+    const panel = this.focused;
+    return panel?.cursorSubject() ?? panel?.subject();
   }
 
   setColumns(columns: number): void {

@@ -16,6 +16,7 @@ import { PanelManager } from './panels/manager.js';
 import type { PanelContext } from './panels/panel.js';
 import { Workspace } from './state.js';
 import { CommandLine } from './terminal/commandline.js';
+import { KeyRouter, Keymap, type KeyMode } from './terminal/keys.js';
 import { parse } from './terminal/parser.js';
 import { COMMAND_INDEX, UsageError, type CommandContext } from './terminal/registry.js';
 import { TickerTape } from './terminal/tape.js';
@@ -26,11 +27,14 @@ workspace.applyTheme();
 const panels = new PanelManager();
 panels.setColumns(workspace.columns);
 
+const keys = new Keymap(workspace);
+
 /* ------------------------------------------------------------------ header */
 
 const clockEl = el('span', { class: 'status-clock' });
 const linkEl = el('span', { class: 'status-link', text: '● CONNECTING' });
 const countEl = el('span', { class: 'status-item' });
+const modeEl = el('span', { class: 'status-mode', text: 'CMD' });
 
 const header = el('header', { class: 'topbar' }, [
   el('div', { class: 'brand' }, [
@@ -38,6 +42,7 @@ const header = el('header', { class: 'topbar' }, [
     el('span', { class: 'brand-name', text: 'PREDICTION TERMINAL' }),
   ]),
   el('div', { class: 'status' }, [
+    modeEl,
     countEl,
     el('span', { class: 'status-item', text: 'KALSHI · POLYMARKET · POLYMARKET US · FRED' }),
     linkEl,
@@ -54,7 +59,8 @@ window.setInterval(tickClock, 1000);
 
 function updateCounts(): void {
   const count = panels.panels.length;
-  countEl.textContent = `${count} panel${count === 1 ? '' : 's'} · ${panels.columns} col`;
+  const layout = panels.zoomed ? 'zoom' : `${panels.columns} col`;
+  countEl.textContent = `${count} panel${count === 1 ? '' : 's'} · ${layout}`;
 }
 panels.onChange(updateCounts);
 updateCounts();
@@ -62,6 +68,7 @@ updateCounts();
 /* -------------------------------------------------------------- dispatch */
 
 let commandLine: CommandLine;
+let router: KeyRouter;
 
 function log(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
   commandLine.log(message, level);
@@ -76,7 +83,10 @@ const commandContext: CommandContext = {
   panels,
   workspace,
   panelContext,
+  keys,
   log,
+  clearLog: () => commandLine.clearLog(),
+  setMode: (mode) => router.setMode(mode),
   run: (command) => run(command),
 };
 
@@ -88,6 +98,15 @@ const commandContext: CommandContext = {
  * command's usage line so the fix is immediate.
  */
 function run(input: string): void {
+  // A leading `>` means "type this, do not run it" — how a key binding opens a
+  // command that still needs an argument, without guessing at the argument.
+  if (input.startsWith('>')) {
+    const line = input.slice(1).trim();
+    if (line) commandLine.setValue(`${line} `);
+    else commandLine.focus();
+    return;
+  }
+
   const parsed = parse(input);
   if (!parsed.verb) return;
 
@@ -134,42 +153,32 @@ app.append(header, tape.root, panels.root, commandLine.root);
 
 /* ------------------------------------------------------------- shortcuts */
 
-window.addEventListener('keydown', (event) => {
-  const target = event.target as HTMLElement | null;
-  const typing =
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target?.isContentEditable === true;
-
-  // `/` focuses the prompt from anywhere, vim-style.
-  if (event.key === '/' && !typing) {
-    event.preventDefault();
-    commandLine.focus();
-    return;
-  }
-
-  if (event.ctrlKey && event.key === 'ArrowRight') {
-    event.preventDefault();
-    panels.cycleFocus(1);
-    return;
-  }
-  if (event.ctrlKey && event.key === 'ArrowLeft') {
-    event.preventDefault();
-    panels.cycleFocus(-1);
-    return;
-  }
-  if (event.ctrlKey && event.key.toLowerCase() === 'w') {
-    event.preventDefault();
-    const focused = panels.focused;
-    if (focused) panels.close(focused.id);
-    return;
-  }
-
-  // Any printable key with the workspace focused starts a command.
-  if (!typing && !event.ctrlKey && !event.metaKey && !event.altKey && /^[a-zA-Z?]$/.test(event.key)) {
-    commandLine.focus();
-  }
+/**
+ * Every key press goes through the router, which turns it into a command line
+ * and hands it back to `run()`. There is no second dispatch path: a shortcut
+ * can only do something you could also have typed, and `KEYS` can only rebind
+ * what the router already fires.
+ */
+router = new KeyRouter({
+  keymap: keys,
+  run: (command) => run(command),
+  log,
+  subject: () => panels.subject(),
+  focusPrompt: () => commandLine.focus(),
+  blurPrompt: () => commandLine.blur(),
+  focusWorkspace: () => panels.focusElement(),
+  onMode: (mode: KeyMode) => {
+    modeEl.textContent = mode === 'nav' ? 'NAV' : 'CMD';
+    modeEl.classList.toggle('is-nav', mode === 'nav');
+    panels.root.classList.toggle('is-nav', mode === 'nav');
+  },
 });
+router.attach(window);
+
+// Esc with nothing left to clear hands the keyboard to the panels; putting it
+// back in the prompt is what takes it away again.
+commandLine.onEscape(() => router.setMode('nav'));
+commandLine.root.addEventListener('focusin', () => router.setMode('cmd'));
 
 /* -------------------------------------------------------------- liveness */
 
@@ -192,7 +201,7 @@ commandLine.log(
   'PREDICTION TERMINAL — Kalshi · Polymarket · Polymarket US · FRED · Billboard',
   'info',
 );
-commandLine.log('Type HELP for commands, or click an example below.', 'info');
+commandLine.log('Type HELP for commands, KEYS for the keyboard, or click an example below.', 'info');
 
 tape.start();
 commandLine.focus();

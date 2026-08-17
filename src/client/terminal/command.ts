@@ -6,18 +6,29 @@
  * collects them. `registry.ts` and `panels/help.ts` already form a cycle —
  * benign only because neither dereferences the other at module scope — and
  * keeping this side of it dependency-free is what stops that cycle spreading.
+ *
+ * Every import here is type-only, `keys.ts`'s included: that module imports
+ * `UsageError` from this one at runtime, and only an erased import keeps the
+ * pair from becoming a real cycle.
  */
 
 import type { PanelManager } from '../panels/manager.js';
 import type { Panel, PanelContext } from '../panels/panel.js';
 import type { Workspace } from '../state.js';
+import type { KeyMode, Keymap } from './keys.js';
 import type { ParsedCommand } from './parser.js';
 
 export interface CommandContext {
   panels: PanelManager;
   workspace: Workspace;
   panelContext: PanelContext;
+  /** The live key map, for `KEYS`. */
+  keys: Keymap;
   log(message: string, level?: 'info' | 'warn' | 'error'): void;
+  /** Wipe the message log. */
+  clearLog(): void;
+  /** Move the keyboard between the command line and the panels. */
+  setMode(mode: KeyMode): void;
   /** Re-dispatch a command string. */
   run(command: string): void;
 }

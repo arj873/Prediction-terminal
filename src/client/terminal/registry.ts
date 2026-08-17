@@ -26,12 +26,15 @@ import {
 } from '../panels/mediadata.js';
 import { DepthPanel, QuotePanel, TradesPanel } from '../panels/market.js';
 import { HelpPanel } from '../panels/help.js';
+import { KeysPanel } from '../panels/keys.js';
 import { NewsPanel, type NewsPanelOptions } from '../panels/news.js';
 import { SpotPanel, type SpotPanelOptions, type SpotStyle } from '../panels/spot.js';
+import { formatChord, type KeyScope } from './keys.js';
 import {
   isIsoDate,
   looksLikeSymbol,
   looksLikeTicker,
+  parse,
   parseDuration,
   parseInterval,
   type ParsedCommand,
@@ -328,6 +331,27 @@ function openSpot(options: SpotPanelOptions, context: CommandContext): void {
       overlays: [...new Set([...existing.options.overlays, ...incoming.overlays])],
     }),
   );
+}
+
+/* ---------------------------------------------------------- KEYS arguments */
+
+/** `--global` / `--panel` / `--scope=panel`, or nothing and let the chord say. */
+function scopeFlag(command: ParsedCommand): KeyScope | undefined {
+  const named = (command.flags['scope'] ?? '').toLowerCase();
+  if (command.flags['global'] === 'true' || named === 'global') return 'global';
+  if (command.flags['panel'] === 'true' || named === 'panel' || named === 'nav') return 'panel';
+  return undefined;
+}
+
+/**
+ * Re-join the arguments that make up a bound command line.
+ *
+ * Quoting has already been stripped by the tokeniser, so an argument that
+ * contained spaces gets its quotes back — otherwise `KEYS alt+f FSRCH "real
+ * gdp"` would store a three-argument command that means something else.
+ */
+function joinCommand(args: string[]): string {
+  return args.map((arg) => (/\s/.test(arg) ? `"${arg}"` : arg)).join(' ');
 }
 
 /* ------------------------------------------------------------------ table */
@@ -826,16 +850,129 @@ export const COMMANDS: Command[] = [
     aliases: ['LAYOUT'],
     group: 'workspace',
     summary: 'Set the number of panel columns',
-    usage: 'LAY <1-4>',
-    examples: ['LAY 1', 'LAY 3'],
+    usage: 'LAY <1-4|+|->',
+    examples: ['LAY 1', 'LAY 3', 'LAY +'],
     handler(command, { panels, workspace, log }) {
-      const value = Number(requireArg(command, 0, '1-4'));
+      const argument = requireArg(command, 0, '1-4');
+      // `+`/`-` are what a key binding wants: one keystroke, no argument to
+      // remember, and it stops at the ends rather than wrapping to one column.
+      const step = argument === '+' || argument.toUpperCase() === 'NEXT' ? 1 : argument === '-' ? -1 : 0;
+      const value = step === 0 ? Number(argument) : panels.columns + step;
+
       if (!Number.isFinite(value) || value < 1 || value > 4) {
+        if (step !== 0) return;
         throw new UsageError('Columns must be between 1 and 4');
       }
+
       panels.setColumns(value);
       workspace.setColumns(value);
       log(`Layout set to ${panels.columns} column${panels.columns === 1 ? '' : 's'}.`);
+    },
+  },
+  {
+    verb: 'FOCUS',
+    aliases: ['FOC'],
+    group: 'workspace',
+    summary: 'Move panel focus, or hand the keyboard to the panels',
+    usage: 'FOCUS <NEXT|PREV|1-9|LAST|NAV|CMD>',
+    examples: ['FOCUS NEXT', 'FOCUS 3', 'FOCUS NAV', 'FOCUS CMD'],
+    handler(command, { panels, setMode, log }) {
+      const target = (command.args[0] ?? 'NEXT').toUpperCase();
+
+      switch (target) {
+        case 'NAV':
+        case 'PANELS':
+          setMode('nav');
+          return;
+        case 'CMD':
+        case 'PROMPT':
+          setMode('cmd');
+          return;
+        case 'NEXT':
+        case '+':
+          panels.cycleFocus(1);
+          return;
+        case 'PREV':
+        case '-':
+          panels.cycleFocus(-1);
+          return;
+        case 'LAST':
+          if (!panels.focusAt(panels.panels.length)) log('No panels are open.', 'warn');
+          return;
+        default:
+          break;
+      }
+
+      const position = Number(target);
+      if (!Number.isInteger(position) || position < 1) {
+        throw new UsageError(`Unknown target "${command.args[0]}"`);
+      }
+      if (!panels.focusAt(position)) log(`There is no panel ${position}.`, 'warn');
+    },
+  },
+  {
+    verb: 'ROW',
+    aliases: ['SEL'],
+    group: 'workspace',
+    summary: 'Drive the row cursor inside the focused panel',
+    usage: 'ROW <NEXT|PREV|TOP|END|OPEN|ALT>',
+    examples: ['ROW NEXT', 'ROW OPEN', 'ROW ALT'],
+    handler(command, { panels, log }) {
+      const panel = panels.focused;
+      if (!panel) {
+        log('No panel is focused.', 'warn');
+        return;
+      }
+
+      const action = (command.args[0] ?? 'NEXT').toUpperCase();
+      switch (action) {
+        case 'NEXT':
+        case 'DOWN':
+          panel.moveCursor(1);
+          return;
+        case 'PREV':
+        case 'UP':
+          panel.moveCursor(-1);
+          return;
+        case 'TOP':
+        case 'FIRST':
+          panel.moveCursor('top');
+          return;
+        case 'END':
+        case 'LAST':
+          panel.moveCursor('end');
+          return;
+        case 'OPEN':
+        case 'GO':
+          if (!panel.activateCursor()) log('Nothing under the row cursor.', 'warn');
+          return;
+        case 'ALT':
+        case 'ACTION':
+          if (!panel.activateRowAction()) log('This row has no second action.', 'warn');
+          return;
+        default:
+          throw new UsageError(`Unknown row action "${command.args[0]}"`);
+      }
+    },
+  },
+  {
+    verb: 'ZOOM',
+    aliases: ['MAX', 'SOLO'],
+    group: 'workspace',
+    summary: 'Give the focused panel the whole workspace, or restore the grid',
+    usage: 'ZOOM',
+    handler(_command, { panels, log }) {
+      if (!panels.toggleZoom()) log('No panel is focused.', 'warn');
+    },
+  },
+  {
+    verb: 'CLR',
+    aliases: ['CLEARLOG'],
+    group: 'workspace',
+    summary: 'Clear the message log',
+    usage: 'CLR',
+    handler(_command, { clearLog }) {
+      clearLog();
     },
   },
   {
@@ -879,11 +1016,102 @@ export const COMMANDS: Command[] = [
     verb: 'REFRESH',
     aliases: ['R'],
     group: 'workspace',
-    summary: 'Force a reload of every panel',
-    usage: 'REFRESH',
-    handler(_command, { panels, log }) {
+    summary: 'Force a reload of every panel, or just the focused one',
+    usage: 'REFRESH [ALL|THIS]',
+    examples: ['REFRESH', 'REFRESH THIS'],
+    handler(command, { panels, log }) {
+      const scope = (command.args[0] ?? 'ALL').toUpperCase();
+
+      if (scope === 'THIS' || scope === 'PANEL') {
+        const focused = panels.focused;
+        if (!focused) {
+          log('No panel is focused.', 'warn');
+          return;
+        }
+        void focused.refresh();
+        return;
+      }
+
+      if (scope !== 'ALL') throw new UsageError(`Unknown scope "${command.args[0]}"`);
       panels.refreshAll();
       log(`Refreshing ${panels.panels.length} panels.`);
+    },
+  },
+  {
+    verb: 'KEYS',
+    aliases: ['KEY', 'KEYMAP', 'BIND'],
+    group: 'workspace',
+    summary: 'The key map: read it, rebind it, reset it',
+    usage: 'KEYS | KEYS <chord> <command…> | KEYS DEL <chord> | KEYS RESET',
+    examples: [
+      'KEYS',
+      'KEYS alt+b OB $',
+      'KEYS "g w" W',
+      'KEYS alt+e EVT --global',
+      'KEYS DEL alt+b',
+      'KEYS RESET',
+    ],
+    handler(command, { panels, panelContext, keys, log }) {
+      const openPanel = (): void => {
+        panels.open(KeysPanel.ID, () => new KeysPanel(KeysPanel.ID, panelContext, keys));
+        // Already open: the map it is showing is now out of date.
+        void panels.find(KeysPanel.ID)?.refresh();
+      };
+
+      const first = command.args[0];
+      if (first === undefined) {
+        openPanel();
+        return;
+      }
+
+      const action = first.toUpperCase();
+
+      if (action === 'RESET') {
+        log(`Restored the presets, forgetting ${keys.reset()} edits.`);
+        openPanel();
+        return;
+      }
+
+      if (action === 'DEL' || action === 'RM' || action === 'UNBIND' || action === '-') {
+        const chord = requireArg(command, 1, 'chord');
+        const removed = keys.remove(chord, scopeFlag(command));
+        log(
+          removed
+            ? `Unbound ${formatChord(removed.chord)}.`
+            : `${chord} is not bound to anything.`,
+        );
+        openPanel();
+        return;
+      }
+
+      // `KEYS SET <chord> …` and `KEYS <chord> …` mean the same thing; the verb
+      // is optional because under time pressure nobody types it.
+      const offset = action === 'SET' || action === 'ADD' || action === 'BIND' ? 1 : 0;
+      const chord = requireArg(command, offset, 'chord');
+      const line = joinCommand(command.args.slice(offset + 1));
+
+      if (!line) {
+        // A chord on its own is a question, not a binding.
+        const existing = keys.describe(chord, scopeFlag(command));
+        log(
+          existing
+            ? `${formatChord(existing.chord)} runs ${existing.command} (${existing.scope}, ${existing.source}).`
+            : `${chord} is not bound to anything.`,
+        );
+        openPanel();
+        return;
+      }
+
+      const bound = keys.set(chord, line, scopeFlag(command));
+      // A binding that names no command is a binding that will fail under the
+      // finger rather than here, so say so now.
+      const verb = parse(bound.command.startsWith('>') ? bound.command.slice(1) : bound.command).verb;
+      if (verb && !COMMAND_INDEX.has(verb)) {
+        log(`"${verb}" is not a command — this binding will report that when pressed.`, 'warn');
+      }
+
+      log(`${formatChord(bound.chord)} runs ${bound.command} (${bound.scope}).`);
+      openPanel();
     },
   },
   {

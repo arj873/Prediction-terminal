@@ -45,6 +45,10 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
     return formatRef(this.#ref);
   }
 
+  override subject(): string {
+    return formatRef(this.#ref);
+  }
+
   protected override subtitle(): string {
     const label = venueInfo(this.#ref.venue).label;
     const market = this.latest?.market;
@@ -175,6 +179,10 @@ export class DepthPanel extends Panel<OrderBook> {
     return formatRef(this.#ref);
   }
 
+  override subject(): string {
+    return formatRef(this.#ref);
+  }
+
   protected override subtitle(): string {
     return venueInfo(this.#ref.venue).label;
   }
@@ -256,6 +264,10 @@ export class TradesPanel extends Panel<TradesResponse> {
   }
 
   protected override title(): string {
+    return formatRef(this.#ref);
+  }
+
+  override subject(): string {
     return formatRef(this.#ref);
   }
 

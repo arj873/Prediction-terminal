@@ -12,6 +12,7 @@ import { TerminalChart, toFredData, type MouseEventParams } from '../lib/chart.j
 import { cell, el, field, row, table } from '../lib/dom.js';
 import { day, direction, metric, truncate } from '../lib/format.js';
 import { Panel, type PanelContext } from './panel.js';
+import { bindRow } from './table.js';
 
 export interface FredPanelOptions {
   id: string;
@@ -38,6 +39,10 @@ export class FredPanel extends Panel<FredSeriesResponse> {
   }
 
   protected override title(): string {
+    return this.#options.id.toUpperCase();
+  }
+
+  override subject(): string {
     return this.#options.id.toUpperCase();
   }
 
@@ -187,9 +192,7 @@ export class FredSearchPanel extends Panel<FredSearchResponse> {
         cell(result.units ?? '', 'dim'),
         cell(result.frequency ?? '', 'dim'),
       ]);
-      tr.classList.add('clickable');
-      tr.title = `Open ${result.id}`;
-      tr.addEventListener('click', () => this.context.run(`FRED ${result.id}`));
+      bindRow(tr, `FRED ${result.id}`, (command) => this.context.run(command), `Open ${result.id}`);
       return tr;
     });
 

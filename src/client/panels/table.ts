@@ -100,6 +100,27 @@ export function stackedCell(
 }
 
 /**
+ * Make an element run a command when it is activated.
+ *
+ * The command is recorded on the element as well as closed over, because the
+ * keyboard needs to read it back: `$` in a key binding means "the thing the row
+ * under the cursor is about", and the row's own command is where that is
+ * written down. Anything clickable should go through here so the two never
+ * disagree.
+ */
+export function bindRow(
+  node: HTMLElement,
+  command: string,
+  run: (command: string) => void,
+  title?: string,
+): void {
+  node.classList.add('clickable');
+  node.dataset['command'] = command;
+  if (title !== undefined) node.title = title;
+  node.addEventListener('click', () => run(command));
+}
+
+/**
  * A click target inside a clickable row.
  *
  * Stops propagation, so the cell's own command runs instead of the row's —
@@ -211,11 +232,7 @@ export function renderTable<R>(
 
     const command = options.rowCommand?.(item) ?? null;
     if (command !== null && options.run) {
-      const run = options.run;
-      tr.classList.add('clickable');
-      const title = options.rowTitle?.(item);
-      if (title !== undefined) tr.title = title;
-      tr.addEventListener('click', () => run(command));
+      bindRow(tr, command, options.run, options.rowTitle?.(item));
     }
 
     return tr;

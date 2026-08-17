@@ -21,7 +21,8 @@ feeds these markets settle against, driven entirely from a command prompt.
 
 Type a command, get a panel. Panels tile into a grid, poll on their own timers,
 and every table row is clickable so the mouse and the keyboard drive the same
-code path.
+code path. It is meant to be driven without the mouse at all: see
+[Keys](#keys).
 
 ---
 
@@ -249,24 +250,88 @@ resolves against. Those pairings are read off each series' own
 | Command | Usage |
 | --- | --- |
 | `W` | `W` · `W ADD <ticker>` · `W DEL <ticker>` · `W CLEAR` |
-| `LAY` | `LAY <1-4>` — panel columns |
+| `LAY` | `LAY <1-4>` · `LAY +` · `LAY -` — panel columns |
 | `THEME` | `THEME amber\|green\|ice` |
 | `CLS` | `CLS` · `CLS ALL` |
-| `REFRESH` | Force-reload every panel |
+| `ZOOM` | Give the focused panel the whole workspace, or restore the grid |
+| `FOCUS` | `FOCUS <NEXT\|PREV\|1-9\|LAST\|NAV\|CMD>` |
+| `ROW` | `ROW <NEXT\|PREV\|TOP\|END\|OPEN\|ALT>` — the row cursor inside a panel |
+| `REFRESH` | `REFRESH` · `REFRESH THIS` |
+| `CLR` | Clear the message log |
+| `KEYS` | `KEYS` · `KEYS <chord> <command>` · `KEYS DEL <chord>` · `KEYS RESET` |
 | `HELP` | `HELP [command]` |
 
 ### Keys
 
+Run `KEYS` for the live map — like `HELP`, it is generated from the bindings
+themselves. The terminal is built to be driven without the mouse: every panel
+opens from a key, every row can be reached with a cursor, and every binding can
+be replaced.
+
+**At the prompt.** These fire anywhere, including mid-word, so they never
+interrupt what you are typing.
+
 | Key | Action |
 | --- | --- |
-| `Enter` | Run |
-| `↑` / `↓` | Walk command history |
-| `Tab` | Complete the verb |
-| `Esc` | Clear the line |
+| `Enter` | Run · `↑`/`↓` walks history · `Tab` completes the verb |
+| `Esc` | Clear the line — again on an empty line hands the keyboard to the panels |
+| `Alt`+`1`…`9` | Focus that panel — the number is in its header |
 | `Ctrl`+`←`/`→` | Move focus between panels |
-| `Ctrl`+`W` | Close the focused panel |
+| `Alt`+`↑`/`↓` | Move the row cursor inside the focused panel |
+| `Alt`+`Enter` | Open the row under the cursor · `Alt`+`Backspace` runs its second action |
+| `Alt`+`F` | Maximise the focused panel · `Alt`+`Q` closes it · `Alt`+`R` reloads them all |
+| `Alt`+`W` `T` `N` `X` `K` `H` | Watchlist · leaderboard · news · cross-venue · key map · help |
+| `Alt`+`G` `S` `D` | Start a `GP`, `SRCH` or `DES` command without running it |
 | `Ctrl`+`L` | Clear the message log |
-| `/` | Focus the prompt from anywhere |
+
+**NAV mode.** `Esc` on an empty line (or `Alt`+`J`) hands the keyboard to the
+workspace — the header says `NAV` while it holds it. Plain letters are bindings
+there, so the vim keys are free:
+
+| Key | Action |
+| --- | --- |
+| `j` / `k` | Row cursor down / up — or scroll, in a panel with no rows |
+| `g` / `G` | First / last row · `Enter` or `o` opens it · `d` runs its second action |
+| `h` / `l` | Previous / next panel · `1`…`9` jumps to one · `Tab` cycles |
+| `c` `b` `q` `s` `v` `a` | Chart · book · quote · tape · cross-venue · add to watchlist, for the row under the cursor |
+| `f` `x` `r` | Maximise · close · reload this panel · `[` and `]` change the column count |
+| `w` `t` `n` `?` `H` | Watchlist · leaderboard · news · key map · help |
+| `/` or `Esc` | Back to the command line |
+
+An unbound letter in NAV mode is not swallowed: it takes you to the prompt with
+the character intact, so `SRCH` still starts by typing `S`.
+
+### Binding your own
+
+```
+> KEYS                       # the whole map, presets and edits together
+> KEYS alt+b OB $            # bind a chord
+> KEYS "g w" W               # a sequence — two chords, in order
+> KEYS alt+e EVT --panel     # force the scope the chord would not have chosen
+> KEYS alt+b                 # what is this bound to?
+> KEYS DEL alt+b             # unbind, presets included
+> KEYS RESET                 # forget every edit
+```
+
+Two rules decide where a binding lives. A chord carrying `Ctrl`, `Alt` or `Meta`
+— or a key that types nothing, like `F4` — is **global** and fires even while
+you are typing. Anything else is **panel**-scoped and fires only in NAV mode,
+because a global `j` would eat every `j` you ever type. `--global` and `--panel`
+override the guess, and a global binding that would swallow typing is refused.
+
+Two characters mean something inside a bound command:
+
+* **`$`** is the market under the row cursor, or failing that whatever the
+  focused panel is about. It is what makes one binding useful everywhere: `OB $`
+  is "the order book for the thing I am looking at", whether that is a
+  leaderboard row, a chart, or a quote.
+* **`>`** types the command at the prompt instead of running it, for the verbs
+  that still need an argument — `>GP` leaves you at `GP ` with the cursor after
+  it.
+
+Edits are stored as a sparse overlay on the presets rather than a copy of them,
+so a preset added in a later version still reaches you, and switching one off
+stays off across a reload.
 
 ---
 
@@ -301,6 +366,14 @@ key are collapsed onto a single in-flight request.
 Charts are [lightweight-charts](https://github.com/tradingview/lightweight-charts)
 v5. The chart theme is read from live CSS custom properties, so `THEME` restyles
 every open chart with no per-panel bookkeeping.
+
+There is one dispatch path in the client, and everything funnels into it. A
+typed line, a clicked row and a key press all end up in the same `run()`: a
+binding is a chord and a command string, and a row records the command it runs
+so the keyboard can read it back. That is what keeps the three in step — a
+shortcut can only do something you could also have typed, `KEYS` can only rebind
+what the router already fires, and a row that gains a click handler gains a
+keyboard cursor the same day.
 
 ### A few things worth knowing
 
@@ -596,7 +669,7 @@ a person and is surfaced verbatim in the panel.
 
 ```bash
 npm run dev          # server + client with reload
-npm test             # 399 tests
+npm test             # 433 tests
 npm run typecheck    # client and server
 npm run check        # typecheck + test
 ```

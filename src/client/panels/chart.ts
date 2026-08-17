@@ -71,6 +71,10 @@ export class ChartPanel extends Panel<ChartData> {
     return formatRef(this.#options.ref);
   }
 
+  override subject(): string {
+    return formatRef(this.#options.ref);
+  }
+
   protected override subtitle(): string {
     const { interval, style, ref } = this.#options;
     const market = this.latest?.market;

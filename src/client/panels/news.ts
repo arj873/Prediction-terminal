@@ -13,6 +13,7 @@ import { news } from '../lib/api.js';
 import { append, cell, el, row, table } from '../lib/dom.js';
 import { EM_DASH, truncate } from '../lib/format.js';
 import { Panel, type PanelContext } from './panel.js';
+import { bindRow } from './table.js';
 
 export interface NewsPanelOptions {
   /** Symbols to filter to. Empty means the whole wire. */
@@ -209,9 +210,12 @@ export class NewsPanel extends Panel<NewsFeed> {
     const primary = symbols[0];
     if (primary) {
       const command = chartCommand(primary);
-      tr.classList.add('clickable');
-      tr.title = `${article.headline}\nClick for ${command}`;
-      tr.addEventListener('click', () => this.context.run(command));
+      bindRow(
+        tr,
+        command,
+        (line) => this.context.run(line),
+        `${article.headline}\nClick for ${command}`,
+      );
     }
 
     return tr;
