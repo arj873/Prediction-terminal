@@ -27,7 +27,7 @@ import type {
   FredSeries,
   FredSeriesResponse,
 } from '../../shared/types.js';
-import { TTL, cache } from '../lib/cache.js';
+import { TTL, cache, keyPart } from '../lib/cache.js';
 import { UpstreamError, fetchJson, fetchText } from '../lib/http.js';
 import { firstAnswer, type ChainOptions, type Provider } from '../lib/providers.js';
 
@@ -491,7 +491,7 @@ export async function searchSeries(query: string, limit = 25): Promise<FredSearc
     throw new UpstreamError('Search needs at least one word', { code: 'bad_request' });
   }
   const capped = Math.min(Math.max(limit, 1), 100);
-  const key = `fred:search:${q.toLowerCase()}:${capped}`;
+  const key = `fred:search:${keyPart(q.toLowerCase())}:${capped}`;
 
   return cache.cached(key, TTL.fred, async () => {
     const { providers, options } = fredProviders(

@@ -42,9 +42,9 @@ import {
   type MatchScore,
   type SeriesDescriptor,
 } from '../../shared/match.js';
-import { TTL, cache } from '../lib/cache.js';
+import { TTL, catalogue } from '../lib/cache.js';
 import { UpstreamError } from '../lib/http.js';
-import { sumOrNull } from './corpus.js';
+import { queryTerms, sumOrNull } from './corpus.js';
 import { sourceFor } from './venues.js';
 
 /* ------------------------------------------------------------------ index */
@@ -154,7 +154,7 @@ interface Indexes {
 }
 
 async function indexes(): Promise<Indexes> {
-  return cache.cached('xvenue:indexes', TTL.catalogue, async () => {
+  return catalogue.cached('xvenue:indexes', TTL.catalogue, async () => {
     const settled = await Promise.allSettled(
       VENUE_IDS.map(async (venue) => {
         const snapshot = await sourceFor(venue).corpusSnapshot();
@@ -379,16 +379,30 @@ function matchesQuery(series: LinkedSeries, terms: string[]): boolean {
   return terms.every((term) => haystack.includes(term));
 }
 
+interface LinkedGroups {
+  found: LinkedSeries[];
+  scanned: Record<string, number>;
+  unavailable: { venue: Venue; error: string }[];
+  builtAt: number;
+}
+
 /**
- * Series that more than one broker lists.
+ * Pair every venue's catalogue against every other, and group the results.
  *
- * Curated links are resolved first and claim their legs; everything left is
- * matched on wording, anchored at the venue with the most series so the pass
- * covers the widest catalogue.
+ * Cached, because none of it depends on the query. This is a cross-product over
+ * three catalogues followed by a sort, a union-find merge and a regroup, and it
+ * used to run on every `/api/xv/series` call — a route that takes no required
+ * argument — with the query applied only as a filter over the finished groups.
+ * The indexes behind it are already held for {@link TTL.catalogue}; holding
+ * their pairing for the same span is the same freshness for a fraction of the
+ * work.
  */
-export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeriesResponse> {
+async function linkedGroups(): Promise<LinkedGroups> {
+  return catalogue.cached('xvenue:links', TTL.catalogue, buildLinkedGroups);
+}
+
+async function buildLinkedGroups(): Promise<LinkedGroups> {
   const { ok, unavailable, builtAt } = await indexes();
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
 
   const scanned: Record<string, number> = {};
   for (const index of ok) scanned[index.venue] = index.series.length;
@@ -499,19 +513,33 @@ export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeries
     });
   }
 
-  const series = found
-    .filter((s) => matchesQuery(s, terms))
-    .sort(
-      (a, b) =>
-        b.legs.length - a.legs.length ||
-        b.score - a.score ||
-        (b.legs[0]?.volume24h ?? -1) - (a.legs[0]?.volume24h ?? -1),
-    )
-    .slice(0, limit);
+  // Ordered once, here, rather than per request: the ranking is a property of
+  // the groups, and the query only ever narrows them.
+  found.sort(
+    (a, b) =>
+      b.legs.length - a.legs.length ||
+      b.score - a.score ||
+      (b.legs[0]?.volume24h ?? -1) - (a.legs[0]?.volume24h ?? -1),
+  );
+
+  return { found, scanned, unavailable, builtAt };
+}
+
+/**
+ * Series that more than one broker lists.
+ *
+ * Curated links are resolved first and claim their legs; everything left is
+ * matched on wording, anchored at the venue with the most series so the pass
+ * covers the widest catalogue. All of that is {@link linkedGroups}' job and is
+ * cached; this narrows the result to the query.
+ */
+export async function linkedSeries(query = '', limit = 40): Promise<LinkedSeriesResponse> {
+  const { found, scanned, unavailable, builtAt } = await linkedGroups();
+  const terms = queryTerms(query);
 
   return {
     query,
-    series,
+    series: found.filter((s) => matchesQuery(s, terms)).slice(0, limit),
     scanned,
     unavailable,
     snapshotAgeSeconds: Math.round((Date.now() - builtAt) / 1000),

@@ -19,7 +19,7 @@
 
 import * as cheerio from 'cheerio';
 import type { SteamChart, SteamGame } from '../../shared/types.js';
-import { TTL, cache } from '../lib/cache.js';
+import { TTL, cache, keyPart } from '../lib/cache.js';
 import { UpstreamError, fetchJson, fetchText } from '../lib/http.js';
 
 const API = 'https://api.steampowered.com';
@@ -168,7 +168,7 @@ export async function searchGames(query: string, limit = 10): Promise<SteamGame[
 
   const url = `${STORE}/api/storesearch/?term=${encodeURIComponent(q)}&l=en&cc=US`;
 
-  const games = await cache.cached(`steam:search:${q.toLowerCase()}`, TTL.catalogue, async () => {
+  const games = await cache.cached(`steam:search:${keyPart(q.toLowerCase())}`, TTL.catalogue, async () => {
     const body = await fetchJson<StoreSearchBody>(url, { timeoutMs: 20_000, retries: 2 });
     return (body.items ?? [])
       .filter((item) => typeof item.id === 'number' && item.name)

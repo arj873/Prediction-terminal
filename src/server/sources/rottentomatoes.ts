@@ -24,7 +24,7 @@ import type {
   RtSearchResult,
   RtTitle,
 } from '../../shared/types.js';
-import { TTL, cache } from '../lib/cache.js';
+import { TTL, cache, keyPart } from '../lib/cache.js';
 import { UpstreamError, fetchText } from '../lib/http.js';
 
 const BASE = 'https://www.rottentomatoes.com';
@@ -234,7 +234,7 @@ export async function search(query: string, limit = 20): Promise<RtSearchRespons
   }
 
   const sourceUrl = `${BASE}/search?search=${encodeURIComponent(q)}`;
-  const found = await cache.cached(`rt:search:${q.toLowerCase()}`, TTL.rottenTomatoes, async () => {
+  const found = await cache.cached(`rt:search:${keyPart(q.toLowerCase())}`, TTL.rottenTomatoes, async () => {
     const html = await fetchText(sourceUrl, { timeoutMs: 30_000, retries: 2 });
     return parseSearchPage(html, q);
   });

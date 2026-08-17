@@ -34,10 +34,63 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? '127.0.0.1';
 
+/**
+ * How much of `X-Forwarded-For` to believe.
+ *
+ * Off by default, because `trust proxy: true` believes the header from *any*
+ * peer — which makes `req.ip` whatever the client says it is, and the per-IP
+ * rate limit below a formality: rotating the header let a single client take
+ * twelve of twelve requests against a limit of five. An operator who really is
+ * behind a proxy states so, and states how many hops.
+ *
+ * Accepts what Express accepts: a hop count (`1`), a preset (`loopback`), or a
+ * comma-separated list of trusted addresses/subnets.
+ */
+function trustProxySetting(): boolean | number | string {
+  const raw = process.env.TRUST_PROXY?.trim();
+  if (!raw || raw === 'false' || raw === '0') return false;
+  const hops = Number(raw);
+  return Number.isInteger(hops) && hops > 0 ? hops : raw;
+}
+
+/**
+ * Security headers, on everything.
+ *
+ * The client builds every node with `textContent` and refuses raw HTML by
+ * design, so there is no injection point today — this is the layer that holds
+ * if a future panel forgets. `frame-ancestors` is the one that fixes a present
+ * fact rather than a hypothetical: without it the terminal is framable by
+ * anyone.
+ *
+ * `style-src` needs `'unsafe-inline'` because the book-depth bars set their
+ * width through a `style` attribute; nothing else here relaxes the default.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "base-uri 'none'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'none'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+  ].join('; '),
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+};
+
 export function createApp(): express.Express {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  app.set('trust proxy', trustProxySetting());
+
+  app.use((_req, res, next) => {
+    for (const [header, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(header, value);
+    next();
+  });
 
   // ---- lightweight request log ------------------------------------------
   app.use((req, res, next) => {
@@ -57,6 +110,21 @@ export function createApp(): express.Express {
   const WINDOW_MS = 60_000;
   const MAX_PER_WINDOW = Number(process.env.RATE_LIMIT ?? 600);
 
+  /**
+   * Ceiling on tracked clients, and the mark the sweep clears down to.
+   *
+   * Sweeping only *expired* buckets was not a bound at all: a client varying
+   * its address leaves every bucket fresh, so nothing was ever collected, the
+   * map grew for as long as the traffic lasted, and the O(n) scan then ran on
+   * every subsequent request — 25,000 addresses cost 27% in latency and climbing.
+   *
+   * Clearing down to a low-water mark rather than to the ceiling is what makes
+   * the scan amortise: it cannot run again until another tenth of the table has
+   * refilled.
+   */
+  const MAX_CLIENTS = 20_000;
+  const LOW_WATER = Math.floor(MAX_CLIENTS * 0.9);
+
   app.use('/api', (req, res, next) => {
     const key = req.ip ?? 'unknown';
     const now = Date.now();
@@ -73,9 +141,15 @@ export function createApp(): express.Express {
       return;
     }
 
-    // Opportunistic sweep so the map cannot grow without bound.
-    if (hits.size > 5000) {
+    if (hits.size > MAX_CLIENTS) {
       for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+      // Expiry alone cannot get us under the mark when every bucket is fresh.
+      // Insertion order is first-seen order, so this drops the oldest windows —
+      // the ones closest to expiring anyway.
+      for (const k of hits.keys()) {
+        if (hits.size <= LOW_WATER) break;
+        hits.delete(k);
+      }
     }
     next();
   });
@@ -91,14 +165,27 @@ export function createApp(): express.Express {
   app.use('/api/ent', entertainmentRouter);
   app.use('/api/news', newsRouter);
 
+  /**
+   * Liveness, and which feeds this deployment can serve.
+   *
+   * The capability flags stay public: they are how the client explains a dead
+   * `NEWS` panel, and "this deployment holds a key" is a fact about the feature
+   * set rather than a secret. Uptime and cache counters do not — hit, miss and
+   * eviction totals are a read-out on the cache an attacker is trying to churn,
+   * which is exactly the feedback loop not to hand out. `HEALTH_DETAIL=1`
+   * restores them for an operator watching their own box.
+   */
+  const healthDetail = process.env.HEALTH_DETAIL?.trim() === '1';
+
   app.get('/api/health', (_req, res) => {
     res.json({
       ok: true,
-      uptimeSeconds: Math.round(process.uptime()),
-      cache: cache.stats(),
       fredApiKey: Boolean(process.env.FRED_API_KEY?.trim()),
       alpacaKeys: hasAlpacaCredentials(),
       time: new Date().toISOString(),
+      ...(healthDetail
+        ? { uptimeSeconds: Math.round(process.uptime()), cache: cache.stats() }
+        : {}),
     });
   });
 
@@ -145,9 +232,14 @@ export function createApp(): express.Express {
       return;
     }
 
+    // An `UpstreamError` message is written to be read by whoever typed the
+    // command, and says only which host declined. Anything reaching here is by
+    // definition unanticipated, so its message was never held to that — it can
+    // carry a path, a stack frame, or an internal identifier. Log it in full;
+    // answer with a fixed string.
     console.error('[server] unhandled error', err);
     res.status(500).json({
-      error: err instanceof Error ? err.message : 'Internal server error',
+      error: 'Internal server error',
       code: 'internal_error',
     } satisfies ApiError);
   });

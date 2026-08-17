@@ -28,7 +28,8 @@ import type {
   TradesResponse,
   VenueEvent,
 } from '../../shared/types.js';
-import { TTL, cache } from '../lib/cache.js';
+import { isValidIdentifier } from '../../shared/venue.js';
+import { TTL, cache, catalogue } from '../lib/cache.js';
 import { UpstreamError, fetchJson } from '../lib/http.js';
 import {
   rankMarkets,
@@ -340,13 +341,34 @@ async function get<T>(path: string, ttlMs: number): Promise<T> {
 
 /* ----------------------------------------------------------------- lookups */
 
+/**
+ * Reject a slug that would not survive being a URL path segment.
+ *
+ * Same reasoning as Kalshi's ticker check: `encodeURIComponent` leaves `.`
+ * alone, so `..` reaches the gateway as a dot-segment and URL normalisation
+ * quietly resolves it to a different endpoint. Polymarket International is not
+ * affected — it passes its slug as a query parameter, never as a path segment.
+ */
+export function assertSlug(slug: string): string {
+  if (!isValidIdentifier(slug)) {
+    throw new UpstreamError(`"${slug}" is not a valid Polymarket US slug`, {
+      code: 'bad_request',
+      hint: 'Slugs look like `tec-mlb-champ-2026-09-27-lad`. Try `SRCH` to find one.',
+    });
+  }
+  return slug;
+}
+
 export async function getMarket(slug: string): Promise<Market> {
-  const [catalogue, bbo] = await Promise.all([
+  assertSlug(slug);
+  // Named `listing` rather than `catalogue` so it does not shadow the catalogue
+  // cache this module now writes its corpus into.
+  const [listing, bbo] = await Promise.all([
     get<{ market?: RawUsMarket }>(`/v1/market/slug/${encodeURIComponent(slug)}`, TTL.meta),
     get<RawUsBbo>(`/v1/markets/${encodeURIComponent(slug)}/bbo`, TTL.quote).catch(() => ({})),
   ]);
 
-  if (!catalogue.market) {
+  if (!listing.market) {
     throw new UpstreamError(`No Polymarket US market with slug ${slug}`, {
       code: 'not_found',
       hint: 'Polymarket US identifies markets by slug, as in `tec-mlb-champ-2026-09-27-lad`.',
@@ -356,7 +378,7 @@ export async function getMarket(slug: string): Promise<Market> {
   // The by-slug record has no parent, so recover the event from the corpus,
   // which is already warm. A miss only costs the two ticker fields.
   const known = (await corpusSnapshot()).markets.find((m) => m.ticker === slug);
-  const market = normaliseMarket(catalogue.market, {
+  const market = normaliseMarket(listing.market, {
     eventTicker: known?.eventTicker ?? '',
     seriesTicker: known?.seriesTicker ?? '',
   });
@@ -365,6 +387,7 @@ export async function getMarket(slug: string): Promise<Market> {
 }
 
 export async function getEvent(slug: string): Promise<VenueEvent> {
+  assertSlug(slug);
   const raw = await get<{ event?: RawUsEvent }>(
     `/v1/events/slug/${encodeURIComponent(slug)}`,
     TTL.quote,
@@ -423,6 +446,7 @@ export function normaliseOrderBook(raw: RawUsBook, ticker: string, depth = 12): 
 }
 
 export async function getOrderBook(slug: string, depth = 12): Promise<OrderBook> {
+  assertSlug(slug);
   const raw = await get<RawUsBook>(`/v1/markets/${encodeURIComponent(slug)}/book`, TTL.quote);
   return normaliseOrderBook(raw, slug, depth);
 }
@@ -562,7 +586,7 @@ async function buildCorpus(): Promise<Corpus> {
 }
 
 export async function corpusSnapshot(): Promise<Corpus> {
-  return cache.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
+  return catalogue.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
 }
 
 export function warmCorpus(): void {

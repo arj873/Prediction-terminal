@@ -210,6 +210,27 @@ export function normaliseId(venue: Venue, id: string): string {
   return venueInfo(venue).case === 'upper' ? id.toUpperCase() : id.toLowerCase();
 }
 
+/** Identifiers are one path segment: a letter or digit, then the venue's punctuation. */
+const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
+/**
+ * Whether an identifier is safe to splice into an upstream URL path.
+ *
+ * `encodeURIComponent` leaves `.` alone, so a ticker of `..` reached the
+ * upstream as a dot-segment and URL normalisation quietly resolved
+ * `…/v2/markets/..` to `…/v2/` — a different endpoint on the same host, chosen
+ * by the caller. Requiring the first character to be alphanumeric is what rules
+ * that out: `.` and `..` are the only segments normalisation collapses, and
+ * neither can start with a letter or a digit.
+ *
+ * A predicate rather than an assertion because this module is shared with the
+ * browser and has no opinion on how a refusal should be reported — each venue
+ * source raises its own, naming what *it* calls an identifier.
+ */
+export function isValidIdentifier(id: string): boolean {
+  return IDENTIFIER.test(id);
+}
+
 /**
  * Read `[venue:]identifier`.
  *

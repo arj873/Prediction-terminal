@@ -91,6 +91,48 @@ async function readCapped(res: Response, maxBytes: number, url: string): Promise
   return out;
 }
 
+/**
+ * Read a response body as bytes, refusing one over `maxBytes`.
+ *
+ * The byte-wise counterpart to {@link readCapped}, for callers that pass a
+ * response through rather than parsing it. The distinction that matters is
+ * *when* the limit applies: `arrayBuffer()` then checking the length has
+ * already done the allocation the limit exists to prevent, so the declared
+ * length is checked first and the stream is cut the moment it overruns.
+ */
+export async function readCappedBytes(
+  res: Response,
+  maxBytes: number,
+  url: string,
+): Promise<Buffer> {
+  const tooLarge = (): UpstreamError =>
+    new UpstreamError(`Response from ${hostOf(url)} exceeds ${maxBytes} bytes`, {
+      code: 'response_too_large',
+      status: res.status,
+    });
+
+  const declared = Number(res.headers.get('content-length') ?? '0');
+  if (declared > maxBytes) throw tooLarge();
+  if (!res.body) return Buffer.alloc(0);
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+
+  return Buffer.concat(chunks, total);
+}
+
 export function hostOf(url: string): string {
   try {
     return new URL(url).host;

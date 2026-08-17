@@ -9,6 +9,13 @@ plus live exercise of the running app. Every finding rated Medium or above was
 reproduced against real code rather than inferred from reading; the measurements
 below are from this machine.
 
+> **Status: all ten findings are fixed.** The report below is kept in the tense
+> it was written in — it describes what was reachable before the fixes, because
+> that is what makes each one legible. What changed, and the measurements taken
+> after, are in [Remediation](#remediation) at the end. Every finding has a
+> regression test in `test/security.test.ts`, written against the exploit rather
+> than the fix.
+
 **Baseline hygiene, verified:**
 
 | Check | Result |
@@ -333,13 +340,52 @@ error bodies rather than draining them.
 
 ---
 
-## Recommended order of work
+## Remediation
 
-1. Cap search query length and term count, and hoist the per-term regex out of
-   the per-event loop (finding 1).
-2. Make `trust proxy` explicit, and bound the rate-limiter map unconditionally
-   (finding 2).
-3. Add the security headers (finding 4) — smallest change on the list.
-4. Partition the cache and bound user-derived key components (finding 3).
-5. Stream-cap the artwork proxy and narrow its content types (finding 5).
-6. The Low findings as convenient.
+All ten are fixed. Two new environment variables are documented in
+`.env.example`: `TRUST_PROXY` (off by default) and `HEALTH_DETAIL` (off by
+default). Nothing else changes how the terminal is run.
+
+| # | What changed | Where |
+| --- | --- | --- |
+| 1 | Query capped at 200 characters and 16 terms, refused rather than truncated; the per-term regex compiled once instead of per event | `sources/corpus.ts` |
+| 2 | `trust proxy` now reads `TRUST_PROXY` and defaults to off; the sweep evicts oldest-first down to a low-water mark, so it is bounded and amortised | `index.ts` |
+| 3 | Catalogue crawls moved to a separate 64-entry pool; free-text key fragments clamped by `keyPart` | `lib/cache.ts` and call sites |
+| 4 | CSP, `nosniff`, `X-Frame-Options`, `Referrer-Policy` on every response | `index.ts` |
+| 5 | Body stream-capped by `readCappedBytes` before allocation; content type narrowed to five raster formats | `routes/billboard.ts`, `lib/http.ts` |
+| 6 | Uptime and cache counters withheld unless `HEALTH_DETAIL=1`; capability flags stay, because the client needs them | `index.ts` |
+| 7 | Unanticipated errors log in full and answer with a fixed string | `index.ts` |
+| 8 | Netflix country-feed ceiling 96 MiB → 48 MiB | `sources/netflix.ts` |
+| 9 | Identifiers must begin with a letter or digit, so `.` and `..` cannot reach an upstream path | `shared/venue.ts`, `sources/kalshi.ts`, `sources/polymarketus.ts` |
+| 10 | Cross-venue pairing cached for `TTL.catalogue`; the query now only narrows a prepared result | `sources/crossvenue.ts` |
+
+### Measured after
+
+Same harnesses as the findings above.
+
+| | Before | After |
+| --- | --- | --- |
+| Worst single search request | 17,756 ms (4,000 terms) — and rising with URL length | **43 ms** (16 terms, the new ceiling); longer queries refused with a 400 |
+| Spoofed `X-Forwarded-For`, limit of 5 | 12 of 12 allowed | **5 of 12 allowed** |
+| Rate-limiter latency, 5k-request batches | 8,862 ms → 11,287 ms across 25k addresses, climbing | **flat** — 9,276 ms → 8,799 ms across 30k addresses |
+| Warm corpus after a 5,000-key flood | evicted | **survives** |
+
+Two things the fixes were checked against, not just for:
+
+- **Scoring is unchanged.** `test/security.test.ts` re-implements the original
+  ranking loop — regex construction and all — and asserts the hoisted version
+  agrees with it event for event and point for point across nine queries,
+  including one with regex metacharacters. A faster search that ranks
+  differently would not have been a fix.
+- **A legitimate proxy still works.** `TRUST_PROXY=1` is covered by its own
+  test: distinct real clients get their own buckets, and one client still hits
+  the limit.
+
+### Not fully closed
+
+Finding 8 is bounded rather than eliminated. The Netflix country feed is still
+decoded into one JS string before parsing, so the worst-case allocation is now
+about 96 MB of heap instead of 192 MB. Removing the class outright means parsing
+the TSV as a stream; that is a real change to the parser, and the upstream is
+trusted, fixed and cached, so the ceiling was tightened to what the data
+actually needs instead.

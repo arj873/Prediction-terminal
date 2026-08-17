@@ -321,12 +321,18 @@ export const ent = {
 
 export interface Health {
   ok: boolean;
-  uptimeSeconds: number;
-  cache: { hits: number; misses: number; entries: number; evictions: number };
   fredApiKey: boolean;
   /** Whether this deployment can serve `NEWS` — the feed needs a key pair. */
   alpacaKeys: boolean;
   time: string;
+  /**
+   * Operational counters, present only when the server is started with
+   * `HEALTH_DETAIL=1`. Withheld by default: eviction and hit totals are a live
+   * read-out on the cache, which is the one thing worth not handing to whoever
+   * is trying to churn it.
+   */
+  uptimeSeconds?: number;
+  cache?: { hits: number; misses: number; entries: number; evictions: number };
 }
 
 export const health = (signal?: AbortSignal): Promise<Health> => request('/health', signal);

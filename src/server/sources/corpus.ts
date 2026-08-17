@@ -13,6 +13,7 @@
 
 import type { Market, Venue, VenueEvent } from '../../shared/types.js';
 import type { MoverSort } from '../../shared/venue.js';
+import { UpstreamError } from '../lib/http.js';
 
 export interface Corpus {
   venue: Venue;
@@ -71,6 +72,55 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/* ------------------------------------------------------------------ queries */
+
+/**
+ * Ceilings on a free-text query.
+ *
+ * Ranking costs the corpus size *times* the term count, and the corpus runs to
+ * twelve thousand events. Nothing bounded the term count, so a query of four
+ * thousand repeated words — eight kilobytes, one unauthenticated GET — held the
+ * event loop for eighteen seconds, and Node has only the one thread, so that is
+ * every panel for every reader, not just the search that asked.
+ *
+ * A real search is a handful of words. These sit far above that and far below
+ * where the scan is felt.
+ */
+export const MAX_QUERY_LENGTH = 200;
+export const MAX_QUERY_TERMS = 16;
+
+/**
+ * Split a query into terms, refusing one too large to answer.
+ *
+ * Shared by every venue's `search` and by the cross-venue view, so the ceiling
+ * is stated once instead of at each call site that would have to remember it.
+ * Refusing beats truncating: a search silently cut to its first sixteen words
+ * answers a question nobody asked.
+ */
+export function queryTerms(query: string): string[] {
+  if (query.length > MAX_QUERY_LENGTH) {
+    throw new UpstreamError(`Search text is too long (${query.length} characters)`, {
+      code: 'bad_request',
+      hint:
+        `Every word is matched against every open event, so search text is capped ` +
+        `at ${MAX_QUERY_LENGTH} characters.`,
+    });
+  }
+
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+  if (terms.length > MAX_QUERY_TERMS) {
+    throw new UpstreamError(`Search has too many words (${terms.length})`, {
+      code: 'bad_request',
+      hint:
+        `A search takes at most ${MAX_QUERY_TERMS} words, because each one is matched ` +
+        `against every open event. Fewer, more specific words rank better anyway.`,
+    });
+  }
+
+  return terms;
+}
+
 /**
  * Rank open events against a free-text query.
  *
@@ -81,7 +131,15 @@ function escapeRegExp(s: string): string {
  * liquid event wins.
  */
 export function searchCorpus(snapshot: Corpus, query: string, limit = 25): SearchResponse {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const terms = queryTerms(query);
+
+  // Compile each term's word-boundary pattern once, outside the scan. Built
+  // where it was used — inside the per-event loop — this was the most expensive
+  // line in the server: a fresh RegExp constructed and thrown away once per
+  // event per term, twelve thousand times over for a single-word search.
+  const boundaries = terms.map((term) => new RegExp(`\\b${escapeRegExp(term)}`));
+  const phrase = terms.length > 1 ? terms.join(' ') : '';
+
   const hits: EventSearchHit[] = [];
 
   for (const event of snapshot.events) {
@@ -96,7 +154,8 @@ export function searchCorpus(snapshot: Corpus, query: string, limit = 25): Searc
     let score = 0;
     let matchedAll = true;
 
-    for (const term of terms) {
+    for (let i = 0; i < terms.length; i++) {
+      const term = terms[i]!;
       if (!haystack.includes(term)) {
         matchedAll = false;
         break;
@@ -104,11 +163,11 @@ export function searchCorpus(snapshot: Corpus, query: string, limit = 25): Searc
       score += 10;
       if (ticker.includes(term)) score += 12;
       if (title.startsWith(term)) score += 8;
-      if (new RegExp(`\\b${escapeRegExp(term)}`).test(haystack)) score += 6;
+      if (boundaries[i]!.test(haystack)) score += 6;
     }
     if (!matchedAll) continue;
 
-    if (terms.length > 1 && haystack.includes(terms.join(' '))) score += 25;
+    if (phrase && haystack.includes(phrase)) score += 25;
 
     const volume24h = sumOrNull(event.markets, (m) => m.volume24h);
     if (volume24h !== null && volume24h > 0) score += 5;

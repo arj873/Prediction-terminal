@@ -108,6 +108,32 @@ export class TtlCache {
 
 export const cache = new TtlCache();
 
+/**
+ * A second pool, for the catalogue crawls.
+ *
+ * These do not belong in the same eviction queue as per-query entries. The
+ * general cache holds a thousand entries and keys many of them on unvalidated
+ * input — a cursor, a search phrase, a chart slug — so 1,200 cheap requests
+ * varying one parameter evicted `kalshi:corpus`, a fifteen-second sixty-page
+ * crawl, and every reader paid the cold start again. There are six of these
+ * snapshots across three venues and the cross-venue index; sixty-four is room
+ * to spare, and nothing keyed on user input is ever written here.
+ */
+export const catalogue = new TtlCache(64);
+
+/**
+ * Clamp a user-supplied fragment before it becomes part of a cache key.
+ *
+ * Bounds what one caller can spend of a shared, fixed-size table. Truncation is
+ * safe in a cache key in a way it would not be in a query: two searches sharing
+ * a 120-character prefix collide onto one entry, which costs a stale-ish
+ * answer, never a wrong destination — every one of these keys names a request
+ * whose arguments were already validated.
+ */
+export function keyPart(value: string, max = 120): string {
+  return value.length <= max ? value : `${value.slice(0, max)}~${value.length}`;
+}
+
 /** TTLs, tuned to how fast each source actually moves. */
 export const TTL = {
   /** Quotes and books: short, but long enough to absorb a panel refresh burst. */

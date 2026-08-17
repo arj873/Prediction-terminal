@@ -28,7 +28,7 @@ import type {
   TradesResponse,
   VenueEvent,
 } from '../../shared/types.js';
-import { TTL, cache } from '../lib/cache.js';
+import { TTL, cache, catalogue } from '../lib/cache.js';
 import { UpstreamError, fetchJson } from '../lib/http.js';
 import {
   rankMarkets,
@@ -768,7 +768,7 @@ async function buildCorpus(): Promise<Corpus> {
 }
 
 export async function corpusSnapshot(): Promise<Corpus> {
-  return cache.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
+  return catalogue.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
 }
 
 export function warmCorpus(): void {

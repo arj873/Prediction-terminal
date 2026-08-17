@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { UpstreamError } from '../lib/http.js';
+import { UpstreamError, readCappedBytes } from '../lib/http.js';
 import * as billboard from '../sources/billboard.js';
 import { asyncRoute, pathParam } from './helpers.js';
 
@@ -20,6 +20,22 @@ const ART_HOSTS = new Set([
 ]);
 
 const MAX_ART_BYTES = 3 * 1024 * 1024;
+
+/**
+ * Image types this route will hand back.
+ *
+ * An allowlist rather than an `image/` prefix test, because `image/svg+xml`
+ * passes that test and an SVG carries script — served from this origin, under
+ * this origin's cookies and storage. Chart artwork is photographic; none of
+ * these five formats can execute.
+ */
+const ART_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+]);
 
 /**
  * Validate an artwork URL before the server will fetch it.
@@ -76,15 +92,20 @@ billboardRouter.get(
       });
     }
 
-    const type = upstream.headers.get('content-type') ?? '';
-    if (!type.startsWith('image/')) {
-      throw new UpstreamError('Artwork URL did not return an image', { code: 'bad_upstream_body' });
+    // `image/png; charset=binary` is still a PNG — match on the media type and
+    // drop whatever parameters follow it.
+    const type = (upstream.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
+    if (!ART_TYPES.has(type)) {
+      throw new UpstreamError('Artwork URL did not return an image', {
+        code: 'bad_upstream_body',
+        hint: `Chart artwork is served as ${[...ART_TYPES].join(', ')}.`,
+      });
     }
 
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    if (buffer.byteLength > MAX_ART_BYTES) {
-      throw new UpstreamError('Artwork exceeds the size limit', { code: 'response_too_large' });
-    }
+    // Capped while streaming rather than after buffering: reading the whole
+    // body and *then* measuring it has already performed the allocation the
+    // limit is here to prevent.
+    const buffer = await readCappedBytes(upstream, MAX_ART_BYTES, target.toString());
 
     res.setHeader('Content-Type', type);
     res.setHeader('Cache-Control', 'public, max-age=86400, immutable');

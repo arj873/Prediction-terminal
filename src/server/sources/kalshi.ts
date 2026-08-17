@@ -20,7 +20,8 @@ import type {
   TradesResponse,
   VenueEvent,
 } from '../../shared/types.js';
-import { TTL, cache } from '../lib/cache.js';
+import { isValidIdentifier } from '../../shared/venue.js';
+import { TTL, cache, catalogue } from '../lib/cache.js';
 import { UpstreamError, fetchJson } from '../lib/http.js';
 import {
   rankMarkets,
@@ -136,6 +137,26 @@ export interface RawCandle {
 export function seriesFromTicker(ticker: string): string {
   const first = ticker.indexOf('-');
   return first === -1 ? ticker : ticker.slice(0, first);
+}
+
+/**
+ * Reject a ticker that would not survive being a URL path segment.
+ *
+ * `encodeURIComponent` does not touch `.`, so a ticker of `..` arrived at the
+ * upstream as a dot-segment and URL normalisation resolved `…/v2/markets/..`
+ * to `…/v2/` — still Kalshi, but an endpoint the caller picked rather than the
+ * one this function names. Checked at every path-building entry point, since
+ * `/api/kalshi/*` reaches these directly without passing through the venue
+ * router's own normalisation.
+ */
+export function assertTicker(ticker: string, label = 'ticker'): string {
+  if (!isValidIdentifier(ticker)) {
+    throw new UpstreamError(`"${ticker}" is not a valid Kalshi ${label}`, {
+      code: 'bad_request',
+      hint: 'Kalshi tickers look like KXFEDDECISION-26SEP-T3.75. Try `SRCH <words>` to find one.',
+    });
+  }
+  return ticker;
 }
 
 /* ------------------------------------------------------------ normalisers */
@@ -258,6 +279,7 @@ export async function listMarkets(params: ListMarketsParams = {}): Promise<Marke
 }
 
 export async function getMarket(ticker: string): Promise<Market> {
+  assertTicker(ticker);
   const raw = await get<{ market?: RawMarket }>(
     `/markets/${encodeURIComponent(ticker)}`,
     TTL.quote,
@@ -289,6 +311,7 @@ export async function listEvents(params: ListEventsParams = {}): Promise<EventsR
 }
 
 export async function getEvent(eventTicker: string): Promise<VenueEvent> {
+  assertTicker(eventTicker, 'event ticker');
   const raw = await get<{ event?: RawEvent; markets?: RawMarket[] }>(
     `/events/${encodeURIComponent(eventTicker)}${qs({ with_nested_markets: 'true' })}`,
     TTL.quote,
@@ -350,6 +373,7 @@ export function normaliseOrderBook(raw: RawOrderBook, ticker: string, depth = 12
 }
 
 export async function getOrderBook(ticker: string, depth = 12): Promise<OrderBook> {
+  assertTicker(ticker);
   const raw = await get<RawOrderBook>(
     `/markets/${encodeURIComponent(ticker)}/orderbook${qs({ depth })}`,
     TTL.quote,
@@ -493,7 +517,7 @@ async function buildCorpus(): Promise<Corpus> {
 }
 
 async function corpus(): Promise<Corpus> {
-  return cache.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
+  return catalogue.cached(CORPUS_KEY, TTL.catalogue, buildCorpus);
 }
 
 /**
@@ -607,7 +631,8 @@ export async function getCandles(
    */
   knownSeriesTicker?: string,
 ): Promise<CandlesResponse> {
-  let seriesTicker = knownSeriesTicker ?? seriesFromTicker(ticker);
+  assertTicker(ticker);
+  let seriesTicker = assertTicker(knownSeriesTicker ?? seriesFromTicker(ticker), 'series ticker');
   if (!knownSeriesTicker) {
     try {
       const market = await getMarket(ticker);

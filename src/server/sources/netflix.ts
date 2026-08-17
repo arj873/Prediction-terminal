@@ -27,8 +27,18 @@ const BASE = 'https://www.netflix.com/tudum/top10';
 const GLOBAL_TSV = `${BASE}/data/all-weeks-global.tsv`;
 const COUNTRIES_TSV = `${BASE}/data/all-weeks-countries.tsv`;
 
-/** The country file is ~31 MB; give it room without lifting the global ceiling. */
-const COUNTRIES_MAX_BYTES = 96 * 1024 * 1024;
+/**
+ * The country file is ~31 MB; give it room without lifting the global ceiling.
+ *
+ * Sized to the data plus growth, not to a round number well clear of it. The
+ * body is decoded into one JS string before it is parsed, so at UTF-16 this is
+ * still the largest single allocation the process can be asked to make — the
+ * former 96 MiB put that near 192 MB of heap for one request, for headroom
+ * three times wider than the file has ever needed. Making this a streaming
+ * parse would remove the class outright; halving the ceiling only bounds it,
+ * and is what the trusted, fixed upstream actually warrants.
+ */
+const COUNTRIES_MAX_BYTES = 48 * 1024 * 1024;
 
 export type NetflixCategory = 'tv' | 'films';
 
