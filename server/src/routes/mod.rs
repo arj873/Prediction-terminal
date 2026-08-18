@@ -19,6 +19,7 @@ pub mod news;
 pub mod spot;
 pub mod venue;
 
+use axum::routing::any;
 use axum::Router;
 
 use crate::app::AppState;
@@ -41,7 +42,14 @@ pub fn api_router(state: AppState) -> Router {
         .merge(entertainment::router())
         .merge(news::router())
         .merge(health::router())
-        .fallback(unknown_api_route)
+        // A wildcard *route* rather than a fallback, because the client's SPA
+        // fallback is attached to this same router afterwards and would
+        // otherwise swallow it — answering a mistyped fetch with an HTML page
+        // that fails to parse somewhere else entirely. `matchit` prefers the
+        // literal routes above to this, so it only catches what nothing claimed.
+        .route("/api", any(unknown_api_route))
+        .route("/api/", any(unknown_api_route))
+        .route("/api/{*rest}", any(unknown_api_route))
         .with_state(state)
         .layer(axum::middleware::from_fn_with_state(
             limiter,

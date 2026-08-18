@@ -13,7 +13,20 @@
 
 import type { Component } from 'svelte';
 
+import BillboardChartsPanel from './BillboardChartsPanel.svelte';
+import BillboardPanel from './BillboardPanel.svelte';
+import BoxOfficePanel from './BoxOfficePanel.svelte';
+import FredPanel from './FredPanel.svelte';
+import FredSearchPanel from './FredSearchPanel.svelte';
+import HelpPanel from './HelpPanel.svelte';
+import KeysPanel from './KeysPanel.svelte';
 import MissingPanel from './MissingPanel.svelte';
+import NetflixPanel from './NetflixPanel.svelte';
+import RtPanel from './RtPanel.svelte';
+import RtSearchPanel from './RtSearchPanel.svelte';
+import SteamPanel from './SteamPanel.svelte';
+import StreamChartPanel from './StreamChartPanel.svelte';
+import TvPanel from './TvPanel.svelte';
 import type { PanelKind } from '../state/panels.svelte';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -32,18 +45,18 @@ export const PANEL_COMPONENTS: Record<PanelKind, AnyPanel> = {
   'linked-series': MissingPanel,
   compare: MissingPanel,
   news: MissingPanel,
-  fred: MissingPanel,
-  'fred-search': MissingPanel,
-  billboard: MissingPanel,
-  'billboard-charts': MissingPanel,
+  fred: FredPanel,
+  'fred-search': FredSearchPanel,
+  billboard: BillboardPanel,
+  'billboard-charts': BillboardChartsPanel,
   ent: MissingPanel,
-  rt: MissingPanel,
-  'rt-search': MissingPanel,
-  netflix: MissingPanel,
-  'stream-chart': MissingPanel,
-  boxoffice: MissingPanel,
-  steam: MissingPanel,
-  tv: MissingPanel,
-  help: MissingPanel,
-  keys: MissingPanel,
+  rt: RtPanel,
+  'rt-search': RtSearchPanel,
+  netflix: NetflixPanel,
+  'stream-chart': StreamChartPanel,
+  boxoffice: BoxOfficePanel,
+  steam: SteamPanel,
+  tv: TvPanel,
+  help: HelpPanel,
+  keys: KeysPanel,
 };

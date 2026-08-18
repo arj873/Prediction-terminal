@@ -6,9 +6,8 @@
  * position and a look-back in another, and arguments arriving out of order.
  *
  * The suites that read `1d` positionally — `parseChartArgs`, `parseSpotArgs`,
- * `parseNewsArgs`, `guessAssetClass` — live in the command registry, which
- * reaches the panels and so has not crossed to this client yet. They come back
- * with it, unchanged.
+ * `parseNewsArgs`, `guessAssetClass` — live with the command grammar, in
+ * `registry.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -27,36 +27,8 @@ import {
   parseChord,
   parseChordSequence,
 } from './keys';
+import { COMMAND_INDEX } from './commands';
 import { Workspace } from '../state/workspace.svelte';
-
-/**
- * The verbs the presets reach for.
- *
- * TODO(registry): this stands in for `COMMAND_INDEX` from `terminal/registry.ts`,
- * which has not been ported yet. When it lands, import it and check
- * `COMMAND_INDEX.has(verb)` instead — the point of the test is that the
- * registry, not this list, is what the keys are checked against.
- */
-const COMMAND_INDEX = new Set([
-  'CLR',
-  'CLS',
-  'DES',
-  'FOCUS',
-  'GP',
-  'HELP',
-  'KEYS',
-  'LAY',
-  'NEWS',
-  'OB',
-  'REFRESH',
-  'ROW',
-  'SRCH',
-  'TAS',
-  'TOP',
-  'W',
-  'XV',
-  'ZOOM',
-]);
 
 /** A key press, with the modifiers nobody set defaulted to false. */
 type Modifiers = Partial<Record<'ctrlKey' | 'altKey' | 'shiftKey' | 'metaKey', boolean>>;

@@ -1,24 +1,64 @@
 /**
  * The command contract, and the moves every command makes.
  *
- * A leaf module: it imports no panel and no registry, so feature modules can
- * type their handlers and throw usage errors without importing the table that
- * collects them. `registry.ts` and `panels/help.ts` already form a cycle —
- * benign only because neither dereferences the other at module scope — and
- * keeping this side of it dependency-free is what stops that cycle spreading.
+ * A leaf module: it imports no panel and no command table, so a feature module
+ * can type its handlers and throw usage errors without importing the table that
+ * collects them. In the client this replaces, this file was what stopped the
+ * `registry.ts` ↔ `panels/help.ts` cycle from spreading — a cycle benign only
+ * because neither side dereferenced the other at module scope. That cycle is
+ * gone (`commands.ts` names panel *kinds*, so it imports no panel at all), and
+ * keeping this side dependency-free is what keeps it gone.
  *
- * Every import here is type-only, `keys.ts`'s included: that module imports
- * `UsageError` from this one at runtime, and only an erased import keeps the
- * pair from becoming a real cycle.
+ * Every import here is type-only, `keys.ts`'s and `context.ts`'s included: those
+ * modules import `UsageError` and Svelte's context API at runtime, and only an
+ * erased import keeps the pair from becoming a real cycle.
  *
- * What has crossed to the Svelte client so far is the half that needs nothing
- * else: the usage error, the argument scanner, and the index that refuses a
- * duplicate verb. `CommandContext`, the `Command` record itself and the two
- * panel-opening helpers name `PanelManager`, `Panel`, `Workspace` and `Keymap`,
- * none of which exist here yet; they land with the panel system, and
- * {@link indexCommands} is written to take the command record as it finds it so
- * that arrival changes nothing at the call site.
+ * The two panel-opening helpers this module used to carry — `openPanel` and
+ * `openOrReconfigure` — are gone rather than ported. They existed to decide
+ * whether re-issuing a command should re-point a live panel object or build a
+ * new one, and a panel is no longer an object: it is a description the grid
+ * renders through a keyed `{#each}`. `panels.open({ id, kind, props })` already
+ * *is* `openPanel`, and `panels.open(desc, merge)` already *is*
+ * `openOrReconfigure` — wrapping either in a same-shaped function would be
+ * indirection with nothing behind it.
  */
+
+import type { TerminalContext } from '../context';
+import type { KeyMode, Keymap } from './keys';
+import type { ParsedCommand } from './parser';
+
+/**
+ * What a handler is handed.
+ *
+ * Deliberately the app's own {@link TerminalContext} widened, not a parallel
+ * object: `run`, `log`, `panels` and `workspace` are the same four services
+ * every panel already gets, and a handler that logged to a different log than a
+ * clicked row is exactly the drift this shape prevents. What is added is the
+ * three things only a command needs — the key map `KEYS` edits, the log `CLR`
+ * wipes, and the mode `FOCUS NAV` switches to — so the shell can build one
+ * object and pass it as either.
+ */
+export interface CommandContext extends TerminalContext {
+  /** The live key map, for `KEYS`. */
+  keys: Keymap;
+  /** Wipe the message log. */
+  clearLog(): void;
+  /** Move the keyboard between the command line and the panels. */
+  setMode(mode: KeyMode): void;
+}
+
+export interface Command {
+  verb: string;
+  aliases?: string[];
+  /** One-line summary shown in `HELP`. */
+  summary: string;
+  /** Usage line, e.g. `GP <ticker> [1m|1h|1d] [range]`. */
+  usage: string;
+  /** Worked examples, shown in `HELP <verb>`. */
+  examples?: string[];
+  group: 'markets' | 'data' | 'workspace';
+  handler(command: ParsedCommand, context: CommandContext): void | Promise<void>;
+}
 
 /** A command the user typed wrong. Reported with the command's usage line. */
 export class UsageError extends Error {}
@@ -100,9 +140,9 @@ export function parsed<T>(
  * table still listed both. That is precisely the drift the command table exists
  * to prevent, so it fails loudly at startup instead.
  *
- * Typed against the two fields it reads rather than the whole `Command` record,
- * which is the one concession to arriving before the panel layer: passing the
- * command table once it exists yields `Map<string, Command>` exactly as before.
+ * Generic over the two fields it actually reads rather than fixed to
+ * {@link Command}, so nothing here has to know what a command *does* to check
+ * that its name is free. Handed the real table it yields `Map<string, Command>`.
  */
 export function indexCommands<C extends { verb: string; aliases?: readonly string[] }>(
   commands: readonly C[],
