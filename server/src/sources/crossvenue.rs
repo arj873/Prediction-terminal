@@ -642,6 +642,7 @@ fn link_series(built: &Indexes, query: &str, limit: usize) -> LinkedSeriesRespon
     // ---- curated -----------------------------------------------------------
     for link in CURATED_LINKS {
         let mut legs: Vec<SeriesLeg> = Vec::new();
+        let mut refs: Vec<SeriesRef> = Vec::new();
         for (v, index) in built.ok.iter().enumerate() {
             let Some(wanted) = link.leg(index.venue) else {
                 continue;
@@ -650,17 +651,24 @@ fn link_series(built: &Indexes, query: &str, limit: usize) -> LinkedSeriesRespon
                 continue;
             };
             legs.push(leg_of(&index.series[s]));
-            // Claimed before the two-leg test below, exactly as the TypeScript
-            // claims it: a series the table names is spoken for whether or not
-            // its partner survived, so the matcher never pairs it a second way.
-            claimed.insert(SeriesRef {
+            refs.push(SeriesRef {
                 venue: v,
                 series: s,
             });
         }
         if legs.len() < 2 {
+            // The link is dropped, so it claims nothing. Claiming a leg here
+            // would take a live series out of the text-matching pass on behalf
+            // of a pairing that no longer exists — a broker rotates a ticker,
+            // the curated entry stops resolving, and the two sides that *are*
+            // listed become unpairable rather than merely unlabelled. A stale
+            // table entry should cost a stated link, not a found one.
             continue;
         }
+
+        // Only a surviving link speaks for its legs, so the matcher cannot
+        // pair one of them a second way.
+        claimed.extend(refs);
 
         legs.sort_by(by_activity);
         found.push(LinkedSeries {
@@ -1562,11 +1570,14 @@ mod tests {
     }
 
     #[test]
-    fn a_curated_link_claims_its_surviving_leg_even_when_it_is_dropped() {
+    fn a_dropped_curated_link_leaves_its_surviving_leg_free_to_be_matched() {
         // The table names `fomc` at Polymarket, which is not listed today — but
-        // `fed-decision` is, and the matcher would happily pair it with Kalshi's
-        // side. It does not, because the curated pass already spoke for that
-        // series.
+        // `fed-decision` is, and it is plainly the same question as Kalshi's
+        // side. A stale table entry must cost a *stated* link, not a found one:
+        // claiming the surviving leg on behalf of a pairing that no longer
+        // exists took a live series out of the text-matching pass entirely, so a
+        // rotated ticker at one broker made the other broker's listing
+        // unpairable rather than merely unlabelled.
         let built = indexes_of(vec![
             (
                 Venue::Kalshi,
@@ -1587,7 +1598,14 @@ mod tests {
         ]);
 
         let response = link_series(&built, "", 40);
-        assert!(response.series.is_empty(), "{:?}", keys(&response));
+        let group = response.series.first().unwrap_or_else(|| {
+            panic!("the two live Fed series should pair: {:?}", keys(&response))
+        });
+        assert_eq!(group.legs.len(), 2);
+        // Found by text, so it is labelled as the reading it is — never as the
+        // curated link, which is the one band that is stated rather than
+        // inferred.
+        assert_ne!(group.confidence, MatchConfidence::Linked);
     }
 
     /* --------------------------------------------------------- assigning */

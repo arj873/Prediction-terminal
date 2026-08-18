@@ -444,14 +444,20 @@ fn numeric_value(token: &str) -> f64 {
 
 /// JavaScript's `Number(string)`, for the tokens [`is_numeric`] admits.
 ///
-/// The difference from [`numeric_value`] is not cosmetic and is not ours to
-/// tidy: [`significant_numbers`] reads its tokens raw, so `$63000` arrives here
-/// with its currency mark still attached and comes back `NaN`. Two dollar
-/// strikes therefore report the *same* non-number, and a `Set` treats `NaN` as
-/// equal to itself — which is why two BTC strikes agree as a series and are only
-/// told apart as events, where [`numbers_in`] strips the mark first.
+/// Only reaches a token whose notation has already been stripped, so it does
+/// not in practice produce `NaN`. It keeps the fallback because the month
+/// encoding shares it.
 fn js_number(text: &str) -> f64 {
     text.parse::<f64>().unwrap_or(f64::NAN)
+}
+
+/// Whether a token is the *date* an exemplar event happens to carry.
+///
+/// Only a bare number can be: `$2026` is a price target and `2026%` is not a
+/// year either. Reading the mark rather than only the digits is what keeps a
+/// four-figure dollar strike out of the year filter.
+fn is_calendar_year(token: &str) -> bool {
+    !token.contains('$') && !token.contains('%') && is_year(numeric_value(token))
 }
 
 /// A title's terms with its numbers taken out.
@@ -533,11 +539,17 @@ fn is_year(n: f64) -> bool {
 /// place` and `3rd place` are different questions, and so are `Best Picture` and
 /// `Best Animated Feature`. Month *names* survive as words here, so only the
 /// year has to be excluded.
+///
+/// The notation is stripped before the number is read, exactly as
+/// [`numbers_in`] does it. Reading the token raw instead — which is what this
+/// used to do — made every currency and percentage strike parse to `NaN`, so
+/// `$63,000` and `$71,000` reported the same non-number and were rewarded for
+/// agreeing on it.
 pub fn significant_numbers(text: &str) -> Vec<f64> {
     tokenise(text)
         .into_iter()
-        .filter(|token| is_numeric(token) && !is_year(js_number(token)))
-        .map(|token| js_number(&token))
+        .filter(|token| is_numeric(token) && !is_calendar_year(token))
+        .map(|token| numeric_value(&token))
         .collect()
 }
 
@@ -963,17 +975,28 @@ fn compare_numbers(left: &[f64], right: &[f64]) -> NumberVerdict {
         };
     }
 
-    let right_set: HashSet<u64> = right.iter().map(|n| same_value_zero(*n)).collect();
-    let left_set: HashSet<u64> = left.iter().map(|n| same_value_zero(*n)).collect();
+    // A number nobody could read matches nothing — not even another unreadable
+    // one. Two unknowns are two unknowns, and treating them as equal is how a
+    // pair of currency-marked strikes used to collect the agreement reward.
+    let right_set: HashSet<u64> = right
+        .iter()
+        .filter(|n| n.is_finite())
+        .map(quantity)
+        .collect();
+    let left_set: HashSet<u64> = left
+        .iter()
+        .filter(|n| n.is_finite())
+        .map(quantity)
+        .collect();
     let only_left: Vec<f64> = left
         .iter()
         .copied()
-        .filter(|n| !right_set.contains(&same_value_zero(*n)))
+        .filter(|n| !n.is_finite() || !right_set.contains(&quantity(n)))
         .collect();
     let only_right: Vec<f64> = right
         .iter()
         .copied()
-        .filter(|n| !left_set.contains(&same_value_zero(*n)))
+        .filter(|n| !n.is_finite() || !left_set.contains(&quantity(n)))
         .collect();
 
     if only_left.is_empty() && only_right.is_empty() {
@@ -997,15 +1020,13 @@ fn compare_numbers(left: &[f64], right: &[f64]) -> NumberVerdict {
     }
 }
 
-/// The key a JavaScript `Set` would file a number under.
+/// The key two quantities are equal under.
 ///
-/// SameValueZero, which is not `==`: `NaN` is equal to itself, so two strikes
-/// whose currency marks made both unreadable count as agreeing rather than as
-/// two distinct unknowns.
-fn same_value_zero(n: f64) -> u64 {
-    if n.is_nan() {
-        f64::NAN.to_bits()
-    } else if n == 0.0 {
+/// Only ever called on a finite number, so the one normalisation it owes is
+/// `-0.0`: a fall of zero and a rise of zero are the same figure, and they do
+/// not share a bit pattern.
+fn quantity(n: &f64) -> u64 {
+    if *n == 0.0 {
         0f64.to_bits()
     } else {
         n.to_bits()
@@ -1709,6 +1730,42 @@ mod tests {
             matched.score
         );
         assert!(matched.reason.contains("numbers differ"));
+    }
+
+    #[test]
+    fn strikes_tells_two_priced_strikes_apart_as_series_too() {
+        // `significantNumbers` read its tokens raw, so `$63,000` and `$71,000`
+        // both parsed to `NaN` — and a JavaScript `Set`, which is what the
+        // comparison mirrors, treats `NaN` as equal to itself. Two strikes
+        // $8,000 apart therefore reported the *same* number and collected the
+        // agreement reward, scoring a confident `strong`. Only event scoring,
+        // which strips the currency mark first, ever told them apart.
+        assert_eq!(significant_numbers("Bitcoin above $63,000"), vec![63000.0]);
+        assert_eq!(
+            significant_numbers("Fed decision 3.75% or below"),
+            vec![3.75]
+        );
+
+        let matched = score_series(
+            &d("KXBTCD-1", "Bitcoin above $63,000"),
+            &d("btc-above-71000", "Bitcoin above $71,000"),
+        );
+        assert!(
+            matched.reason.contains("numbers differ"),
+            "two priced strikes should disagree as series; got {:?} at {} — {}",
+            matched.confidence,
+            matched.score,
+            matched.reason
+        );
+    }
+
+    #[test]
+    fn strikes_never_lets_two_unreadable_numbers_count_as_agreement() {
+        // Whatever produces them, two numbers nobody could read are two
+        // unknowns, not a match. Rewarding them is how the bug above paid out.
+        let verdict = compare_numbers(&[f64::NAN], &[f64::NAN]);
+        assert!(verdict.factor < 1.0, "two unknowns must not be rewarded");
+        assert!(!compare_numbers(&[f64::NAN], &[63000.0]).note.is_empty());
     }
 
     #[test]
