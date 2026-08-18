@@ -40,7 +40,9 @@ async fn series(
     let query = params.string("q");
     let limit = params.int_param("limit", 40, 1, 200) as usize;
 
-    Ok(Json(crossvenue::linked_series(&state, &query, limit).await?))
+    Ok(Json(
+        crossvenue::linked_series(&state, &query, limit).await?,
+    ))
 }
 
 /// `GET /api/xv/compare?event&venue`

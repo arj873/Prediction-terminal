@@ -31,14 +31,13 @@ const DAY_HHMM = new Intl.DateTimeFormat('en-GB', {
  * every row is noise — but the window reaches back a week, and a bare time on a
  * three-day-old story would read as three hours old.
  *
- * The wire type is a `bigint` because the server sends unix seconds out of a
- * `u64`; it is an instant, not an amount, so it is narrowed once here rather
- * than at every call site.
+ * An item with no usable timestamp prints `--` rather than the epoch: a story
+ * dated 1 Jan 1970 at the top of a wire is worse than one that admits it does
+ * not know.
  */
-export function wireTime(unixSeconds: bigint | number): string {
-  const seconds = Number(unixSeconds);
-  if (!Number.isFinite(seconds) || seconds <= 0) return EM_DASH;
-  const date = new Date(seconds * 1000);
+export function wireTime(unixSeconds: number): string {
+  if (!Number.isFinite(unixSeconds) || unixSeconds <= 0) return EM_DASH;
+  const date = new Date(unixSeconds * 1000);
   const today = new Date();
   const sameDay = date.toISOString().slice(0, 10) === today.toISOString().slice(0, 10);
   return sameDay ? `${HHMM.format(date)}Z` : DAY_HHMM.format(date).replace(',', '');

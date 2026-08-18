@@ -68,9 +68,6 @@
     failed: { eventTicker: string; message: string }[];
   }
 
-  /** A bar with `time` as a number: the wire type carries a `u64` as `bigint`. */
-  type Bar = Omit<SpotCandle, 'time'> & { time: number };
-
   const INTERVAL_LABEL: Record<CandleInterval, string> = { 1: '1m', 60: '1h', 1440: '1d' };
 
   const { panels, workspace } = getTerminalContext();
@@ -133,9 +130,7 @@
   });
 
   const loaded = $derived(data.data);
-  const bars = $derived<Bar[]>(
-    (loaded?.candles.candles ?? []).map((candle) => ({ ...candle, time: Number(candle.time) })),
-  );
+  const bars = $derived<readonly SpotCandle[]>(loaded?.candles.candles ?? []);
   /** Overlays that came back, in the order they were asked for. */
   const drawnOverlays = $derived(loaded?.overlays ?? []);
 
@@ -211,7 +206,7 @@
       ...drawnOverlays.map((overlay) => ({
         id: `implied:${overlay.eventTicker}`,
         kind: 'implied-line' as const,
-        data: toImpliedData(overlay.points.map((p) => ({ time: Number(p.time), value: p.value }))),
+        data: toImpliedData(overlay.points),
         color: colourFor(overlay.eventTicker),
         precision,
       })),
@@ -288,7 +283,7 @@
     (): { eventTicker: string; value: number; colour: string }[] => {
       if (cursorTime === undefined) return [];
       return drawnOverlays.flatMap((overlay) => {
-        const value = overlay.points.find((p) => Number(p.time) === cursorTime)?.value;
+        const value = overlay.points.find((p) => p.time === cursorTime)?.value;
         if (value === undefined || value === null) return [];
         return [
           { eventTicker: overlay.eventTicker, value, colour: colourFor(overlay.eventTicker) },

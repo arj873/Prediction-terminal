@@ -35,9 +35,6 @@
     candles: CandlesResponse;
   }
 
-  /** A bar with `time` as a number: the wire type carries a `u64` as `bigint`. */
-  type Bar = Omit<Candle, 'time'> & { time: number };
-
   const INTERVAL_LABEL: Record<CandleInterval, string> = { 1: '1m', 60: '1h', 1440: '1d' };
 
   const { workspace } = getTerminalContext();
@@ -60,9 +57,7 @@
   });
 
   const loaded = $derived(data.data);
-  const bars = $derived<Bar[]>(
-    (loaded?.candles.candles ?? []).map((candle) => ({ ...candle, time: Number(candle.time) })),
-  );
+  const bars = $derived<readonly Candle[]>(loaded?.candles.candles ?? []);
 
   const subtitle = $derived.by(() => {
     const label = `${venueInfo(ref.venue).label} · ${INTERVAL_LABEL[interval]} · ${style}`;
