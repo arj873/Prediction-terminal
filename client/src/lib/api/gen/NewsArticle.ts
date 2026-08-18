@@ -23,12 +23,12 @@ url: string,
 /**
  * Publication time, unix seconds (UTC).
  */
-time: bigint, 
+time: number, 
 /**
  * Last edit, unix seconds. Equal to [`NewsArticle::time`] for an unrevised
  * item.
  */
-updated: bigint, 
+updated: number, 
 /**
  * Tickers the publisher tagged, e.g. `["NVDA", "AMD"]`.
  */

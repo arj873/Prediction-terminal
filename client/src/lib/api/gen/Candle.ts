@@ -4,7 +4,7 @@ export type Candle = {
 /**
  * Period *end*, unix seconds.
  */
-time: bigint, open: number, high: number, low: number, close: number, 
+time: number, open: number, high: number, low: number, close: number, 
 /**
  * Contracts traded in the period. `None` where the venue's history carries
  * prices only — Polymarket International publishes a price series with no

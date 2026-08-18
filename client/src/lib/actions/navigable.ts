@@ -22,28 +22,61 @@ export interface NavigableParams {
   action?: () => void;
   /** Run instead of clicking, when the row is not a plain click target. */
   activate?: () => void;
+  /**
+   * Whether this element is a cursor stop at all. Default `true`.
+   *
+   * A table that renders inert rows — the key crib in `HELP`, the reference
+   * tables in `KEYS` — passes `false` for them, because a caret that stops
+   * somewhere `Enter` does nothing is worse than one that skips it. The old
+   * client got this for free by matching a `.clickable` class that only
+   * command-bound rows carried.
+   */
+  enabled?: boolean;
 }
 
 export const navigable: Action<HTMLElement, NavigableParams> = (element, params) => {
   let current = params;
+  let registered = false;
 
   const onClick = () => current.cursor.focusElement(element, { scroll: false });
-  element.addEventListener('click', onClick);
-  current.cursor.register({ element, ...entryOf(current) });
+
+  function apply(next: NavigableParams) {
+    const wanted = next.enabled ?? true;
+
+    if (!wanted) {
+      if (registered) {
+        next.cursor.unregister(element);
+        element.removeEventListener('click', onClick);
+        registered = false;
+      }
+      return;
+    }
+
+    if (!registered) {
+      element.addEventListener('click', onClick);
+      next.cursor.register({ element, ...entryOf(next) });
+      registered = true;
+      return;
+    }
+
+    if (next.cursor !== current.cursor) {
+      current.cursor.unregister(element);
+      next.cursor.register({ element, ...entryOf(next) });
+    } else {
+      next.cursor.update({ element, ...entryOf(next) });
+    }
+  }
+
+  apply(params);
 
   return {
     update(next: NavigableParams) {
-      if (next.cursor !== current.cursor) {
-        current.cursor.unregister(element);
-        next.cursor.register({ element, ...entryOf(next) });
-      } else {
-        next.cursor.update({ element, ...entryOf(next) });
-      }
+      apply(next);
       current = next;
     },
     destroy() {
       element.removeEventListener('click', onClick);
-      current.cursor.unregister(element);
+      if (registered) current.cursor.unregister(element);
     },
   };
 };

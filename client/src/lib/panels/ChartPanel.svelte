@@ -168,14 +168,7 @@
   });
 </script>
 
-<PanelFrame
-  {id}
-  kind="GP"
-  title={formatRef(ref)}
-  {subtitle}
-  subject={formatRef(ref)}
-  {data}
->
+<PanelFrame {id} kind="GP" title={formatRef(ref)} {subtitle} subject={formatRef(ref)} {data}>
   <div class="chart-wrap">
     {#if bar}
       <!--
@@ -216,7 +209,7 @@
       <div class="chart-host">
         <EmptyState
           message="No candles in this window."
-          hint={data.data?.candles.note ??
+          hint={loaded?.candles.note ??
             'This market may not have traded yet. Try a wider range, e.g. `GP <ticker> 1d 1y`.'}
         />
       </div>

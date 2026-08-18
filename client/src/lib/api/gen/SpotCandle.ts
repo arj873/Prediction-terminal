@@ -10,4 +10,4 @@ export type SpotCandle = {
 /**
  * Period *start*, unix seconds — the convention both upstreams use.
  */
-time: bigint, open: number, high: number, low: number, close: number, volume: number, };
+time: number, open: number, high: number, low: number, close: number, volume: number, };

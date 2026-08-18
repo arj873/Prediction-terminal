@@ -6,9 +6,8 @@
  * handler be a one-liner and a panel be a component with no knowledge of the
  * command that opened it.
  *
- * Every kind resolves to something. A kind still being ported resolves to
- * `MissingPanel`, so a half-finished registry runs rather than throwing at the
- * grid.
+ * The map is total over `PanelKind`, so adding a kind without a component is a
+ * compile error rather than an empty tile.
  */
 
 import type { Component } from 'svelte';
@@ -16,40 +15,52 @@ import type { Component } from 'svelte';
 import BillboardChartsPanel from './BillboardChartsPanel.svelte';
 import BillboardPanel from './BillboardPanel.svelte';
 import BoxOfficePanel from './BoxOfficePanel.svelte';
+import ChartPanel from './ChartPanel.svelte';
+import ComparePanel from './ComparePanel.svelte';
+import DepthPanel from './DepthPanel.svelte';
+import EntPanel from './EntPanel.svelte';
+import EventPanel from './EventPanel.svelte';
 import FredPanel from './FredPanel.svelte';
 import FredSearchPanel from './FredSearchPanel.svelte';
 import HelpPanel from './HelpPanel.svelte';
 import KeysPanel from './KeysPanel.svelte';
-import MissingPanel from './MissingPanel.svelte';
+import LinkedSeriesPanel from './LinkedSeriesPanel.svelte';
 import NetflixPanel from './NetflixPanel.svelte';
+import NewsPanel from './NewsPanel.svelte';
+import QuotePanel from './QuotePanel.svelte';
 import RtPanel from './RtPanel.svelte';
 import RtSearchPanel from './RtSearchPanel.svelte';
+import SearchPanel from './SearchPanel.svelte';
+import SpotPanel from './SpotPanel.svelte';
 import SteamPanel from './SteamPanel.svelte';
 import StreamChartPanel from './StreamChartPanel.svelte';
+import TopPanel from './TopPanel.svelte';
+import TradesPanel from './TradesPanel.svelte';
 import TvPanel from './TvPanel.svelte';
+import WatchlistPanel from './WatchlistPanel.svelte';
 import type { PanelKind } from '../state/panels.svelte';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type AnyPanel = Component<any>;
 
 export const PANEL_COMPONENTS: Record<PanelKind, AnyPanel> = {
-  quote: MissingPanel,
-  depth: MissingPanel,
-  trades: MissingPanel,
-  chart: MissingPanel,
-  search: MissingPanel,
-  event: MissingPanel,
-  top: MissingPanel,
-  watchlist: MissingPanel,
-  spot: MissingPanel,
-  'linked-series': MissingPanel,
-  compare: MissingPanel,
-  news: MissingPanel,
+  quote: QuotePanel,
+  depth: DepthPanel,
+  trades: TradesPanel,
+  chart: ChartPanel,
+  search: SearchPanel,
+  event: EventPanel,
+  top: TopPanel,
+  watchlist: WatchlistPanel,
+  spot: SpotPanel,
+  'linked-series': LinkedSeriesPanel,
+  compare: ComparePanel,
+  news: NewsPanel,
   fred: FredPanel,
   'fred-search': FredSearchPanel,
   billboard: BillboardPanel,
   'billboard-charts': BillboardChartsPanel,
-  ent: MissingPanel,
+  ent: EntPanel,
   rt: RtPanel,
   'rt-search': RtSearchPanel,
   netflix: NetflixPanel,

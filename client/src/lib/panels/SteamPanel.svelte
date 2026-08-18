@@ -25,20 +25,11 @@
     refreshMs: 120_000,
   });
 
-  /**
-   * Valve's counts are `u64` on the server, so the generated type says `bigint`
-   * while the JSON delivers a number. The `null` has to survive the conversion:
-   * an absent count means no live figure right now, which is `--` and not `0`.
-   */
-  function players(value: bigint | null): number | null {
-    return value === null ? null : Number(value);
-  }
-
   const subtitle = $derived.by(() => {
     const chart = data.data;
     if (!chart) return '';
     if (chart.view === 'game') return chart.games[0]?.name ?? '';
-    const total = chart.games.reduce((sum, game) => sum + (players(game.currentPlayers) ?? 0), 0);
+    const total = chart.games.reduce((sum, game) => sum + (game.currentPlayers ?? 0), 0);
     return `${compact(total)} players in the top ${chart.games.length}`;
   });
 
@@ -56,8 +47,8 @@
   const columns: Column<SteamGame>[] = [
     { header: '#', cell: (game) => countOrDash(game.rank), class: 'num strong' },
     { header: 'GAME', cell: (game) => truncate(game.name, 44), title: (game) => game.name },
-    { header: 'PLAYERS', cell: (game) => group(players(game.currentPlayers)), class: 'num' },
-    { header: 'PEAK 24H', cell: (game) => group(players(game.peakPlayers)), class: 'num dim' },
+    { header: 'PLAYERS', cell: (game) => group(game.currentPlayers), class: 'num' },
+    { header: 'PEAK 24H', cell: (game) => group(game.peakPlayers), class: 'num dim' },
     { header: 'APPID', cell: (game) => (game.appId ? String(game.appId) : '—'), class: 'mono dim' },
   ];
 </script>

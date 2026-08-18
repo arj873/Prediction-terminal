@@ -587,26 +587,34 @@ async fn compute_implied_series(
     // Anchor the strike selection on where the ladder currently prices the
     // underlying, so the rungs read are the ones bracketing the crossing.
     let live = implied_price(&live_legs(&markets), method);
-    let selected = select_strikes(&markets, live.value);
+    // Owned rather than borrowed: a closure taking `&Market` and returning an
+    // async block needs a higher-ranked bound that the block cannot satisfy, so
+    // the whole future stops being nameable by an axum handler. One clone per
+    // rung buys a signature that composes.
+    let selected: Vec<Market> = select_strikes(&markets, live.value)
+        .into_iter()
+        .cloned()
+        .collect();
     let requested = selected.len();
+    let series_ticker = event.series_ticker.clone();
 
     // `buffered`, not `buffer_unordered`: `build_points` walks the rungs in the
     // order they were selected, and so does `contributors`.
-    let series: Vec<RungSeries> = futures::stream::iter(selected.into_iter().map(|market| async {
-        let candles = get_candles(
-            state,
-            &market.ticker,
-            interval,
-            start_ts,
-            end_ts,
-            Some(&event.series_ticker),
-        )
-        .await
-        .map(|response| response.candles)
-        .unwrap_or_default();
-        RungSeries {
-            market: market.clone(),
-            candles,
+    let series: Vec<RungSeries> = futures::stream::iter(selected.into_iter().map(|market| {
+        let series_ticker = series_ticker.clone();
+        async move {
+            let candles = get_candles(
+                state,
+                &market.ticker,
+                interval,
+                start_ts,
+                end_ts,
+                Some(&series_ticker),
+            )
+            .await
+            .map(|response| response.candles)
+            .unwrap_or_default();
+            RungSeries { market, candles }
         }
     }))
     .buffered(FAN_OUT)

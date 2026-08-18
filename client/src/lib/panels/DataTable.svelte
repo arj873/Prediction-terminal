@@ -52,7 +52,7 @@
         class:clickable={command !== null}
         title={rowTitle?.(row)}
         onclick={command === null ? undefined : () => run(command)}
-        use:navigable={{ cursor, command: command ?? undefined }}
+        use:navigable={{ cursor, command: command ?? undefined, enabled: command !== null }}
       >
         {#each active as column, i (i)}
           <td class={columnClass(column, row)} title={column.title?.(row)}>

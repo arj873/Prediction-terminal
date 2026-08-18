@@ -16,7 +16,7 @@ venue: string,
 /**
  * When the price was observed, unix seconds.
  */
-time: bigint, 
+time: number, 
 /**
  * Which provider answered — surfaced in the panel header.
  */

@@ -4,7 +4,7 @@ export type ImpliedPoint = {
 /**
  * Bucket end, unix seconds — aligned to the Kalshi candle grid.
  */
-time: bigint, 
+time: number, 
 /**
  * Implied price of the underlying, or `None` when the ladder was unusable.
  */

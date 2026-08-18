@@ -4,8 +4,8 @@ export type SteamGame = { appId: number, name: string, rank: number | null,
 /**
  * Players in game right now.
  */
-currentPlayers: bigint | null, 
+currentPlayers: number, 
 /**
  * Highest concurrent players in the last 24h.
  */
-peakPlayers: bigint | null, };
+peakPlayers: number, };

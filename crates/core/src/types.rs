@@ -194,6 +194,7 @@ pub struct Trade {
     pub venue: Venue,
     pub trade_id: String,
     pub ticker: String,
+    #[ts(type = "number")]
     pub ts: i64,
     pub count: f64,
     pub yes_price: f64,
@@ -275,6 +276,7 @@ impl TryFrom<u16> for CandleInterval {
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
 pub struct Candle {
     /// Period *end*, unix seconds.
+    #[ts(type = "number")]
     pub time: i64,
     pub open: f64,
     pub high: f64,
@@ -631,6 +633,7 @@ pub struct SpotQuote {
     /// Exchange or venue the print came from, e.g. `NASDAQ`, `Coinbase`.
     pub venue: String,
     /// When the price was observed, unix seconds.
+    #[ts(type = "number")]
     pub time: i64,
     /// Which provider answered — surfaced in the panel header.
     pub source: String,
@@ -645,6 +648,7 @@ pub struct SpotQuote {
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
 pub struct SpotCandle {
     /// Period *start*, unix seconds — the convention both upstreams use.
+    #[ts(type = "number")]
     pub time: i64,
     pub open: f64,
     pub high: f64,
@@ -775,6 +779,7 @@ pub struct ImpliedCandidatesResponse {
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
 pub struct ImpliedPoint {
     /// Bucket end, unix seconds — aligned to the Kalshi candle grid.
+    #[ts(type = "number")]
     pub time: i64,
     /// Implied price of the underlying, or `None` when the ladder was unusable.
     pub value: Option<f64>,
@@ -944,9 +949,11 @@ pub struct NewsArticle {
     /// Article link. Empty when the item has none, or its scheme was not http(s).
     pub url: String,
     /// Publication time, unix seconds (UTC).
+    #[ts(type = "number")]
     pub time: i64,
     /// Last edit, unix seconds. Equal to [`NewsArticle::time`] for an unrevised
     /// item.
+    #[ts(type = "number")]
     pub updated: i64,
     /// Tickers the publisher tagged, e.g. `["NVDA", "AMD"]`.
     pub symbols: Vec<String>,
@@ -1325,8 +1332,10 @@ pub struct SteamGame {
     pub name: String,
     pub rank: Option<u32>,
     /// Players in game right now.
+    #[ts(type = "number")]
     pub current_players: Option<u64>,
     /// Highest concurrent players in the last 24h.
+    #[ts(type = "number")]
     pub peak_players: Option<u64>,
 }
 
@@ -1377,9 +1386,13 @@ pub struct TvSchedule {
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
 pub struct CacheStats {
+    #[ts(type = "number")]
     pub hits: u64,
+    #[ts(type = "number")]
     pub misses: u64,
+    #[ts(type = "number")]
     pub entries: u64,
+    #[ts(type = "number")]
     pub evictions: u64,
 }
 
@@ -1483,6 +1496,40 @@ mod tests {
             assert_eq!(text.parse::<EntGenre>(), Ok(*genre));
             assert_eq!(serde_json::to_string(genre).unwrap(), format!("\"{text}\""));
         }
+    }
+
+    #[test]
+    fn no_wire_field_is_generated_as_a_bigint() {
+        // JSON has one number type, and `JSON.parse` never produces a bigint.
+        // `ts-rs` maps a Rust `i64`/`u64` to `bigint` by default, which would
+        // have the client's types confidently disagree with the values it
+        // actually receives — `candle.time` was declared `bigint` and arrives a
+        // `number`. Every such field carries `#[ts(type = "number")]`; this
+        // fails if a new one is added without it.
+        let generated =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../client/src/lib/api/gen");
+        let Ok(entries) = std::fs::read_dir(&generated) else {
+            // The bindings are written by the export tests; if they have not
+            // been generated in this run there is nothing to check.
+            return;
+        };
+
+        let mut offenders = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().is_some_and(|e| e == "ts") {
+                if let Ok(text) = std::fs::read_to_string(&path) {
+                    if text.contains("bigint") {
+                        offenders.push(path.file_name().unwrap().to_string_lossy().into_owned());
+                    }
+                }
+            }
+        }
+        offenders.sort();
+        assert!(
+            offenders.is_empty(),
+            "these generated types declare a bigint the wire never sends: {offenders:?}"
+        );
     }
 
     #[test]
