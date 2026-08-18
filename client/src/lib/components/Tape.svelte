@@ -21,7 +21,7 @@
   import { venue as venueApi } from '../api/client';
   import { getTerminalContext } from '../context';
   import { cents, direction, signedCents } from '../format';
-  import { formatRef, VENUES } from '../terminal/venue';
+  import { formatRef, supportsSort, VENUES } from '../terminal/venue';
 
   /** How often the tape re-reads the leaderboards. */
   const REFRESH_MS = 45_000;
@@ -40,6 +40,15 @@
 
   const { run } = getTerminalContext();
 
+  /**
+   * Only the venues that publish a volume ranking.
+   *
+   * Polymarket US's public catalogue carries no volume, so asking it for a
+   * leaderboard is a request that can only be refused — the registry says so
+   * without a round trip.
+   */
+  const RANKED = VENUES.filter((info) => supportsSort(info.id, 'volume'));
+
   let items = $state<TapeItem[]>([]);
   let controller: AbortController | undefined;
 
@@ -49,15 +58,15 @@
     controller = own;
 
     const boards = await Promise.allSettled(
-      VENUES.map((info) => venueApi.top(info.id, 'volume', PER_VENUE, own.signal)),
+      RANKED.map((info) => venueApi.top(info.id, 'volume', PER_VENUE, own.signal)),
     );
     if (own.signal.aborted) return;
 
     const lanes = boards.map((board, index) =>
       board.status === 'fulfilled'
         ? board.value.markets.map((market) => ({
-            ref: formatRef({ venue: VENUES[index]!.id, id: market.ticker }),
-            code: VENUES[index]!.code,
+            ref: formatRef({ venue: RANKED[index]!.id, id: market.ticker }),
+            code: RANKED[index]!.code,
             title: market.title,
             price: market.mid ?? market.lastPrice,
             change: market.change,
