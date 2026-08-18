@@ -52,6 +52,7 @@ import {
   type MoverSort,
   type SearchResponse,
 } from './corpus.js';
+import { stripDates } from './slug.js';
 
 const ENDPOINT = process.env.PREDICTFUN_GRAPHQL_URL ?? 'https://graphql.predict.fun/graphql';
 
@@ -107,8 +108,9 @@ async function gql<T>(
     const body = await fetchJson<GraphQLBody<T>>(url.toString(), {
       timeoutMs,
       retries: 2,
-      // A crawl page of 100 categories with every leg runs to ~600 KB, and the
-      // 32-leg timeseries to ~160 KB; both are well inside the default ceiling.
+      // A crawl page of 100 categories with every leg runs to ~750 KB and the
+      // 32-leg timeseries to ~160 KB, so the ceiling is only raised against a
+      // catalogue that grows an order of magnitude, not against today's.
       maxBytes: 32 * 1024 * 1024,
     });
 
@@ -225,7 +227,21 @@ export interface RawPfOutcome {
 export interface RawPfMarketStatistics {
   volumeTotalUsd?: number | null;
   volume24hUsd?: number | null;
+  /** Turnover against the previous day, not a price move. Unread. */
   volume24hChangeUsd?: number | null;
+  /**
+   * Published, unsigned, and deliberately unread: it is the 24h *range*.
+   *
+   * It is named like the daily move and behaves like a spread. It is never
+   * negative — 0 of 6,341 stated values in a full crawl of the open catalogue —
+   * and where it is non-zero it tracks max − min of the venue's own chance
+   * series rather than the distance between its ends: leg 932250 reports 15.5
+   * over a day that finished 0.4 lower, leg 1215726 reports 11.0 over a rise of
+   * 4, and leg 935920 reports 29.0 over a 29-point *fall*. Across the legs with
+   * a non-zero figure it matched the range on 22 of 28 and the signed move on
+   * none of the contested ones. Passing it through as `Market.change` would
+   * paint every crash on this venue green.
+   */
   percentageChanceChange24h?: number | null;
   liquidity3CAskUsd?: number | null;
   /** Present, unscaled and unread — see {@link normaliseMarket}. */
@@ -239,9 +255,10 @@ export interface RawPfOrderbook {
   /** `[price, size]`, best (highest) first. */
   bids?: [number, number][] | null;
   lastOrderSettled?: {
+    /** Whole cents, in YES terms whichever outcome is named — see {@link lastPrintOf}. */
     price?: string | null;
     side?: string | null;
-    /** Which outcome the price belongs to — a NO print reads 0.951 for YES 0.049. */
+    /** The side the resting order sat on, not the space its price is quoted in. */
     outcome?: string | null;
     kind?: string | null;
   } | null;
@@ -354,23 +371,31 @@ export function parseTicker(ticker: string): { slug: string; marketId: string } 
 /**
  * The recurring question behind a slug.
  *
- * Two suffixes name an occasion rather than a question, and both are precise
- * enough to strip without guessing: a ten-digit unix stamp on the machine-made
- * crypto series (`btc-updown-15m-1787032800` → `btc-updown-15m`, a new slug
- * every fifteen minutes) and an ISO date on the fixtures
- * (`mlb-oak-hou-2026-08-23` → `mlb-oak-hou`). Ten digits is what keeps a season
- * year safe: `big-game-champion-2027` is one question, not one instance of one.
+ * Dates come off through the shared {@link stripDates}, which is the same rule
+ * Polymarket US's slugs need and for the same reason: `fed-decision-in-september`
+ * and `fed-decision-in-october` are one question asked twice, and leaving the
+ * month on makes them two one-event series, neither of which then lines up
+ * against `KXFEDDECISION` at Kalshi — which is the pairing this terminal exists
+ * to draw.
  *
- * A date spelled in words is deliberately left alone.
- * `bitcoin-up-or-down-on-august-18-2026` and
- * `ethereum-up-or-down-august-18-2026-2am-et` put the words in different places
- * with different tails, so removing them merges questions that are not the same
- * question — and an evergreen slug being its own series costs nothing, while a
- * wrong series pairs two markets that never settle together.
+ * Two suffixes are this venue's own, and are taken off first because
+ * {@link stripDates} reads segments rather than digit runs. A machine-minted
+ * stamp — ten digits of unix seconds on the crypto books
+ * (`btc-updown-15m-1787032800`, a new slug every fifteen minutes) or seventeen
+ * of creation time on the season books
+ * (`laliga-2027-champion-20260701200737375`) — is dropped wherever it appears.
+ * A short trailing run is dropped only at the end (`fed-decision-in-september-762`),
+ * because that position is where this venue puts a disambiguator and nowhere
+ * else: a number in the middle of a slug is part of the question, and
+ * `nasdaq-100` should not become `nasdaq`.
  */
 export function seriesFromSlug(slug: string): string {
-  const withoutStamp = slug.replace(/-\d{10}$/, '');
-  return withoutStamp.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+  const withoutStamps = slug
+    .split('-')
+    .filter((part) => !/^\d{6,}$/.test(part))
+    .join('-')
+    .replace(/-\d{3,5}$/, '');
+  return stripDates(withoutStamps) || withoutStamps;
 }
 
 /* ------------------------------------------------------------ normalisers */
@@ -466,7 +491,7 @@ export function normaliseMarket(raw: RawPfMarket, category?: RawPfCategory | nul
 
   const yesBid = figure(yes?.bidPriceInCurrency);
   const yesAsk = figure(yes?.askPriceInCurrency);
-  const lastPrice = lastPrintOf(raw, no?.name);
+  const lastPrice = lastPrintOf(raw);
 
   // The venue states the NO side itself, and it agrees with the mirror of the
   // YES side to the last decimal. The mirror is the fallback for the leg that
@@ -478,11 +503,6 @@ export function normaliseMarket(raw: RawPfMarket, category?: RawPfCategory | nul
 
   const mid =
     yesBid !== null && yesAsk !== null ? round4((yesBid + yesAsk) / 2) : (lastPrice ?? yesBid ?? yesAsk);
-
-  // Percentage *points*: a stated 1.0 is a cent, not a dollar.
-  const stated = figure(raw.statistics?.percentageChanceChange24h);
-  const change = stated === null ? null : round4(stated / 100);
-  const previousPrice = mid !== null && change !== null ? round4(mid - change) : null;
 
   const tag = nodes(parent?.tags)[0]?.name ?? '';
 
@@ -502,8 +522,12 @@ export function normaliseMarket(raw: RawPfMarket, category?: RawPfCategory | nul
     noAsk,
     mid,
     lastPrice,
-    previousPrice,
-    change,
+    // The venue states a 24h *range* and no earlier price at all — see
+    // `percentageChanceChange24h` on {@link RawPfMarketStatistics}. A range has
+    // no direction, and the terminal colours this column by its sign, so both
+    // fields stay unstated rather than painting every fall as a rise.
+    previousPrice: null,
+    change: null,
     // Dollars, not contracts — the venue meters turnover in collateral and the
     // registry note says so, because the honest number in the wrong unit is
     // more dangerous silently than the missing one is loudly.
@@ -520,6 +544,8 @@ export function normaliseMarket(raw: RawPfMarket, category?: RawPfCategory | nul
     closeTime: parent?.endsAt ?? '',
     expirationTime: parent?.endsAt ?? '',
     result: resultOf(raw),
+    // The leg's own terms when the leg was read on its own, the category's when
+    // it came out of the catalogue — see {@link MARKET_FIELDS}.
     rulesPrimary: raw.description ?? parent?.description ?? '',
     ...(tag ? { category: tag } : {}),
     // Strikes exist here only as prose inside the leg title (`">¥42B"`,
@@ -532,22 +558,24 @@ export function normaliseMarket(raw: RawPfMarket, category?: RawPfCategory | nul
 }
 
 /**
- * The last print, re-based to YES.
+ * The last print, which is already quoted in YES terms.
  *
- * `lastOrderSettled` names the outcome its price belongs to, so a NO print of
- * 0.951 is a YES trade at 0.049. Only a price the venue explicitly attributed
- * to the NO leg is inverted: a name that matches neither outcome is left as
- * quoted rather than flipped on a hunch, since a wrongly inverted print is a
- * 90-cent error on a 10-cent market.
+ * `lastOrderSettled` names an outcome beside the price, which reads as an
+ * invitation to flip a NO print into YES terms — the tape really does work that
+ * way, so the two look alike and behave differently. Of 167 live legs whose
+ * last settled order names the NO outcome, 163 sit nearer the YES mid as
+ * quoted than inverted, and the ones that decide it are unambiguous: leg
+ * 1457355 is quoted 0.01 on YES and reports `{price: "0.01", outcome: "No"}`,
+ * which inverted would have printed 99¢ on a penny market. `outcome` names the
+ * side the resting order was on, not the space its price is in.
+ *
+ * The price is also the venue's display figure rather than a tick-exact fill:
+ * 315 of 315 sampled prints carry exactly two decimals, including on legs
+ * quoted to three, so a sub-cent market can report a last of `0.00`. The exact
+ * fills are on the tape — see {@link normaliseTrades}.
  */
-function lastPrintOf(raw: RawPfMarket, noName: string | null | undefined): number | null {
-  const settled = raw.orderbook?.lastOrderSettled;
-  const price = decimal(settled?.price);
-  if (price === null) return null;
-
-  const named = (settled?.outcome ?? '').trim().toLowerCase();
-  const isNo = named !== '' && (named === (noName ?? '').trim().toLowerCase() || named === 'no');
-  return isNo ? round4(1 - price) : price;
+function lastPrintOf(raw: RawPfMarket): number | null {
+  return decimal(raw.orderbook?.lastOrderSettled?.price);
 }
 
 /**
@@ -782,11 +810,24 @@ export function normaliseSeries(raw: RawPfTag): SeriesInfo {
 
 /* ---------------------------------------------------------------- queries */
 
-/** The leg fields every view needs. Fee and on-chain fields are left unasked. */
+/**
+ * The leg fields every view needs.
+ *
+ * `description` is not among them, and that is the difference between a crawl
+ * that weighs 750 KB a page and one that weighs 1.7 MB: the settlement rules
+ * run to two kilobytes a leg and account for half of every payload they appear
+ * in. Only `DES` renders them, and `DES` reads one leg through
+ * {@link MARKET_QUERY}, which asks for them there. A leg read out of the
+ * catalogue falls back to its category's rules, which are the same terms
+ * written once for the group.
+ *
+ * The fee, on-chain and reward fields are left unasked because nothing in the
+ * terminal reads them.
+ */
 const MARKET_FIELDS = `
-  id title question description status marketType isTradingEnabled decimalPrecision
+  id title question status marketType isTradingEnabled decimalPrecision
   resolution { index name status }
-  statistics { volumeTotalUsd volume24hUsd volume24hChangeUsd percentageChanceChange24h liquidity3CAskUsd }
+  statistics { volumeTotalUsd volume24hUsd liquidity3CAskUsd }
   outcomes { edges { node { id index name status bidPriceInCurrency askPriceInCurrency statistics { sharesCount } } } }
 `;
 
@@ -799,6 +840,7 @@ const CATEGORY_FIELDS = `
 const MARKET_QUERY = `query Market($id: ID!) {
   market(id: $id) {
     ${MARKET_FIELDS}
+    description
     orderbook { asks bids lastOrderSettled { price side outcome kind } }
     category { ${CATEGORY_FIELDS} }
   }
@@ -812,6 +854,7 @@ const CATEGORY_QUERY = `query Category($id: ID!) {
 }`;
 
 const TRADES_QUERY = `query Trades($marketId: ID!, $first: Int!) {
+  market(id: $marketId) { id }
   matchEventLog(filter: { marketId: $marketId }, pagination: { first: $first }) {
     pageInfo { hasNextPage endCursor }
     edges { node {
@@ -955,12 +998,20 @@ export async function getTrades(reference: string, limit = 50): Promise<TradesRe
   // would report a shorter tape than the caller thinks it received.
   const first = Math.min(Math.max(limit, 1), 100);
 
-  const data = await gql<{ matchEventLog?: RawPfConnection<RawPfTrade> | null }>(
-    `trades:${marketId}:${first}`,
-    TTL.quote,
-    TRADES_QUERY,
-    { marketId, first },
-  );
+  const data = await gql<{
+    market?: { id?: string } | null;
+    matchEventLog?: RawPfConnection<RawPfTrade> | null;
+  }>(`trades:${marketId}:${first}`, TTL.quote, TRADES_QUERY, { marketId, first });
+
+  // The tape connection answers an unknown leg with an empty page rather than
+  // an error, so the leg is confirmed in the same round trip: a quiet market
+  // and a mistyped id must not both read as a market nobody trades.
+  if (!data.market) {
+    throw new UpstreamError(`No predict.fun market with id ${marketId}`, {
+      code: 'not_found',
+      hint: IDENTIFIER_HINT,
+    });
+  }
 
   const log = data.matchEventLog ?? {};
   return {
@@ -1075,17 +1126,19 @@ export async function listSeries(category?: string): Promise<SeriesInfo[]> {
 
 const CORPUS_KEY = 'predictfun:corpus';
 
-/** The page size the API silently enforces, stated so the crawl agrees with it. */
-const CORPUS_PAGE = 100;
-
 /**
  * Pages of open categories, ordered by 24h turnover.
  *
- * The open universe is about 1,024 categories and 7,400 legs, and each page of
- * 100 with every leg attached is ~600 KB and two to three seconds — so a full
- * crawl is roughly half a minute, once per catalogue TTL. The cap sits just
- * past the whole universe rather than under it, so the ordinary case completes
- * and a venue that doubles overnight truncates instead of running for minutes.
+ * The page size is fixed at the 100 the API silently enforces — it clamps
+ * anything larger without saying so, and a crawl that asked for 500 would
+ * quietly walk a fifth of the catalogue while believing it had walked it all.
+ *
+ * The open universe is about 1,085 categories and 7,800 legs, and each page of
+ * 100 with every leg attached is ~750 KB and two to three seconds — so a full
+ * crawl is eleven pages and about twelve seconds, once per catalogue TTL. The cap
+ * sits just past the whole universe rather than under it, so the ordinary case
+ * completes and a venue that doubles overnight truncates instead of running
+ * for minutes.
  *
  * Volume ordering is what makes the truncation principled: what a cap drops is
  * the untraded tail, not an arbitrary slice of the middle.
@@ -1162,10 +1215,15 @@ export async function search(query: string, limit = 25): Promise<SearchResponse>
 /**
  * Leaderboards over the snapshot.
  *
- * Every board this venue's registry row claims is backed by a figure in the
- * catalogue — turnover, the 24h move, resting depth and, under the name
- * `sharesCount`, open interest — so all five sorts rank on published numbers
- * rather than on a stand-in.
+ * Turnover, resting depth and — under the name `sharesCount` — open interest
+ * are all stated per leg in the catalogue, so those three boards rank on the
+ * venue's own numbers. The movers do not: the only 24h figure here is a range
+ * with no direction (see `percentageChanceChange24h` on
+ * {@link RawPfMarketStatistics}), `Market.change` is therefore unstated, and
+ * {@link rankMarkets} drops a market rather than ranking an unpublished figure
+ * as zero. `TOP gainers` and `TOP losers` come back empty on this venue until
+ * the venue publishes a signed move or the crawl can afford the per-category
+ * history that would reconstruct one.
  */
 export async function topMarkets(sort: MoverSort, limit = 25): Promise<Market[]> {
   return rankMarkets((await corpusSnapshot()).markets, sort, limit);

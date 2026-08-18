@@ -5,10 +5,11 @@
  * these words, what is busiest — and none of them offers an endpoint that does
  * it well. Kalshi has no search at all; Polymarket International's ranks by its
  * own relevance and cannot be filtered; Polymarket US's matched "Seeman Jan vs
- * Dufek Jakub Jr" for the query `fed`. So each source crawls its catalogue into
- * a {@link Corpus} once per TTL and the ranking lives here, identical for all
- * three, which is also what makes cross-venue results comparable: the same
- * query scores the same way whoever is listing the market.
+ * Dufek Jakub Jr" for the query `fed`, and Gemini's answered it with baseball.
+ * So each source crawls its catalogue into a {@link Corpus} once per TTL and the
+ * ranking lives here, identical for every venue, which is also what makes
+ * cross-venue results comparable: the same query scores the same way whoever is
+ * listing the market.
  */
 
 import type { Market, Venue, VenueEvent } from '../../shared/types.js';
@@ -166,8 +167,15 @@ export function rankMarkets(markets: Market[], sort: MoverSort, limit = 25): Mar
     return true;
   });
 
-  const direction = sort === 'losers' ? 1 : -1;
+  // Every board but `losers` wants the largest figure first; `losers` wants the
+  // most negative change first. Written as a plain ascending comparator with an
+  // explicit flip, because the previous form — a `direction` multiplied into an
+  // already-descending subtraction — cancelled itself out and inverted all five
+  // boards. Nothing caught it downstream: the panel re-sorts what it is given,
+  // so `TOP volume` looked correctly ordered while listing the thirty quietest
+  // markets on the exchange.
+  const ascending = sort === 'losers';
   return eligible
-    .sort((a, b) => direction * ((field(b) ?? 0) - (field(a) ?? 0)))
+    .sort((a, b) => ((field(a) ?? 0) - (field(b) ?? 0)) * (ascending ? 1 : -1))
     .slice(0, limit);
 }

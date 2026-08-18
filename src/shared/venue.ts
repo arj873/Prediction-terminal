@@ -207,10 +207,16 @@ const VENUE_TABLE = [
       candles: true,
       trades: true,
       seriesCategoryFilter: true,
-      sorts: ALL_SORTS,
+      // No movers board: the venue's 24h change figure is a magnitude, not a
+      // move. Sorting its own catalogue ascending by that field returns 0.0 as
+      // the minimum across every page, and 259 sampled markets held not one
+      // negative value — so a `gainers` board built on it would rank the
+      // biggest falls alongside the biggest rises and call them all rises.
+      sorts: ['volume', 'open_interest', 'liquidity'],
       note:
         'predict.fun states volume and resting depth in US dollars rather than contracts, ' +
-        'and publishes a probability sample series rather than OHLC bars.',
+        'publishes a probability sample series rather than OHLC bars, and states a 24h ' +
+        'move without a direction, so there is no movers board.',
     },
   },
   {

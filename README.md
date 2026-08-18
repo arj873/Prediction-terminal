@@ -595,11 +595,11 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `POLYMARKET_CLOB_BASE` | `https://clob.polymarket.com` | Polymarket book and price history |
 | `POLYMARKET_DATA_BASE` | `https://data-api.polymarket.com` | Polymarket print tape |
 | `POLYMARKET_US_API_BASE` | `https://gateway.polymarket.us` | Polymarket US public gateway |
-| `GEMINI_WEB_BASE` | `https://www.gemini.com` | Gemini prediction-market catalogue |
+| `GEMINI_CATALOGUE_BASE` | `https://www.gemini.com` | Gemini prediction-market catalogue |
 | `GEMINI_API_BASE` | `https://api.gemini.com` | Gemini book, tape and candles |
 | `PREDICTFUN_GRAPHQL_URL` | `https://graphql.predict.fun/graphql` | predict.fun public GraphQL host |
 | `FORECASTEX_API_BASE` | `https://forecastex.com` | ForecastEx catalogue, products and prices |
-| `FORECASTEX_S3_BASE` | `https://forecastex-public-data.s3.amazonaws.com` | ForecastEx end-of-session archive |
+| `FORECASTEX_ARCHIVE_BASE` | `https://forecastex-public-data.s3.amazonaws.com` | ForecastEx end-of-session archive |
 | `FRED_WEB_BASE` | `https://fred.stlouisfed.org` | Override for testing against a fixture |
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
@@ -766,6 +766,29 @@ misses — `2nd place` against `3rd place`, October's Fed meeting against
 January's, `NFL Champion` against `NFL Rookie of the Year` — alongside the real
 five-rung FOMC ladder, which must line up across every venue listing it without
 ever mapping two rungs onto one.
+
+`test/corpus.test.ts` exists because `rankMarkets` had no test and shipped
+inverted: every `TOP` board returned the *bottom* of the book. Nothing
+downstream caught it, because the panel re-sorts whatever it is handed — so the
+thirty quietest markets on the exchange arrived in a convincingly correct order.
+The tests assert the direction of all five boards, which is the part that was
+wrong and the part no amount of looking at the panel would have revealed.
+
+The three newest venues are tested for the traps their APIs set rather than for
+their happy paths, because each one answers `200 OK` while being wrong.
+`test/gemini.test.ts` covers the strikes whose structured value is mangled
+label text (`{"type":"below","value":"CKHEE."}`), the 23% of contracts that
+carry no `bestBid`/`bestAsk` key at all, and the turnover that is stated per
+event and must not be copied onto its twelve legs. `test/predictfun.test.ts`
+covers the 1e18-scaled trade amounts, the prints priced in the *named* outcome's
+terms rather than in YES, and the slug rule that has to fold September's and
+October's Fed books into one series without fusing all 38 Texas districts.
+`test/forecastex.test.ts` covers the archive rows where an untraded day reports
+`0.00` as its high, low and VWAP — which would draw a wick to zero on 92% of
+contracts — and the case folding that decides whether a price call answers at
+all: that exchange's price endpoint is case-sensitive and reports a wrong case
+as an empty `200`, so the one thing a test can check is that the canonical
+spelling is restored before the call.
 
 `test/polymarketus.test.ts` pins down the field the normaliser deliberately does
 not read. `outcomePrices` exists on every Polymarket US market and means

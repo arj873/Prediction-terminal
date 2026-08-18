@@ -37,6 +37,7 @@ import {
   type MoverSort,
   type SearchResponse,
 } from './corpus.js';
+import { stripDates } from './slug.js';
 
 const BASE = process.env.POLYMARKET_US_API_BASE ?? 'https://gateway.polymarket.us';
 
@@ -213,6 +214,13 @@ export function normaliseMarket(
 }
 
 /**
+ * Re-exported so this module still owns the whole of its slug handling from a
+ * reader's point of view. The implementation moved out when predict.fun turned
+ * out to need the same rule.
+ */
+export { stripDates } from './slug.js';
+
+/**
  * The series an event belongs to.
  *
  * The exchange states one on its sports and weather books (`mlb-2026`,
@@ -234,42 +242,6 @@ export function seriesFromEvent(raw: RawUsEvent): string {
   return stripDates(slug) || slug;
 }
 
-const MONTH_SEGMENT =
-  /^(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)$/;
-
-const isYear = (part = ''): boolean => /^(19|20)\d{2}$/.test(part);
-const isDayOrMonth = (part = ''): boolean => /^\d{1,2}$/.test(part);
-
-/**
- * Drop the segments of a slug that name an occasion rather than a question.
- *
- * Dates are removed as whole groups, never as loose numbers, because a slug's
- * other numbers carry meaning: `ushr-tx-15-2026-11-03` is the Texas 15th
- * district on 3 November 2026, and stripping every short number would file all
- * 38 Texas districts under one series. A year anchors the group — the two
- * segments after it if they are a month and day (`2026-11-03`), otherwise the
- * two before it (`03-14-2027`), otherwise nothing.
- */
-export function stripDates(slug: string): string {
-  const parts = slug.split('-');
-  const drop = new Set<number>();
-
-  parts.forEach((part, i) => {
-    if (MONTH_SEGMENT.test(part)) drop.add(i);
-    if (!isYear(part)) return;
-
-    drop.add(i);
-    if (isDayOrMonth(parts[i + 1]) && isDayOrMonth(parts[i + 2])) {
-      drop.add(i + 1);
-      drop.add(i + 2);
-    } else if (isDayOrMonth(parts[i - 1]) && isDayOrMonth(parts[i - 2])) {
-      drop.add(i - 1);
-      drop.add(i - 2);
-    }
-  });
-
-  return parts.filter((part, i) => part !== '' && !drop.has(i)).join('-');
-}
 
 export function normaliseEvent(raw: RawUsEvent): VenueEvent {
   const eventTicker = raw.ticker ?? raw.slug ?? '';

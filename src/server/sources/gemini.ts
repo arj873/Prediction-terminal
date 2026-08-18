@@ -94,17 +94,17 @@ export interface RawGeminiPrices {
    */
   buy?: { yes?: string; no?: string };
   sell?: { yes?: string; no?: string };
-  /** Absent, key and all, on 680 of 2,995 contracts. */
+  /** Absent, key and all, on 678 of 2,995 contracts. */
   bestBid?: string;
   bestAsk?: string;
-  /** Absent on 1,511 of 2,995 — never traded, or settled. */
+  /** Absent on 1,509 of 2,995 — never traded, or settled. */
   lastTradePrice?: string;
 }
 
 export interface RawGeminiStrike {
   /** `above` | `under_or_equal` | `below` | `reference`. */
   type?: string;
-  /** A decimal string on 431 of 458 strikes, and label debris on the other 27. */
+  /** A decimal string on 429 of 456 strikes, and label debris on the other 27. */
   value?: string;
 }
 
@@ -127,6 +127,8 @@ export interface RawGeminiContract {
   /** `yes` or `no`, on exactly the 262 settled contracts. */
   resolutionSide?: string;
   strike?: RawGeminiStrike;
+  /** The venue's own display order for the leg — see {@link normaliseEvent}. */
+  sortOrder?: number;
 }
 
 export interface RawGeminiEvent {
@@ -148,7 +150,7 @@ export interface RawGeminiEvent {
   volumeDelta24hPct?: string;
   effectiveDate?: string;
   expiryDate?: string;
-  /** Kickoff or observation start — when trading *ends*, not when it began. */
+  /** Start of the observed period, not of trading — see {@link normaliseMarket}. */
   startTime?: string;
   resolvedAt?: string;
   contracts?: RawGeminiContract[];
@@ -240,17 +242,24 @@ const NO_STRIKE: Strike = { strikeType: null, floorStrike: null, capStrike: null
 /**
  * The structured strike, when the number in it is a number.
  *
- * 458 contracts carry a `{type, value}` strike and 27 of them carry debris from
+ * 456 contracts carry a `{type, value}` strike and 27 of them carry debris from
  * whatever generated the label instead of a figure — "Lockheed Martin" arrives
  * as `{type:'below', value:'CKHEE.'}` and "Hike 25bps" as `{value:'KE25'}`. So
  * the value is parsed before the type is believed, and a strike that fails to
  * parse leaves the contract with none: a `NaN` bound would sort to one end of
  * every ladder it appeared in and price a spread against nothing.
  *
- * The type is read in the exchange's vocabulary rather than the label's prose,
- * which disagrees with it — `above` maps to `greater` on a contract whose own
- * label says "$61,000 or above". `reference` names the level a ladder is quoted
- * against rather than a bound anything settles over, so it is no strike at all.
+ * `above` and `below` are the exchange's shorthand for bounds that include
+ * their own edge, which the labels and the rules text agree on: every numeric
+ * `above` strike is a "$61,000 or above" rung whose terms read "if the price of
+ * Bitcoin is $61,000 or above … this market will resolve to Yes", and every
+ * numeric `below` one is a "74°F or below" weather bucket worded the same way.
+ * So both are the inclusive bound, the same one `under_or_equal` states for a
+ * golf top-10 finish. Reading them as strict would put the settlement price
+ * itself on the losing side of a rung that pays on it, and the two halves of a
+ * ladder would then leave a gap at every tick. `reference` is the level a
+ * five-minute up/down book is quoted against rather than a bound anything
+ * settles over, so it is no strike at all.
  */
 export function strikeOf(raw: RawGeminiStrike | undefined): Strike {
   const value = num(raw?.value);
@@ -258,11 +267,10 @@ export function strikeOf(raw: RawGeminiStrike | undefined): Strike {
 
   switch (raw?.type) {
     case 'above':
-      return { strikeType: 'greater', floorStrike: value, capStrike: null };
+      return { strikeType: 'greater_or_equal', floorStrike: value, capStrike: null };
     case 'under_or_equal':
-      return { strikeType: 'less_or_equal', floorStrike: null, capStrike: value };
     case 'below':
-      return { strikeType: 'less', floorStrike: null, capStrike: value };
+      return { strikeType: 'less_or_equal', floorStrike: null, capStrike: value };
     default:
       return NO_STRIKE;
   }
@@ -308,7 +316,7 @@ export interface GeminiParent {
  * One leg of an event, quoted from `bestBid` and `bestAsk`.
  *
  * **`prices.buy` and `prices.sell` are not read, on purpose.** Where a book
- * exists they restate it exactly — `buy.yes` equalled `bestAsk` on all 1,344
+ * exists they restate it exactly — `buy.yes` equalled `bestAsk` on all 2,317
  * contracts carrying both, and `sell.no` equalled `1 - bestAsk` to the cent on
  * every one. But on the 142 contracts with nothing resting they hold an
  * indicative mark instead, with `buy.yes === sell.yes === lastTradePrice`.
@@ -360,9 +368,11 @@ export function normaliseMarket(raw: RawGeminiContract, parent: GeminiParent): M
     // Not published either, but the book states it for anyone who asks for the
     // book: {@link getMarket} adds it up there rather than across 2,865 crawls.
     liquidity: null,
-    // `effectiveDate` is when this leg opened. The event's `startTime` is the
-    // kickoff or the observation window — the moment trading *stops* — so it is
-    // never read here however tempting its name is.
+    // `effectiveDate` is when this leg opened. The event's `startTime` names the
+    // start of the period being observed — kickoff, or the first tick of a price
+    // window — which on the Carolina–Jacksonville game is ten days after the
+    // book opened, so reading it here would say the contract had not started
+    // trading for most of the time it traded.
     openTime: raw.effectiveDate ?? parent.openTime,
     closeTime: parent.closeTime,
     expirationTime: raw.expiryDate ?? parent.closeTime,
@@ -396,21 +406,32 @@ export function stripEventDate(ticker: string): string {
  *
  * Gemini states one on 64 of 436 events — its crypto, metals, energy and
  * weather ladders — and those are exactly the events where guessing goes wrong,
- * so a stated series always wins. `BTC2608212100` says `BTC1H` while
+ * so a stated series is preferred. `BTC2608212100` says `BTC1H` while
  * `BTC2608180600` says `BTC`: an hourly bitcoin ladder and a daily one are
  * different products, and stripping the date from both fuses them into one
  * series that would then be matched against a single market at the next broker.
- * It cuts the other way too — the venue calls every daily-high weather book
- * `WXHIGH`, where the ticker would split it four ways by city.
  *
  * Everywhere else the ticker carries its own date and removing it leaves the
  * question: `FED260917` and `FED260729` are both `FED`, one series with two
  * open expiries.
+ *
+ * The two disagree in one direction that the stated name loses. Gemini files
+ * all seventeen cities' daily highs under the single product `WXHIGH`, but a
+ * series here is a recurring *question*, and "the high in Chicago tomorrow" is
+ * not the same question as "the high in Miami tomorrow" — grouping them makes
+ * sixteen of the seventeen unreachable from `XV`, since one event has to stand
+ * for the family. So where the stripped ticker *extends* the stated name, the
+ * longer one wins: `WXHIGH-CHI` over `WXHIGH`. Where the stated name extends
+ * the stripped one it still wins, which is what keeps `BTC1H` apart from `BTC`.
+ * Anything else is a name the ticker does not resemble, and the venue's own is
+ * the safer of the two.
  */
 export function seriesFromEvent(raw: RawGeminiEvent): string {
-  if (raw.series) return raw.series;
   const ticker = raw.ticker ?? '';
-  return stripEventDate(ticker) || ticker;
+  const stripped = stripEventDate(ticker) || ticker;
+  const stated = raw.series;
+  if (!stated) return stripped;
+  return stripped.startsWith(`${stated}-`) ? stripped : stated;
 }
 
 /**
@@ -432,6 +453,19 @@ export function normaliseEvent(raw: RawGeminiEvent): VenueEvent {
    * the 17 one-contract books, where the two figures are the same figure.
    */
   const sole = contracts.length === 1;
+
+  /*
+   * The array order is not the exchange's order. 148 of the 239 events that
+   * number every leg disagree with their own numbering, and the disagreement
+   * shows: `WXHIGH-LA` arrives as 79-80°F, 81-82°F, 77-78°F, 83°F or above,
+   * 74°F or below, 75-76°F, where its `sortOrder` reads the ladder from cold to
+   * hot. A strike ladder out of sequence is unreadable, so an event that
+   * numbers all of its legs is read in that order — and one that numbers only
+   * some is left alone rather than half-sorted around the gaps.
+   */
+  const ordered = contracts.every((c) => typeof c.sortOrder === 'number')
+    ? [...contracts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    : contracts;
 
   const parent: GeminiParent = {
     eventTicker,
@@ -467,7 +501,7 @@ export function normaliseEvent(raw: RawGeminiEvent): VenueEvent {
      * puts a false arbitrage on screen.
      */
     mutuallyExclusive: false,
-    markets: contracts.map((contract) => normaliseMarket(contract, parent)),
+    markets: ordered.map((contract) => normaliseMarket(contract, parent)),
   };
 }
 
@@ -517,13 +551,39 @@ function missing(id: string, what: 'event' | 'contract'): UpstreamError {
   });
 }
 
+/**
+ * The trading host said no to a symbol, and the catalogue says which no it was.
+ *
+ * api.gemini.com answers `is not a valid symbol` both for a mistyped symbol and
+ * for a contract it has simply never opened an instrument for — around a third
+ * of the legs that have never been quoted and never traded, every leg of
+ * `HORMUZNORMAL` among them, all of which the catalogue lists and `EVT` prints.
+ * Both arrive as a 400, so the snapshot is consulted before the reader is told
+ * to check the spelling of a symbol the terminal handed them a moment ago.
+ */
+async function rejected(symbol: string): Promise<UpstreamError> {
+  const listed = await corpusSnapshot()
+    .then((c) => c.markets.some((m) => m.ticker === symbol))
+    .catch(() => false);
+  if (!listed) return missing(symbol, 'contract');
+
+  return new UpstreamError(`Gemini has opened no instrument for ${symbol}`, {
+    code: 'not_found',
+    hint:
+      `${symbol} is listed in the Gemini catalogue, but api.gemini.com answers ` +
+      '`is not a valid symbol` for it, which is what it says about a contract that has ' +
+      'never been quoted and never traded. `DES` shows what the catalogue states; the ' +
+      'book, tape and bars have nothing to read until the leg opens.',
+  });
+}
+
 /** Ask api.gemini.com about one instrument, reading its rejection as a typo. */
 async function instrument<T>(symbol: string, path: string, ttlMs: number): Promise<T> {
   try {
     return await api<T>(path, ttlMs);
   } catch (err) {
     if (err instanceof UpstreamError && (err.status === 400 || err.status === 404)) {
-      throw missing(symbol, 'contract');
+      throw await rejected(symbol);
     }
     throw err;
   }
@@ -544,16 +604,45 @@ export async function getEvent(ticker: string): Promise<VenueEvent> {
 }
 
 /**
+ * Which event owns an instrument symbol.
+ *
+ * The open snapshot answers instantly, and answers nearly every lookup. It
+ * cannot answer for a leg of a settled event — the crawl reads `status=active`
+ * — and `EVT` on a settled event hands the reader exactly those symbols, so
+ * refusing them would make the terminal reject identifiers it had just printed.
+ * The symbol's own prefixes are tried against the single-event endpoint
+ * instead, longest first: `GEMI-BTC2608171800-HI63700` asks for
+ * `BTC2608171800-HI63700`, is told there is no such event, then asks for
+ * `BTC2608171800` and is given it. Only the event half of the symbol is ever
+ * used, which is why the four legs whose symbol does not contain their own
+ * contract ticker are found as readily as the rest, and why a hyphenated event
+ * ticker costs one wasted request rather than a wrong answer.
+ */
+async function eventTickerFor(symbol: string): Promise<string> {
+  const known = (await corpusSnapshot()).markets.find((m) => m.ticker === symbol);
+  if (known) return known.eventTicker;
+
+  const parts = symbol.replace(/^GEMI-/i, '').split('-');
+  for (let take = parts.length - 1; take >= 1; take--) {
+    const candidate = parts.slice(0, take).join('-');
+    try {
+      const raw = await catalogue<RawGeminiEvent>(`/${encodeURIComponent(candidate)}`, TTL.quote);
+      if ((raw.contracts ?? []).some((c) => c.instrumentSymbol === symbol)) return candidate;
+    } catch {
+      // Naming no event is the expected answer for every candidate but one.
+    }
+  }
+  throw missing(symbol, 'contract');
+}
+
+/**
  * One contract, recovered through the event that owns it.
  *
  * An instrument symbol is not fetchable on its own: api.gemini.com quotes it
- * but publishes no name, no rules and no parent, and the symbol cannot be taken
- * apart to find the event either — `GEMI-NFL-2608212330-CAR-JAX-M-JAX` has
- * hyphens on both sides of the join, and 4 of 2,995 symbols do not contain
- * their own contract ticker at all. So the corpus says which event owns the
- * symbol, the event is re-read for live prices, and the leg is picked out of
- * it: the recovery {@link polymarketus.getMarket} does for a parent, one step
- * longer because there is no by-symbol endpoint to start from.
+ * but publishes no name, no rules and no parent. So {@link eventTickerFor}
+ * finds the owning event, the event is read for live prices, and the leg is
+ * picked out of it — the recovery `polymarketus.getMarket` does for a parent,
+ * one step longer because there is no by-symbol endpoint to start from.
  *
  * The two api.gemini.com sidecars are best-effort. The book adds the resting
  * depth nothing in the catalogue states; `/v2/ticker` adds the only 24h open
@@ -562,10 +651,7 @@ export async function getEvent(ticker: string): Promise<VenueEvent> {
  * take the quote down with it.
  */
 export async function getMarket(symbol: string): Promise<Market> {
-  const known = (await corpusSnapshot()).markets.find((m) => m.ticker === symbol);
-  if (!known) throw missing(symbol, 'contract');
-
-  const event = await getEvent(known.eventTicker);
+  const event = await getEvent(await eventTickerFor(symbol));
   const leg = event.markets.find((m) => m.ticker === symbol);
   if (!leg) throw missing(symbol, 'contract');
 
@@ -620,9 +706,11 @@ export function applyBook(market: Market, raw: RawGeminiBook | null): Market {
  * Merge the instrument's own 24h summary.
  *
  * `/v2/ticker` restates the top of book and adds an `open` — the price 24h ago
- * — which is the only per-contract one the exchange publishes, and therefore
- * the only way the 262 contracts whose catalogue row carries no
- * `priceDelta24hPct` get a change figure at all.
+ * — which is the only one the exchange states per contract. It is what gives a
+ * move to the 1,247 legs whose catalogue row carries a 24h percentage but no
+ * last print for it to apply to: a percentage of a price nobody states is not a
+ * figure, and those legs would otherwise show `--` in the change column while
+ * the exchange's own page shows a number.
  *
  * Its `changes` array of 24 hourly closes is **not** read. The documented order
  * is newest first and the payload's is not: on both instruments sampled
@@ -738,7 +826,7 @@ const MAX_TRADES = 500;
  * Two things this tape is not, both of which matter more than what it is.
  *
  * It is **not a count of anything**. Twenty identical requests for one
- * instrument returned 278 rows eleven times and 348-349 rows the rest, and the
+ * instrument returned 278 rows thirteen times and 348-349 rows the rest, and the
  * two variants are not a prefix of each other — each replica held prints the
  * other lacked, and their summed sizes differed by 11%. So nothing here derives
  * a volume or a trade count, and nothing paginates on `tid`: a walk backwards
@@ -758,24 +846,34 @@ export function normaliseTrades(
   ticker: string,
   limit: number,
 ): TradesResponse {
-  const trades: Trade[] = rows.slice(0, limit).map((row) => {
-    const yesPrice = num(row.price) ?? 0;
-    const seconds = num(row.timestamp) ?? (num(row.timestampms) ?? 0) / 1000;
+  const trades: Trade[] = [];
 
-    return {
+  for (const row of rows) {
+    if (trades.length >= limit) break;
+
+    const yesPrice = num(row.price);
+    const count = num(row.amount);
+    const ms = num(row.timestampms);
+    const seconds = num(row.timestamp) ?? (ms === null ? null : ms / 1000);
+    // A print with no price, no size or no clock is not a print the tape can
+    // show. Defaulting any of the three would put a free trade, an empty one or
+    // one stamped 1970 in a column the reader scans for outliers.
+    if (yesPrice === null || count === null || seconds === null) continue;
+
+    trades.push({
       venue: VENUE,
       // A 16-digit integer: an identity, never an amount, so it travels as text.
       tradeId: String(row.tid ?? ''),
       ticker,
       ts: Math.floor(seconds),
-      count: num(row.amount) ?? 0,
+      count,
       yesPrice,
       noPrice: round4(1 - yesPrice),
       takerSide: row.type === 'sell' ? 'no' : 'yes',
       // No block or cross flag exists on this venue.
       isBlockTrade: false,
-    };
-  });
+    });
+  }
 
   // No cursor: see above — a `since_tid` walk over an inconsistent tape can
   // silently drop prints, so the panel gets one honest page instead.
@@ -1057,10 +1155,14 @@ export async function topMarkets(sort: MoverSort, limit = 25): Promise<Market[]>
   if (sort !== 'gainers' && sort !== 'losers') return [];
 
   const { corpus, facts } = await snapshot();
+  // Biggest rise first on `gainers`, biggest fall first on `losers`. `TOP` puts
+  // several venues on one board and orders the merge itself, so what matters
+  // here is that the `limit` rows handed over are the venue's real movers and
+  // not the quiet end of its book.
   const direction = sort === 'losers' ? 1 : -1;
 
   return corpus.markets
     .filter((m) => m.change !== null && (facts.get(m.eventTicker)?.volume24h ?? 0) > 0)
-    .sort((a, b) => direction * ((b.change ?? 0) - (a.change ?? 0)))
+    .sort((a, b) => direction * ((a.change ?? 0) - (b.change ?? 0)))
     .slice(0, limit);
 }
