@@ -233,7 +233,10 @@ impl std::fmt::Debug for TtlCache {
 /// That is a bug in the key, not a runtime condition to paper over, so it is
 /// reported loudly rather than treated as a miss — silently re-fetching would
 /// turn a wrong key into an invisible cache that never hits.
-fn downcast<T: Send + Sync + 'static>(key: &str, value: Arc<dyn Any + Send + Sync>) -> Result<Arc<T>> {
+fn downcast<T: Send + Sync + 'static>(
+    key: &str,
+    value: Arc<dyn Any + Send + Sync>,
+) -> Result<Arc<T>> {
     value.downcast::<T>().map_err(|_| {
         tracing::error!(
             key,
@@ -284,39 +287,23 @@ mod tests {
     use super::*;
     use std::sync::atomic::AtomicUsize;
 
-    /// A producer that counts how many times it was actually run.
-    fn counting(
-        calls: &Arc<AtomicUsize>,
-    ) -> (
-        Arc<AtomicUsize>,
-        impl Fn() -> std::pin::Pin<Box<dyn Future<Output = Result<String>> + Send>>,
-    ) {
-        let calls = Arc::clone(calls);
-        let seen = Arc::clone(&calls);
-        (seen, move || {
-            let calls = Arc::clone(&calls);
-            Box::pin(async move {
-                let n = calls.fetch_add(1, Ordering::SeqCst);
-                tokio::time::sleep(Duration::from_millis(30)).await;
-                Ok(format!("value-{n}"))
-            })
-        })
-    }
-
     #[tokio::test]
     async fn concurrent_misses_share_one_call() {
         let cache = TtlCache::new();
         let calls = Arc::new(AtomicUsize::new(0));
-        let (seen, produce) = counting(&calls);
-        let produce = Arc::new(produce);
 
         let mut tasks = Vec::new();
         for _ in 0..16 {
             let cache = cache.clone();
-            let produce = Arc::clone(&produce);
+            let calls = Arc::clone(&calls);
             tasks.push(tokio::spawn(async move {
                 cache
-                    .cached("kalshi:markets", ttl::META, || produce())
+                    .cached("kalshi:markets", ttl::META, || async move {
+                        let n = calls.fetch_add(1, Ordering::SeqCst);
+                        // Long enough that every task is waiting on this one.
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        Ok(format!("value-{n}"))
+                    })
                     .await
                     .unwrap()
             }));
@@ -328,7 +315,11 @@ mod tests {
             .map(|t| t.unwrap())
             .collect();
 
-        assert_eq!(seen.load(Ordering::SeqCst), 1, "produce ran more than once");
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            1,
+            "produce ran more than once"
+        );
         assert!(values.iter().all(|v| **v == "value-0"));
 
         // Everyone who joined the one in-flight call counts as a hit.
@@ -430,7 +421,11 @@ mod tests {
             })
             .await
             .unwrap();
-        assert_eq!(calls.load(Ordering::SeqCst), 2, "the expired entry was served");
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            2,
+            "the expired entry was served"
+        );
         assert!(cache.get::<u8>("quote:INXD").await.is_some());
     }
 
@@ -490,8 +485,14 @@ mod tests {
 
         assert_eq!(*quote, Quote { price: 0.62 });
         assert_eq!(titles.len(), 1);
-        assert_eq!(*cache.get::<Quote>("kalshi:quote:INXD").await.unwrap(), Quote { price: 0.62 });
-        assert!(cache.get::<Vec<String>>("kalshi:quote:INXD").await.is_none());
+        assert_eq!(
+            *cache.get::<Quote>("kalshi:quote:INXD").await.unwrap(),
+            Quote { price: 0.62 }
+        );
+        assert!(cache
+            .get::<Vec<String>>("kalshi:quote:INXD")
+            .await
+            .is_none());
     }
 
     #[tokio::test]
