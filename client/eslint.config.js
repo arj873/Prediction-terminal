@@ -14,6 +14,13 @@ export default ts.config(
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
+    rules: {
+      // TypeScript resolves identifiers itself, and does it correctly: the base
+      // rule cannot see type-only names and reports every generic parameter as
+      // undefined. Leaving it on would mean writing `R` twice for eslint's
+      // benefit in every generic component.
+      'no-undef': 'off',
+    },
   },
   {
     files: ['**/*.svelte'],
