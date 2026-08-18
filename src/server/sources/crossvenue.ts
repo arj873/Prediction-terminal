@@ -1,11 +1,11 @@
 /**
  * Lining one broker's series up against the others'.
  *
- * The terminal quotes three exchanges that list many of the same questions and
+ * The terminal quotes six exchanges that list many of the same questions and
  * agree on no identifier for any of them. This module builds, per venue, an
  * index of open series, then pairs those indexes up — by a curated table where
  * one exists and by {@link scoreSeries} everywhere else — so `Fed decision in
- * Oct 2026?` can be read at all three prices at once.
+ * Oct 2026?` can be read at every price at once.
  *
  * Two rules keep it honest:
  *
@@ -185,9 +185,11 @@ async function indexes(): Promise<Indexes> {
 /**
  * Series the terminal states are the same question, rather than inferring it.
  *
- * Each entry was read off all three live catalogues, and each is re-checked
- * against them on every request — a leg whose identifier no longer exists is
- * dropped, so this table can go stale without ever producing a wrong quote.
+ * Each entry was read off the live catalogues, and each is re-checked against
+ * them on every request — a leg whose identifier no longer exists is dropped, so
+ * this table can go stale without ever producing a wrong quote. That is what
+ * makes it safe to name a leg at a venue whose book rotates: ForecastEx retires
+ * a product without warning, and a retired `FFDEC` simply stops appearing.
  *
  * It exists for the cases the matcher cannot reach on wording alone: nothing in
  * "Fed decision in Oct 2026?" and Polymarket's series slug `fomc` shares a
@@ -206,37 +208,68 @@ const CURATED_LINKS: CuratedLink[] = [
   {
     key: 'fed-decision',
     title: 'Federal Reserve rate decision',
-    legs: { kalshi: 'KXFEDDECISION', polymarket: 'fomc', 'polymarket-us': 'usfed-fomc' },
+    legs: {
+      kalshi: 'KXFEDDECISION',
+      polymarket: 'fomc',
+      'polymarket-us': 'usfed-fomc',
+      gemini: 'FED',
+      predictfun: 'fed-decision-in',
+      forecastex: 'FFDEC',
+    },
   },
   {
     key: 'fed-rate-range',
     title: 'Fed funds target range',
-    legs: { kalshi: 'KXFED', polymarket: 'fed-interest-rates' },
+    legs: { kalshi: 'KXFED', polymarket: 'fed-interest-rates', forecastex: 'FF' },
   },
   {
     key: 'cpi-yoy',
     title: 'US CPI, year over year',
-    legs: { kalshi: 'KXCPIYOY', 'polymarket-us': 'cpi' },
+    legs: { kalshi: 'KXCPIYOY', 'polymarket-us': 'cpi', forecastex: 'CPIY' },
   },
   {
     key: 'us-midterms-house',
     title: 'US House control after the midterms',
-    legs: { kalshi: 'KXHOUSE', 'polymarket-us': 'usho-midterms' },
+    legs: {
+      kalshi: 'KXHOUSE',
+      'polymarket-us': 'usho-midterms',
+      gemini: 'CTRLUSHOU',
+      forecastex: 'HORC',
+    },
   },
   {
     key: 'us-midterms-senate',
     title: 'US Senate control after the midterms',
-    legs: { kalshi: 'KXSENATE', 'polymarket-us': 'usse-midterms' },
+    legs: {
+      kalshi: 'KXSENATE',
+      'polymarket-us': 'usse-midterms',
+      gemini: 'CTRLUSSEN',
+      predictfun: 'which-party-will-win-the-senate-in',
+      forecastex: 'SENM',
+    },
   },
   {
     key: 'nyc-high-temperature',
     title: 'Daily high temperature, New York City',
-    legs: { kalshi: 'KXHIGHNY', 'polymarket-us': 'weather-daily-high-nyc' },
+    legs: {
+      kalshi: 'KXHIGHNY',
+      'polymarket-us': 'weather-daily-high-nyc',
+      // Gemini files every city under one `WXHIGH` product and ForecastEx names
+      // the reporting station rather than the city, so neither identifier says
+      // "New York" anywhere. The matcher cannot reach either from the wording.
+      gemini: 'WXHIGH-NYC',
+      forecastex: 'UHLGA',
+    },
   },
   {
     key: 'chicago-high-temperature',
     title: 'Daily high temperature, Chicago',
-    legs: { kalshi: 'KXHIGHCHI', 'polymarket-us': 'weather-daily-high-chicago' },
+    legs: {
+      kalshi: 'KXHIGHCHI',
+      'polymarket-us': 'weather-daily-high-chicago',
+      gemini: 'WXHIGH-CHI',
+      forecastex: 'UHMDW',
+    },
   },
   {
     key: 'best-picture',
@@ -251,7 +284,14 @@ const CURATED_LINKS: CuratedLink[] = [
   {
     key: 'super-bowl',
     title: 'Super Bowl champion',
-    legs: { kalshi: 'KXPROFOOTBALLCHAMP', 'polymarket-us': 'nfl-2026' },
+    legs: {
+      kalshi: 'KXPROFOOTBALLCHAMP',
+      'polymarket-us': 'nfl-2026',
+      // predict.fun cannot say "Super Bowl" — the phrase is trademarked and the
+      // exchange writes around it — so no wording the matcher could reach
+      // connects this listing to the other two.
+      predictfun: 'big-game-champion',
+    },
   },
 ];
 

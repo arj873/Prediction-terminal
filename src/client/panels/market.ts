@@ -117,15 +117,16 @@ export class QuotePanel extends Panel<{ market: Market; book: OrderBook | null }
     const event = formatRef({ venue: market.venue, id: market.eventTicker });
 
     // Only offer what this venue actually serves. Polymarket US publishes no
-    // public price history or tape, so an enabled GP/TAS button here was a
-    // click that could only ever land on a 501 — the capability is declared on
-    // the venue registry precisely so the button can know before the reader does.
+    // public price history or tape and ForecastEx publishes no book at all, so
+    // an enabled GP/TAS/OB button there was a click that could only ever land on
+    // a 501 — the capability is declared on the venue registry precisely so the
+    // button can know before the reader does.
     const caps = venueInfo(market.venue).capabilities;
 
     this.body.append(
       el('div', { class: 'panel-actions' }, [
         this.#action('GP', `GP ${ref}`, caps.candles ? undefined : caps.note),
-        this.#action('OB', `OB ${ref}`),
+        this.#action('OB', `OB ${ref}`, caps.book ? undefined : caps.note),
         this.#action('TAS', `TAS ${ref}`, caps.trades ? undefined : caps.note),
         market.eventTicker ? this.#action('EVT', `EVT ${event}`) : null,
         market.eventTicker ? this.#action('XV', `XV ${event}`) : null,
@@ -292,13 +293,20 @@ export class TradesPanel extends Panel<TradesResponse> {
       // A YES taker lifted the offer — an aggressive buy of YES, which prints
       // green by the usual convention. A NO taker hit the bid: that is a sale
       // of YES, and prints red.
-      const aggression = trade.takerSide === 'yes' ? 'buy' : 'sell';
+      //
+      // Not every exchange says which side was the aggressor. ForecastEx matches
+      // by pairing a YES buyer with a NO buyer, so structurally neither lifted
+      // the other; predict.fun states a side whose meaning its own book
+      // contradicts. Both send an empty `takerSide`, and an unattributed print
+      // is drawn in neither colour rather than being guessed into red.
+      const aggression =
+        trade.takerSide === 'yes' ? 'buy' : trade.takerSide === 'no' ? 'sell' : 'unattributed';
       return row(
         [
           cell(timeOfDay(trade.ts), 'mono dim'),
           cell(cents(trade.yesPrice), `num trade-${aggression}`),
           cell(compact(trade.count), 'num'),
-          cell(trade.takerSide.toUpperCase(), `tag-cell trade-${aggression}`),
+          cell(trade.takerSide.toUpperCase() || '--', `tag-cell trade-${aggression}`),
           cell(trade.isBlockTrade ? 'BLOCK' : '', 'dim'),
         ],
         `trade-row-${aggression}`,

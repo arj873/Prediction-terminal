@@ -421,7 +421,7 @@ export class WatchlistPanel extends Panel<Market[]> {
           el('div', { text: 'Watchlist is empty.' }),
           el('div', {
             class: 'panel-empty-hint',
-            text: 'Add with `W ADD <ticker>` — prefix `pm:` or `pmus:` for a Polymarket slug.',
+            text: 'Add with `W ADD <ticker>` — prefix `pm:`, `pmus:`, `gem:`, `pf:` or `fx:` for another venue.',
           }),
         ]),
       );

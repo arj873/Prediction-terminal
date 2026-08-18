@@ -77,10 +77,11 @@ function requireRef(command: ParsedCommand, index: number, name: string): VenueR
  * Pull venue names out of an argument list, leaving the rest untouched.
  *
  * Read in `word` context, so aliases that are also ordinary English — `us`,
- * `intl`, a bare `k` — are not claimed out of a query. `SRCH us election` is a
- * search for two words, not a filtered search for one, and a row click that
- * dispatches `SRCH The Office US` must not quietly change which exchange was
- * searched. The `pmus:` prefix remains the unambiguous way to say it.
+ * `intl`, a bare `k`, `gem`, `fx`, `predict`, `forecast` — are not claimed out
+ * of a query. `SRCH us election` is a search for two words, not a filtered
+ * search for one, and a row click that dispatches `SRCH The Office US` must not
+ * quietly change which exchange was searched. The `pmus:` prefix, and each
+ * venue's unambiguous name, remain the ways to say it.
  *
  * A repeated venue token stays in `rest` rather than vanishing: dropping it
  * from both lists silently ate a word.
@@ -388,7 +389,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'Quote and contract description',
     usage: 'DES [venue:]<ticker>',
-    examples: ['DES KXFEDDECISION-27JAN-H26', 'DES pmus:apdc-jerpowgov-2026-12-31'],
+    examples: ['DES KXFEDDECISION-27JAN-H26', 'DES gem:GEMI-FED260917-MAINTAIN'],
     handler(command, { panels, panelContext }) {
       const ref = requireRef(command, 0, 'ticker');
       const id = QuotePanel.idFor(ref);
@@ -401,7 +402,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'Order book ladder',
     usage: 'OB [venue:]<ticker>',
-    examples: ['OB KXFEDDECISION-27JAN-H26', 'OB pmus:tec-mlb-champ-2026-09-27-lad'],
+    examples: ['OB KXFEDDECISION-27JAN-H26', 'OB pf:big-game-champion-2027~26952'],
     handler(command, { panels, panelContext }) {
       const ref = requireRef(command, 0, 'ticker');
       const id = DepthPanel.idFor(ref);
@@ -414,7 +415,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'Time and sales tape',
     usage: 'TAS [venue:]<ticker>',
-    examples: ['TAS KXFEDDECISION-27JAN-H26', 'TAS pm:fed-decision-in-october'],
+    examples: ['TAS KXFEDDECISION-27JAN-H26', 'TAS fx:HORC_1126_Republican'],
     handler(command, { panels, panelContext }) {
       const ref = requireRef(command, 0, 'ticker');
       const id = TradesPanel.idFor(ref);
@@ -426,8 +427,8 @@ export const COMMANDS: Command[] = [
     aliases: ['S', 'FIND'],
     group: 'markets',
     summary: 'Search open events across every venue',
-    usage: 'SRCH <words> [kalshi|pm|pmus]',
-    examples: ['SRCH fed decision', 'SRCH bitcoin pm', 'SRCH senate kalshi pmus'],
+    usage: 'SRCH <words> [kalshi|pm|pmus|gemini|pf|fex]',
+    examples: ['SRCH fed decision', 'SRCH bitcoin pm', 'SRCH senate kalshi gemini'],
     handler(command, { panels, panelContext }) {
       const { venues, rest } = takeVenues(command.args);
       const query = rest.join(' ').trim();
@@ -442,7 +443,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'All contracts in an event',
     usage: 'EVT [venue:]<event-ticker>',
-    examples: ['EVT KXFEDDECISION-27JAN', 'EVT pm:fed-decision-in-september-762'],
+    examples: ['EVT KXFEDDECISION-27JAN', 'EVT gem:DEMNOM2028'],
     handler(command, { panels, panelContext }) {
       const ref = requireRef(command, 0, 'event-ticker');
       const id = EventPanel.idFor(ref);
@@ -454,8 +455,8 @@ export const COMMANDS: Command[] = [
     aliases: ['MOVERS'],
     group: 'markets',
     summary: 'Leaderboards: volume, movers, open interest',
-    usage: 'TOP [volume|gainers|losers|oi|liquidity] [kalshi|pm|pmus]',
-    examples: ['TOP', 'TOP gainers', 'TOP oi kalshi', 'TOP volume pm'],
+    usage: 'TOP [volume|gainers|losers|oi|liquidity] [kalshi|pm|pmus|gemini|pf|fex]',
+    examples: ['TOP', 'TOP gainers', 'TOP oi kalshi', 'TOP volume pf'],
     handler(command, { panels, panelContext }) {
       const { venues, rest } = takeVenues(command.args);
       const raw = (rest[0] ?? 'volume').toLowerCase();

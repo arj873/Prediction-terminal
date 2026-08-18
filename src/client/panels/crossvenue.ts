@@ -227,9 +227,20 @@ export class ComparePanel extends Panel<CompareResponse> {
       );
     } else {
       const venues = data.events.map((e) => e.venue);
+
+      // A venue that publishes no book gets one LAST column rather than two
+      // empty ones. ForecastEx matches by pairing a YES buyer with a NO buyer,
+      // so it has a print and never a quote — and its print still moves
+      // DIVERGE, which is computed from mids. Two columns of `--` beside a
+      // divergence that plainly used this venue reads as a bug.
       const headers = [
         'CONTRACT',
-        ...venues.flatMap((v) => [`${venueInfo(v).code} BID`, `${venueInfo(v).code} ASK`]),
+        ...venues.flatMap((v) => {
+          const info = venueInfo(v);
+          return info.capabilities.book
+            ? [`${info.code} BID`, `${info.code} ASK`]
+            : [`${info.code} LAST`];
+        }),
         'DIVERGE',
         'EDGE',
       ];
@@ -239,8 +250,12 @@ export class ComparePanel extends Panel<CompareResponse> {
 
         for (const v of venues) {
           const leg = r.legs.find((l) => l.venue === v);
-          cells.push(cell(cents(leg?.yesBid ?? null), 'num price-bid'));
-          cells.push(cell(cents(leg?.yesAsk ?? null), 'num price-ask'));
+          if (venueInfo(v).capabilities.book) {
+            cells.push(cell(cents(leg?.yesBid ?? null), 'num price-bid'));
+            cells.push(cell(cents(leg?.yesAsk ?? null), 'num price-ask'));
+          } else {
+            cells.push(cell(cents(leg?.mid ?? null), 'num'));
+          }
         }
 
         cells.push(cell(r.divergence === null ? '--' : cents(r.divergence), 'num'));

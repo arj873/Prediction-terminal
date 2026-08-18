@@ -2,7 +2,8 @@
  * Prediction Terminal API server.
  *
  * Exists for three reasons the browser cannot handle on its own:
- *   1. CORS — none of the three upstreams allow cross-origin reads.
+ *   1. CORS — none of the market upstreams allow cross-origin reads, and
+ *      predict.fun's GraphQL host answers a wrong `Origin` with a hard 403.
  *   2. Scraping — FRED and Billboard serve HTML that has to be parsed somewhere.
  *   3. Caching and request coalescing, so N polling panels make 1 upstream call.
  *
@@ -164,7 +165,10 @@ if (invokedDirectly) {
   createApp().listen(PORT, HOST, () => {
     console.log(`PREDICTION TERMINAL api  http://${HOST}:${PORT}`);
     console.log(`  kalshi     /api/kalshi/{markets,events,search,top,series}`);
-    console.log(`  venues     /api/venue/{kalshi,polymarket,polymarket-us}/{markets,events,search,top}`);
+    console.log(
+      `  venues     /api/venue/{kalshi,polymarket,polymarket-us,gemini,predictfun,forecastex}` +
+        `/{markets,events,search,top}`,
+    );
     console.log(`  xvenue     /api/xv/{series,compare}`);
     console.log(`  spot       /api/spot/{stock,crypto}/:symbol[/candles]`);
     console.log(`  implied    /api/implied/{underlyings,candidates,series}`);
@@ -178,8 +182,8 @@ if (invokedDirectly) {
     if (!hasAlpacaCredentials()) {
       console.log(`  note: ALPACA_API_KEY_ID/SECRET unset — NEWS is unavailable until they are.`);
     }
-    // Crawl all three catalogues in the background, then pair their series up,
-    // so the first `SRCH` or `XV` does not pay the cold-start cost.
+    // Crawl every catalogue in the background, then pair their series up, so the
+    // first `SRCH` or `XV` does not pay the cold-start cost.
     warmAll();
     warmIndexes();
   });

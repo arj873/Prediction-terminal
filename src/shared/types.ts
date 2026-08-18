@@ -106,9 +106,10 @@ export type StrikeType = 'greater' | 'greater_or_equal' | 'less' | 'less_or_equa
 /**
  * One question, with every contract that resolves it.
  *
- * All three venues group markets this way — Kalshi calls it an event, both
- * Polymarkets call it an event too — so it is the unit the terminal compares
- * across brokers.
+ * Every venue groups markets this way — Kalshi, both Polymarkets and Gemini all
+ * call it an event, predict.fun calls it a category and ForecastEx leaves it
+ * implicit in the first two segments of a contract id — so it is the unit the
+ * terminal compares across brokers.
  */
 export interface VenueEvent {
   venue: Venue;
@@ -287,8 +288,8 @@ export interface LinkedSeriesResponse {
   /** Series scanned, per venue. */
   scanned: Record<string, number>;
   /**
-   * Venues that did not answer. A board covering two of three brokers has to
-   * say which one is missing, or a "no match" reads as "no such market".
+   * Venues that did not answer. A board covering four of six brokers has to say
+   * which two are missing, or a "no match" reads as "no such market".
    */
   unavailable: { venue: Venue; error: string }[];
   snapshotAgeSeconds: number;

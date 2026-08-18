@@ -1,15 +1,16 @@
 /**
- * One interface over the three brokers.
+ * One interface over the six brokers.
  *
  * Every venue module already exports the same handful of verbs; this states
  * that as a type and hands back the right module for a {@link Venue}, so the
- * routes and the cross-venue code are written once instead of three times.
+ * routes and the cross-venue code are written once instead of six times.
  *
  * The interface is deliberately the union of what the venues *can* answer, not
- * the intersection — Polymarket US has no public candles or tape, and it throws
- * a described `unsupported` error rather than the type pretending the method is
- * absent. A terminal that silently omitted a chart would be worse than one that
- * says why there isn't one.
+ * the intersection — Polymarket US has no public candles or tape, ForecastEx
+ * has no order book at all, and both throw a described `unsupported` error
+ * rather than the type pretending the method is absent. A terminal that
+ * silently omitted a chart would be worse than one that says why there isn't
+ * one.
  */
 
 import type {
@@ -23,9 +24,12 @@ import type {
   VenueEvent,
 } from '../../shared/types.js';
 import type { Corpus, MoverSort, SearchResponse } from './corpus.js';
+import * as forecastex from './forecastex.js';
+import * as gemini from './gemini.js';
 import * as kalshi from './kalshi.js';
 import * as polymarket from './polymarket.js';
 import * as polymarketUs from './polymarketus.js';
+import * as predictfun from './predictfun.js';
 
 export interface VenueSource {
   getMarket(id: string): Promise<Market>;
@@ -49,6 +53,9 @@ const SOURCES: Record<Venue, VenueSource> = {
   kalshi,
   polymarket,
   'polymarket-us': polymarketUs,
+  gemini,
+  predictfun,
+  forecastex,
 };
 
 export function sourceFor(venue: Venue): VenueSource {
