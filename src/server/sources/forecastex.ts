@@ -711,6 +711,44 @@ export function normaliseSeries(raw: RawFexProduct): SeriesInfo {
 /* ------------------------------------------------------------------- CSVs */
 
 /**
+ * Split one CSV line, honouring the quoting the archive actually uses.
+ *
+ * Eight live contracts have a comma inside their identifier — the conditional
+ * books, `FEDRO_1128_Senate-D,House-D,President-D` and its siblings — and the
+ * exchange quotes those cells, so sixteen lines of every daily archive carry
+ * fourteen commas against a twelve-column header. Splitting on every comma
+ * shifts their fields two to the left, which puts `House-D` in the `subtype`
+ * column, fails the `YES` filter, and drops the contract from the archive
+ * entirely: its published turnover and previous close then reach the terminal
+ * as `null`, which is the terminal's way of saying the exchange never stated
+ * them. It did.
+ */
+function splitRow(line: string): string[] {
+  const cells: string[] = [];
+  let cell = '';
+  let quoted = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (quoted) {
+      // A doubled quote inside a quoted cell is one literal quote.
+      if (char === '"' && line[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (char === '"') quoted = false;
+      else cell += char;
+    } else if (char === '"') quoted = true;
+    else if (char === ',') {
+      cells.push(cell);
+      cell = '';
+    } else cell += char;
+  }
+
+  cells.push(cell);
+  return cells;
+}
+
+/**
  * Split a CSV into records keyed by its own header.
  *
  * Reading by header rather than by position: the archive gained a `vwap` column
@@ -719,13 +757,13 @@ export function normaliseSeries(raw: RawFexProduct): SeriesInfo {
  */
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/);
-  const header = (lines[0] ?? '').split(',').map((name) => name.trim());
+  const header = splitRow(lines[0] ?? '').map((name) => name.trim());
   const rows: Record<string, string>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
-    const cells = line.split(',');
+    const cells = splitRow(line);
     if (cells.length < header.length) continue;
     const row: Record<string, string> = {};
     header.forEach((name, col) => {

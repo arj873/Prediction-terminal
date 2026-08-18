@@ -239,10 +239,10 @@ const VENUE_TABLE = [
       // the live catalogue, except open interest, which the catalogue states.
       sorts: ['volume', 'gainers', 'losers', 'open_interest'],
       note:
-        'ForecastEx runs a paired auction and publishes no order book or quote at all \u2014 ' +
-        'DES and OB show the last YES and NO prints and the open interest behind them. ' +
-        'Turnover and the daily move come from the exchange\u2019s end-of-session archive, ' +
-        'so they are one session behind the tape.',
+        'ForecastEx runs a paired auction and publishes no order book or quote at all, so ' +
+        'there is no ladder to draw \u2014 DES gives the last YES and NO prints and the open ' +
+        'interest behind them. Turnover and the daily move come from the exchange\u2019s ' +
+        'end-of-session archive, so they are one session behind the tape.',
     },
   },
 ] as const satisfies readonly VenueDefinition[];

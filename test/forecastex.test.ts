@@ -525,6 +525,38 @@ describe('parseArchiveCsv', () => {
     assert.equal(session('UST_1230_54.41').settlement_price, '');
     assert.equal(session('HORC_1126_REPUBLICAN').settlement_price, '0.21');
   });
+
+  it('reads a quoted id containing commas, which eight live contracts have', () => {
+    // Verbatim from prices/daily_prices_20260817.csv. The conditional books put
+    // commas inside the identifier, so the exchange quotes the cell and the line
+    // carries fourteen commas against a twelve-column header. Split naively, the
+    // fields shift two left, `subtype` reads `House-D` instead of `YES`, the row
+    // is filtered away, and the contract's published turnover and previous close
+    // reach the terminal as `null` — the terminal's way of saying the exchange
+    // never stated them.
+    const quoted = parseArchiveCsv(
+      'event_contract,subtype,expiration_date,date,start_price,high_price,low_price,' +
+        'end_price,settlement_price,pair_quantity,open_interest,vwap\n' +
+        '"FEDRO_1128_Senate-D,House-D,President-D",YES,2029-01-08T15:00:00-06:00,' +
+        '2026-08-17,0.20,0.00,0.00,0.20,0.20,0,20,0.00\n' +
+        '"FEDRO_1128_Senate-D,House-D,President-D",NO,2029-01-08T15:00:00-06:00,' +
+        '2026-08-17,0.80,0.00,0.00,0.80,0.80,0,20,0.00\n',
+    );
+
+    const row = quoted.get('FEDRO_1128_SENATE-D,HOUSE-D,PRESIDENT-D');
+    assert.ok(row, 'the quoted contract must survive the split');
+    assert.equal(row.subtype, 'YES');
+    assert.equal(row.end_price, '0.20');
+    assert.equal(row.open_interest, '20');
+  });
+
+  it('reads a doubled quote inside a quoted cell as one literal quote', () => {
+    const quoted = parseArchiveCsv(
+      'event_contract,subtype,end_price,pair_quantity,open_interest\n' +
+        '"A_1_x""y",YES,0.40,7,9\n',
+    );
+    assert.equal(quoted.get('A_1_X"Y')?.end_price, '0.40');
+  });
 });
 
 describe('applySession', () => {
