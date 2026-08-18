@@ -27,5 +27,6 @@ pub mod scrape;
 pub mod sources;
 pub mod static_files;
 
+pub use app::{build_router, AppState};
 pub use config::Config;
 pub use error::{codes, Result, UpstreamError};
