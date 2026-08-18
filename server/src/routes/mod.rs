@@ -4,6 +4,9 @@
 //! back what it returns. It holds no knowledge of any upstream — that all lives
 //! in `sources/` — and it raises no errors of its own beyond `bad_request` for
 //! a query it cannot make sense of.
+//!
+//! Every module here exposes `router() -> Router<AppState>` carrying its own
+//! absolute paths, so the mount table below is the whole map of the API.
 
 pub mod billboard;
 pub mod crossvenue;
@@ -25,6 +28,18 @@ pub fn api_router(state: AppState) -> Router {
     let limiter = crate::rate_limit::RateLimiter::new(state.config().rate_limit);
 
     Router::new()
+        // The venue-agnostic surface every command actually uses.
+        .merge(venue::router())
+        // Kalshi's own mount predates the other two venues and is kept so that
+        // anything written against the original API still works.
+        .merge(kalshi::router())
+        .merge(crossvenue::router())
+        .merge(spot::router())
+        .merge(implied::router())
+        .merge(fred::router())
+        .merge(billboard::router())
+        .merge(entertainment::router())
+        .merge(news::router())
         .merge(health::router())
         .fallback(unknown_api_route)
         .with_state(state)

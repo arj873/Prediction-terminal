@@ -1,0 +1,94 @@
+[
+  {
+    "id": 3128761,
+    "url": "https://www.tvmaze.com/episodes/3128761/big-brother-28x12-week-6",
+    "name": "Week 6",
+    "season": 28,
+    "number": 12,
+    "type": "regular",
+    "airdate": "2026-08-20",
+    "airtime": "20:00",
+    "airstamp": "2026-08-21T00:00:00+00:00",
+    "runtime": 60,
+    "rating": { "average": null },
+    "show": {
+      "id": 1173,
+      "name": "Big Brother",
+      "type": "Reality",
+      "language": "English",
+      "genres": ["Reality"],
+      "status": "Running",
+      "runtime": 60,
+      "network": {
+        "id": 2,
+        "name": "CBS",
+        "country": { "name": "United States", "code": "US", "timezone": "America/New_York" }
+      },
+      "webChannel": null
+    }
+  },
+  {
+    "id": 3128762,
+    "url": "https://www.tvmaze.com/episodes/3128762/streaming-only-1x01",
+    "name": "Episode 1",
+    "season": 1,
+    "number": 1,
+    "type": "regular",
+    "airdate": "2026-08-20",
+    "airtime": "",
+    "airstamp": "2026-08-20T07:00:00+00:00",
+    "runtime": null,
+    "show": {
+      "id": 60432,
+      "name": "Streaming Only",
+      "type": "Scripted",
+      "language": "English",
+      "status": "Running",
+      "runtime": null,
+      "network": null,
+      "webChannel": {
+        "id": 1,
+        "name": "Netflix",
+        "country": null
+      }
+    }
+  },
+  {
+    "id": 3128763,
+    "url": "https://www.tvmaze.com/episodes/3128763/morning-show",
+    "name": "Early",
+    "season": null,
+    "number": null,
+    "type": "regular",
+    "airdate": "2026-08-20",
+    "airtime": "06:00",
+    "airstamp": "2026-08-20T10:00:00+00:00",
+    "runtime": 30,
+    "show": {
+      "id": 2993,
+      "name": "Morning Show",
+      "type": "Talk Show",
+      "language": "English",
+      "status": "Running",
+      "runtime": 30,
+      "network": {
+        "id": 1,
+        "name": "NBC",
+        "country": { "name": "United States", "code": "US", "timezone": "America/New_York" }
+      },
+      "webChannel": null
+    }
+  },
+  {
+    "id": 3128764,
+    "url": "https://www.tvmaze.com/episodes/3128764/orphan",
+    "name": "Orphaned Row",
+    "season": 2,
+    "number": 4,
+    "type": "regular",
+    "airdate": "2026-08-20",
+    "airtime": "21:30",
+    "runtime": 45,
+    "show": null
+  }
+]

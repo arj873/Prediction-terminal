@@ -17,4 +17,8 @@ markets: Array<Market>,
 /**
  * Summed 24h volume across the event's markets, `None` when unpublished.
  */
-volume24h: number | null, score: number, };
+volume24h: number | null, 
+/**
+ * Relevance, as whole points accumulated by the corpus scorer.
+ */
+score: number, };

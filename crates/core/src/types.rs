@@ -378,7 +378,22 @@ pub struct EventSearchHit {
     pub markets: Vec<Market>,
     /// Summed 24h volume across the event's markets, `None` when unpublished.
     pub volume24h: Option<f64>,
-    pub score: f64,
+    /// Relevance, as whole points accumulated by the corpus scorer.
+    pub score: u32,
+}
+
+impl From<&VenueEvent> for EventSummary {
+    fn from(event: &VenueEvent) -> Self {
+        Self {
+            venue: event.venue,
+            event_ticker: event.event_ticker.clone(),
+            series_ticker: event.series_ticker.clone(),
+            title: event.title.clone(),
+            sub_title: event.sub_title.clone(),
+            category: event.category.clone(),
+            mutually_exclusive: event.mutually_exclusive,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
