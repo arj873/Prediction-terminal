@@ -22,6 +22,8 @@ export type { EntFeed } from "./EntFeed";
 export type { EntGenre } from "./EntGenre";
 export type { EntGenreFilter } from "./EntGenreFilter";
 export type { EntResponse } from "./EntResponse";
+export type { EventSearchHit } from "./EventSearchHit";
+export type { EventSummary } from "./EventSummary";
 export type { EventsResponse } from "./EventsResponse";
 export type { FredObservation } from "./FredObservation";
 export type { FredSearchResponse } from "./FredSearchResponse";

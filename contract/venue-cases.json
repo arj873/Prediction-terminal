@@ -1,0 +1,206 @@
+{
+  "about": {
+    "purpose": "Parity cases for the venue reference grammar, which is implemented twice on purpose: the server routes requests with it, and the client needs parseRef synchronously at the prompt, before any request exists. Codegen can pin the venue identifiers but not the logic, so this file pins the logic. Both implementations read it from their own test suite; a rule changed on one side fails on the other.",
+    "implementations": [
+      "client/src/lib/terminal/venue.ts (TypeScript)",
+      "crates/core/src/venue.rs (Rust)"
+    ],
+    "cases": {
+      "parseRef": "parseRef(input, fallback) succeeds and returns exactly { venue, id }. `fallback` is the venue an unprefixed reference belongs to; it is always stated so no case depends on the default.",
+      "parseRefErrors": "parseRef(input, fallback) fails. `error` is the kind — `unknown-prefix` when the text before the first colon names no venue, `empty-identifier` when a known prefix is followed by nothing. Every string in `messageContains` must appear in the rendered message; the surrounding wording is not pinned.",
+      "formatRef": "formatRef({ venue, id }) === text. The default venue prints bare; the others print their prefix.",
+      "normaliseId": "normaliseId(venue, input) === id. Kalshi upper-cases, both Polymarkets lower-case.",
+      "parseVenue": "parseVenue(token, context) === venue, where `context` is \"prefix\" (a token before a colon, which accepts every alias) or \"word\" (one token among the words of free text, which declines the aliases that are also ordinary English). A null `venue` means the token names no venue in that context."
+    },
+    "notes": [
+      "Identifiers here are ASCII on purpose: Rust's to_uppercase and JavaScript's toUpperCase agree on ASCII and need not agree elsewhere.",
+      "Both `input` and `id` are byte-exact. Leading and trailing whitespace in an input is deliberate where present.",
+      "A colon at position 0 is not a prefix, and only the first colon separates: both are pinned below."
+    ]
+  },
+
+  "parseRef": [
+    {
+      "input": "KXFEDDECISION-26SEP-T3.75",
+      "fallback": "kalshi",
+      "venue": "kalshi",
+      "id": "KXFEDDECISION-26SEP-T3.75"
+    },
+    { "input": "kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "  kxfed-1  ", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    {
+      "input": "Fed-Decision-In-October",
+      "fallback": "polymarket",
+      "venue": "polymarket",
+      "id": "fed-decision-in-october"
+    },
+    {
+      "input": "USFED-FOMC-2026-10-28",
+      "fallback": "polymarket-us",
+      "venue": "polymarket-us",
+      "id": "usfed-fomc-2026-10-28"
+    },
+    { "input": ":kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": ":KXFED-1" },
+    { "input": ":Foo", "fallback": "polymarket", "venue": "polymarket", "id": ":foo" },
+
+    { "input": "kx:kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "kalshi:kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "kal:kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "k:kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "KX:kxfed-1", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "kx:   kxfed-1  ", "fallback": "kalshi", "venue": "kalshi", "id": "KXFED-1" },
+    { "input": "kx:kxfed-1", "fallback": "polymarket", "venue": "kalshi", "id": "KXFED-1" },
+
+    {
+      "input": "pm:Fed-Decision-In-October",
+      "fallback": "kalshi",
+      "venue": "polymarket",
+      "id": "fed-decision-in-october"
+    },
+    { "input": "polymarket:Foo-Bar", "fallback": "kalshi", "venue": "polymarket", "id": "foo-bar" },
+    { "input": "poly:Foo-Bar", "fallback": "kalshi", "venue": "polymarket", "id": "foo-bar" },
+    { "input": "intl:Foo-Bar", "fallback": "kalshi", "venue": "polymarket", "id": "foo-bar" },
+    {
+      "input": "international:Foo-Bar",
+      "fallback": "kalshi",
+      "venue": "polymarket",
+      "id": "foo-bar"
+    },
+    {
+      "input": "polymarket-intl:Foo-Bar",
+      "fallback": "kalshi",
+      "venue": "polymarket",
+      "id": "foo-bar"
+    },
+    { "input": "PM:FOO-BAR", "fallback": "kalshi", "venue": "polymarket", "id": "foo-bar" },
+    { "input": "pm:foo:bar", "fallback": "kalshi", "venue": "polymarket", "id": "foo:bar" },
+
+    {
+      "input": "pmus:USFED-FOMC-2026-10-28",
+      "fallback": "kalshi",
+      "venue": "polymarket-us",
+      "id": "usfed-fomc-2026-10-28"
+    },
+    {
+      "input": "polymarketus:Foo-Bar",
+      "fallback": "kalshi",
+      "venue": "polymarket-us",
+      "id": "foo-bar"
+    },
+    {
+      "input": "polymarket-us:Foo-Bar",
+      "fallback": "kalshi",
+      "venue": "polymarket-us",
+      "id": "foo-bar"
+    },
+    { "input": "polyus:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" },
+    { "input": "pm-us:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" },
+    { "input": "us:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" }
+  ],
+
+  "parseRefErrors": [
+    {
+      "input": "nasdaq:foo",
+      "fallback": "kalshi",
+      "error": "unknown-prefix",
+      "messageContains": ["Unknown venue prefix \"nasdaq\"", "kx:", "pm:", "pmus:"]
+    },
+    {
+      "input": "foo:bar",
+      "fallback": "polymarket",
+      "error": "unknown-prefix",
+      "messageContains": ["Unknown venue prefix \"foo\""]
+    },
+    {
+      "input": "kx:",
+      "fallback": "kalshi",
+      "error": "empty-identifier",
+      "messageContains": ["\"kx:\" names a venue but no ticker"]
+    },
+    {
+      "input": "pm:",
+      "fallback": "kalshi",
+      "error": "empty-identifier",
+      "messageContains": ["\"pm:\" names a venue but no slug"]
+    },
+    {
+      "input": "pmus:   ",
+      "fallback": "kalshi",
+      "error": "empty-identifier",
+      "messageContains": ["names a venue but no slug"]
+    }
+  ],
+
+  "formatRef": [
+    {
+      "venue": "kalshi",
+      "id": "KXFEDDECISION-26SEP-T3.75",
+      "text": "KXFEDDECISION-26SEP-T3.75"
+    },
+    {
+      "venue": "polymarket",
+      "id": "fed-decision-in-september",
+      "text": "pm:fed-decision-in-september"
+    },
+    {
+      "venue": "polymarket-us",
+      "id": "fed-decision-2026-09-16",
+      "text": "pmus:fed-decision-2026-09-16"
+    }
+  ],
+
+  "normaliseId": [
+    { "venue": "kalshi", "input": "kxfed-1", "id": "KXFED-1" },
+    { "venue": "kalshi", "input": "KXFED-1", "id": "KXFED-1" },
+    { "venue": "kalshi", "input": "KxFeD-1", "id": "KXFED-1" },
+    { "venue": "polymarket", "input": "Fed-Decision", "id": "fed-decision" },
+    { "venue": "polymarket", "input": "fed-decision", "id": "fed-decision" },
+    { "venue": "polymarket-us", "input": "USFED-FOMC", "id": "usfed-fomc" }
+  ],
+
+  "parseVenue": [
+    { "token": "kalshi", "context": "prefix", "venue": "kalshi" },
+    { "token": "kal", "context": "prefix", "venue": "kalshi" },
+    { "token": "kx", "context": "prefix", "venue": "kalshi" },
+    { "token": "k", "context": "prefix", "venue": "kalshi" },
+    { "token": "polymarket", "context": "prefix", "venue": "polymarket" },
+    { "token": "poly", "context": "prefix", "venue": "polymarket" },
+    { "token": "pm", "context": "prefix", "venue": "polymarket" },
+    { "token": "intl", "context": "prefix", "venue": "polymarket" },
+    { "token": "international", "context": "prefix", "venue": "polymarket" },
+    { "token": "polymarket-intl", "context": "prefix", "venue": "polymarket" },
+    { "token": "polymarketus", "context": "prefix", "venue": "polymarket-us" },
+    { "token": "polymarket-us", "context": "prefix", "venue": "polymarket-us" },
+    { "token": "polyus", "context": "prefix", "venue": "polymarket-us" },
+    { "token": "pmus", "context": "prefix", "venue": "polymarket-us" },
+    { "token": "pm-us", "context": "prefix", "venue": "polymarket-us" },
+    { "token": "us", "context": "prefix", "venue": "polymarket-us" },
+
+    { "token": "KX", "context": "prefix", "venue": "kalshi" },
+    { "token": "  PM  ", "context": "prefix", "venue": "polymarket" },
+    { "token": "PMUS", "context": "prefix", "venue": "polymarket-us" },
+
+    { "token": "kalshi", "context": "word", "venue": "kalshi" },
+    { "token": "kal", "context": "word", "venue": "kalshi" },
+    { "token": "kx", "context": "word", "venue": "kalshi" },
+    { "token": "polymarket", "context": "word", "venue": "polymarket" },
+    { "token": "poly", "context": "word", "venue": "polymarket" },
+    { "token": "pm", "context": "word", "venue": "polymarket" },
+    { "token": "polymarket-intl", "context": "word", "venue": "polymarket" },
+    { "token": "polymarketus", "context": "word", "venue": "polymarket-us" },
+    { "token": "polymarket-us", "context": "word", "venue": "polymarket-us" },
+    { "token": "polyus", "context": "word", "venue": "polymarket-us" },
+    { "token": "pmus", "context": "word", "venue": "polymarket-us" },
+    { "token": "pm-us", "context": "word", "venue": "polymarket-us" },
+
+    { "token": "us", "context": "word", "venue": null },
+    { "token": "US", "context": "word", "venue": null },
+    { "token": "k", "context": "word", "venue": null },
+    { "token": "intl", "context": "word", "venue": null },
+    { "token": "international", "context": "word", "venue": null },
+
+    { "token": "nasdaq", "context": "prefix", "venue": null },
+    { "token": "nasdaq", "context": "word", "venue": null },
+    { "token": "", "context": "prefix", "venue": null }
+  ]
+}

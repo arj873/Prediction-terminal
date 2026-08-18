@@ -346,12 +346,55 @@ pub struct CatalogueSnapshot {
     pub age_seconds: f64,
 }
 
+/// A [`VenueEvent`] without its markets.
+///
+/// A search hit carries the event's own fields alongside a *ranked* market
+/// list, so nesting the unranked one inside it would ship the same contracts
+/// twice in two different orders.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct EventSummary {
+    pub venue: Venue,
+    pub event_ticker: String,
+    pub series_ticker: String,
+    pub title: String,
+    pub sub_title: String,
+    pub category: String,
+    pub mutually_exclusive: bool,
+}
+
+/// One event matched by a search, with the contracts that resolve it.
+///
+/// Search runs against *events*, not markets: roughly 99.98% of Kalshi's open
+/// markets are auto-generated parlay legs, so a market-level search returns
+/// thousands of near-identical rows and buries the question being asked.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct EventSearchHit {
+    pub event: EventSummary,
+    /// Markets in the event, most liquid first.
+    pub markets: Vec<Market>,
+    /// Summed 24h volume across the event's markets, `None` when unpublished.
+    pub volume24h: Option<f64>,
+    pub score: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
 pub struct SearchResponse {
     pub query: String,
-    pub markets: Vec<Market>,
+    pub hits: Vec<EventSearchHit>,
+    /// How many events were searched.
+    pub scanned: u32,
+    /// Age of the snapshot in seconds — surfaced so the UI can say so.
+    pub snapshot_age_seconds: f64,
+    /// True when the crawl behind this snapshot hit its page cap before the
+    /// catalogue ran out. The panel says so rather than presenting a partial
+    /// universe as the whole one.
+    pub truncated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
