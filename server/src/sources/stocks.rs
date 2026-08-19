@@ -280,7 +280,7 @@ pub fn parse_yahoo_chart(
         source: "yahoo".to_string(),
     };
 
-    candles.sort_by(|a, b| a.time.cmp(&b.time));
+    candles.sort_by_key(|a| a.time);
     Ok(ChartReading { quote, candles })
 }
 
@@ -579,7 +579,7 @@ pub fn parse_nasdaq_historical(body: &NasdaqEnvelope<NasdaqHistorical>) -> Vec<S
     }
 
     // Nasdaq returns newest first.
-    candles.sort_by(|a, b| a.time.cmp(&b.time));
+    candles.sort_by_key(|a| a.time);
     candles
 }
 

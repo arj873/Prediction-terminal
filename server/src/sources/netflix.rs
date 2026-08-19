@@ -470,7 +470,7 @@ pub async fn get_top10(
         .filter(|row| field(row, "category").unwrap_or("").trim().to_lowercase() == want)
         .map(to_entry)
         .collect();
-    entries.sort_by(|a, b| a.rank.cmp(&b.rank));
+    entries.sort_by_key(|a| a.rank);
     entries.truncate(10);
 
     if entries.is_empty() {
