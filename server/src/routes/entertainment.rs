@@ -9,15 +9,17 @@ use axum::extract::{RawQuery, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use terminal_core::types::{
-    BoxOfficeDay, EntResponse, NetflixTop10, RtSearchResponse, RtTitle, SteamChart, StreamChart,
-    StreamChartsResponse, TvSchedule,
+    AwardResult, BoxOfficeDay, EntResponse, NetflixTop10, PodcastChart, ReleaseList,
+    RtSearchResponse, RtTitle, SteamChart, StreamChart, StreamChartsResponse, TrendList,
+    TvSchedule,
 };
 
 use crate::app::AppState;
 use crate::error::Result;
 use crate::routes::helpers::QueryParams;
 use crate::sources::{
-    boxoffice, entertainment, netflix, rottentomatoes, steam, streamcharts, tvmaze,
+    awards, boxoffice, entertainment, netflix, podcasts, releases, rottentomatoes, steam,
+    streamcharts, trends, tvmaze,
 };
 
 pub fn router() -> Router<AppState> {
@@ -32,6 +34,10 @@ pub fn router() -> Router<AppState> {
         .route("/api/ent/boxoffice", get(boxoffice_daily))
         .route("/api/ent/steam", get(steam_chart))
         .route("/api/ent/tv", get(tv))
+        .route("/api/ent/awards", get(award))
+        .route("/api/ent/trends", get(trending))
+        .route("/api/ent/releases", get(release_list))
+        .route("/api/ent/podcasts", get(podcast_chart))
 }
 
 /// Parse the query once, for a handler that only ever reads it.
@@ -231,4 +237,96 @@ async fn tv(State(state): State<AppState>, RawQuery(raw): RawQuery) -> Result<Js
         )
         .await?,
     ))
+}
+
+/* ---------------------------------------------------------- culture feeds */
+
+/// `GET /api/ent/awards?q&year&limit`
+async fn award(
+    State(state): State<AppState>,
+    RawQuery(raw): RawQuery,
+) -> Result<Json<AwardResult>> {
+    let params = query(raw);
+
+    let name = params.string("q");
+    let raw_year = params.string("year");
+    // Absent means "every ceremony on record", which is a different question
+    // from a year that failed to parse — so only a stated one is validated.
+    let year = if raw_year.is_empty() {
+        None
+    } else {
+        Some(awards::assert_year(&raw_year)?)
+    };
+    let limit = params.int_param("limit", 300, 1, 600);
+
+    Ok(Json(
+        awards::get_award(&state, &name, year, limit as usize).await?,
+    ))
+}
+
+/// `GET /api/ent/trends?geo&limit`
+async fn trending(
+    State(state): State<AppState>,
+    RawQuery(raw): RawQuery,
+) -> Result<Json<TrendList>> {
+    let params = query(raw);
+    let limit = params.int_param("limit", 25, 1, 100);
+
+    Ok(Json(
+        trends::get_trending(&state, &params.string("geo"), limit as usize).await?,
+    ))
+}
+
+/// `GET /api/ent/releases?q&kind&limit`
+async fn release_list(
+    State(state): State<AppState>,
+    RawQuery(raw): RawQuery,
+) -> Result<Json<ReleaseList>> {
+    let params = query(raw);
+    let limit = params.int_param("limit", 25, 1, 100);
+
+    // The clock is read here rather than in the source, so `upcoming` is decided
+    // against the moment the request was answered and never against the moment
+    // the cache entry was written.
+    let today = today_utc();
+
+    Ok(Json(
+        releases::get_releases(
+            &state,
+            &params.string("q"),
+            &params.string("kind"),
+            limit as usize,
+            &today,
+        )
+        .await?,
+    ))
+}
+
+/// `GET /api/ent/podcasts?view&country&limit`
+async fn podcast_chart(
+    State(state): State<AppState>,
+    RawQuery(raw): RawQuery,
+) -> Result<Json<PodcastChart>> {
+    let params = query(raw);
+    let limit = params.int_param("limit", 50, 1, 100);
+
+    Ok(Json(
+        podcasts::get_chart(
+            &state,
+            &params.string("view"),
+            &params.string("country"),
+            limit as usize,
+        )
+        .await?,
+    ))
+}
+
+/// Today, UTC, as `YYYY-MM-DD`.
+fn today_utc() -> String {
+    use time::format_description::BorrowedFormatItem;
+    const DATE: &[BorrowedFormatItem<'_>] =
+        time::macros::format_description!("[year]-[month]-[day]");
+    time::OffsetDateTime::now_utc()
+        .format(DATE)
+        .unwrap_or_default()
 }

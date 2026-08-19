@@ -475,6 +475,104 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    verb: 'AWRD',
+    aliases: ['AWARD', 'AWARDS', 'OSCARS'],
+    group: 'data',
+    summary: 'Award nominees and winners (settles Kalshi KXOSCAR*, KXEMMY*, KXGRAMMY*)',
+    usage: 'AWRD <award> [year]',
+    examples: [
+      'AWRD best picture',
+      'AWRD best picture 2026',
+      'AWRD drama series',
+      'AWRD album of the year',
+      'AWRD game of the year',
+    ],
+    handler(command, { panels }) {
+      // A trailing four-digit token is the ceremony; everything else is the
+      // award's name, which is several words often enough that joining is the
+      // only sane reading.
+      const args = [...command.args];
+      const last = args.at(-1) ?? '';
+      const year = /^(19|20)\d{2}$/.test(last)
+        ? Number.parseInt(args.pop() as string, 10)
+        : undefined;
+      const award = args.join(' ').trim();
+
+      if (!award) throw new UsageError('Missing <award>');
+
+      panels.open({
+        id: panelId.awards(award, year),
+        kind: 'awards',
+        props: year === undefined ? { query: award } : { query: award, year },
+      });
+    },
+  },
+  {
+    verb: 'TRND',
+    aliases: ['TRENDS', 'TRENDING'],
+    group: 'data',
+    summary: 'Google trending searches (settles Kalshi KXGOOGLESEARCH*)',
+    usage: 'TRND [country]',
+    examples: ['TRND', 'TRND GB', 'TRND JP'],
+    handler(command, { panels }) {
+      const geo = (command.args[0] ?? 'US').toUpperCase();
+      panels.open({ id: panelId.trends(geo), kind: 'trends', props: { geo } });
+    },
+  },
+  {
+    verb: 'REL',
+    aliases: ['RELEASE', 'RELEASES'],
+    group: 'data',
+    summary: 'Release dates and pre-orders (settles Kalshi KXALBUMRELEASE*)',
+    usage: 'REL <artist> [album|song]',
+    examples: ['REL taylor swift', 'REL drake song', 'REL tate mcrae album'],
+    handler(command, { panels }) {
+      const args = [...command.args];
+      // The kind is a trailing keyword, so an artist called "Song" is still
+      // reachable as `REL song album`.
+      const last = (args.at(-1) ?? '').toLowerCase();
+      const kind = ['album', 'albums', 'song', 'songs'].includes(last)
+        ? (args.pop() as string).toLowerCase().replace(/s$/, '')
+        : 'album';
+      const query = args.join(' ').trim();
+
+      if (!query) throw new UsageError('Missing <artist>');
+
+      panels.open({
+        id: panelId.releases(query, kind),
+        kind: 'releases',
+        props: { query, kind },
+      });
+    },
+  },
+  {
+    verb: 'POD',
+    aliases: ['PODCAST', 'PODCASTS'],
+    group: 'data',
+    summary: 'Apple podcast charts (settles Kalshi KXTOPPOD, KXROGANGUEST)',
+    usage: 'POD [top|episodes] [country]',
+    examples: ['POD', 'POD episodes', 'POD top gb'],
+    handler(command, { panels }) {
+      let view = 'top';
+      let country = 'us';
+
+      for (const token of command.args) {
+        const lower = token.toLowerCase();
+        if (['top', 'shows', 'show', 'episodes', 'episode'].includes(lower)) {
+          view = lower.startsWith('episode') ? 'episodes' : 'top';
+        } else if (/^[a-z]{2}$/.test(lower)) {
+          country = lower;
+        }
+      }
+
+      panels.open({
+        id: panelId.podcasts(view, country),
+        kind: 'podcasts',
+        props: { view, country },
+      });
+    },
+  },
+  {
     verb: 'STEAM',
     aliases: ['GAMES'],
     group: 'data',

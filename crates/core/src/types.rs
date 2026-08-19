@@ -1380,6 +1380,125 @@ pub struct TvSchedule {
     pub source_url: String,
 }
 
+/* ------------------------------------------------------- culture feeds */
+
+/// One recipient of an award, in one year, for one work.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct AwardEntry {
+    /// The Wikidata item, so a reader can check the claim at its source.
+    pub id: String,
+    pub name: String,
+    /// What they were nominated *for* — empty where the award has no such thing.
+    pub work: String,
+    pub won: bool,
+    /// `None` where the statement carries no date, which is a real record.
+    pub year: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct AwardResult {
+    pub award_id: String,
+    pub award: String,
+    pub year: Option<u32>,
+    pub entries: Vec<AwardEntry>,
+    /// Every ceremony on record, newest first — the picker of what else to ask.
+    pub years: Vec<u32>,
+    pub source_url: String,
+    /// What the panel should say about what it is showing. Empty when nothing
+    /// needs saying; a ceremony that has not happened is the interesting case.
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub note: String,
+}
+
+/// One trending search, with the story Google attributes the spike to.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct TrendEntry {
+    pub rank: u32,
+    pub query: String,
+    /// Google states these as lower bounds, never exact counts. `None` means
+    /// Google did not say — which is not the same as nobody searching it.
+    pub traffic_floor: Option<f64>,
+    pub started_at: String,
+    pub headline: String,
+    pub headline_source: String,
+    pub headline_url: String,
+    pub articles: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct TrendList {
+    pub geo: String,
+    pub geo_label: String,
+    pub entries: Vec<TrendEntry>,
+    pub source_url: String,
+}
+
+/// One record, out or announced.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct Release {
+    pub title: String,
+    pub artist: String,
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    pub kind: String,
+    pub track_count: Option<u32>,
+    pub genre: String,
+    pub url: String,
+    /// Dated after today. Computed on the way out rather than at parse time, so
+    /// a cached record that shipped this morning is not still flagged unreleased.
+    pub upcoming: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct ReleaseList {
+    pub query: String,
+    pub kind: String,
+    pub kind_label: String,
+    pub releases: Vec<Release>,
+    pub source_url: String,
+}
+
+/// One row of Apple's podcast chart.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct PodcastEntry {
+    pub rank: u32,
+    pub name: String,
+    /// The publisher on the show chart, the show on the episode chart.
+    pub publisher: String,
+    pub genre: String,
+    /// `YYYY-MM-DD`, or empty — Apple's chart feeds do not currently carry one.
+    pub released: String,
+    pub explicit: bool,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct PodcastChart {
+    pub view: String,
+    pub view_label: String,
+    pub country: String,
+    pub title: String,
+    pub updated: String,
+    pub entries: Vec<PodcastEntry>,
+    pub source_url: String,
+}
+
 /* ------------------------------------------------------------------ health */
 
 /// What the cache has been doing.

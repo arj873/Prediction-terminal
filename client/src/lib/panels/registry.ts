@@ -32,7 +32,11 @@ import RtPanel from './RtPanel.svelte';
 import RtSearchPanel from './RtSearchPanel.svelte';
 import SearchPanel from './SearchPanel.svelte';
 import SpotPanel from './SpotPanel.svelte';
+import AwardsPanel from './AwardsPanel.svelte';
+import PodcastsPanel from './PodcastsPanel.svelte';
+import ReleasesPanel from './ReleasesPanel.svelte';
 import SteamPanel from './SteamPanel.svelte';
+import TrendsPanel from './TrendsPanel.svelte';
 import StreamChartPanel from './StreamChartPanel.svelte';
 import TopPanel from './TopPanel.svelte';
 import TradesPanel from './TradesPanel.svelte';
@@ -68,6 +72,10 @@ export const PANEL_COMPONENTS: Record<PanelKind, AnyPanel> = {
   boxoffice: BoxOfficePanel,
   steam: SteamPanel,
   tv: TvPanel,
+  awards: AwardsPanel,
+  trends: TrendsPanel,
+  releases: ReleasesPanel,
+  podcasts: PodcastsPanel,
   help: HelpPanel,
   keys: KeysPanel,
 };

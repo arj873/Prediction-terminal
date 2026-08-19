@@ -305,6 +305,22 @@ export const MENUS: readonly Menu[] = [
         item('Spotify streams', 'SPOT'),
         item('YouTube music videos', 'YT'),
       ]),
+      group('Awards, trends and releases', [
+        item('Award nominees and winners…', '>AWRD'),
+        SEP,
+        ...[
+          'best picture',
+          'best director',
+          'drama series',
+          'album of the year',
+          'game of the year',
+        ].map((award) => item(titleCase(award), `AWRD ${award}`)),
+        SEP,
+        item('Trending searches', 'TRND'),
+        item('Release dates and pre-orders…', '>REL'),
+        item('Podcast chart', 'POD'),
+        item('Trending podcast episodes', 'POD episodes'),
+      ]),
       group('Screens and scores', [
         item('Rotten Tomatoes score…', '>RT'),
         item('Search Rotten Tomatoes…', '>RT SEARCH'),

@@ -131,7 +131,11 @@ does exactly what naming its event ticker does.
 | `YT` | `YT [today\|alltime\|trending]` | YouTube music video views |
 | `BO` | `BO [YYYY-MM-DD]` | Domestic daily box office |
 | `STEAM` | `STEAM [game\|appid]` | Live concurrent players, or the most-played leaderboard |
-| `TV` | `TV [YYYY-MM-DD] [country]` | What airs that day, by network |
+| `TV` | `TV [YYYY-MM-DD] [country]` |
+| `AWRD` | `AWRD <award> [year]` |
+| `TRND` | `TRND [country]` |
+| `REL` | `REL <artist> [album\|song]` |
+| `POD` | `POD [top\|episodes] [country]` | What airs that day, by network |
 
 `NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
 and `NFLX gb films` are the same chart.
@@ -267,6 +271,44 @@ resolves against. Those pairings are read off each series' own
 | `KXTOPSONG`, `KXTOPALBUM`, `KXALBUMEQUIV` | Billboard / Luminate | `BB` |
 | `KXSTEAM*`, `GAMERANK` | Steam | `STEAM` |
 | `KXBIGBROTHER*`, `KXDWTS`, `KXSNL` | what actually aired | `TV` |
+| `KXOSCAR*`, `KXEMMY*`, `KXGRAMMY*`, `KXGOTY` | the ceremony itself | `AWRD` |
+| `KXGOOGLESEARCH*`, `KXRANKLISTGOOGLESEARCH` | trends.google.com | `TRND` |
+| `KXALBUMRELEASE*`, `KXSONGRELEASE*`, `KXNEWTAYLOR` | when a record ships | `REL` |
+| `KXTOPPOD`, `KXROGANGUEST`, `KXCALLHERDADDY*` | Apple's podcast chart | `POD` |
+
+Four of those exist because the market's own settlement source will not answer a
+datacentre IP, and the terminal had nothing to show against them:
+
+**`AWRD` reads Wikidata, not oscars.org.** Award markets were the largest hole in
+the table — oscars.org and its awards database both return 403 from a container,
+the way fred.stlouisfed.org resets one. Wikidata holds the same facts as
+statements (`P166` award received, `P1411` nominated for, `P585` which ceremony)
+and answers. Two properties of that source change how the panel reads, and it
+says both rather than implying otherwise: **winners are recorded within minutes
+and losing slates fill in over days**, so the panel reports the nominee count it
+actually got; and **a ceremony that has not happened is empty**, which is the
+state an open market exists to price rather than a failure to find anything.
+
+**`TRND` is the daily list, not the annual one.** The markets naming
+trends.google.com settle on Year in Search, published once in December. What the
+feed shows is who is being searched today — the evidence a trader has in August
+for a market resolving then, the same relationship `BO` has to a total-gross
+market. The panel captions itself that way.
+
+**`REL` reads Apple, not Spotify.** Spotify's API needs an OAuth client, which
+would be the first credential in this codebase; Apple's Search API needs nothing,
+covers the same catalogue, and lists pre-orders with their announced date — which
+is the most direct evidence a "will they release by X" market has. Results are
+held to the artist named, because `attribute=artistTerm` narrows the search and
+does not close it: a live query for one artist returns tribute and covers acts,
+and because those release constantly they would head a newest-first list.
+
+**`POD` reads Apple's own chart.** Two views, because they answer different
+questions: `top` ranks shows, which is what a "most popular podcast" market is
+about, and `episodes` is what is charting now, which is where a guest booking
+shows up. Apple spells its own advisory rating `Explict`, so the reading matches
+on a prefix — an equality test against `explicit` reports an all-clean chart,
+which is wrong without ever looking broken.
 
 ### Workspace
 

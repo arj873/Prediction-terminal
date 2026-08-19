@@ -21,6 +21,7 @@ import type {
   CatalogueSnapshot,
   CompareResponse,
   EntGenreFilter,
+  AwardResult,
   EntResponse,
   FredSearchResponse,
   FredSeriesResponse,
@@ -40,6 +41,9 @@ import type {
   SpotCandlesResponse,
   SpotQuote,
   SpotSearchResponse,
+  PodcastChart,
+  ReleaseList,
+  TrendList,
   SteamChart,
   StreamChart,
   StreamChartsResponse,
@@ -291,6 +295,23 @@ export const ent = {
 
   tv: (date?: string, country?: string, signal?: AbortSignal): Promise<TvSchedule> =>
     request(`/ent/tv${query({ date, country })}`, signal),
+
+  /** Nominees and winners, from Wikidata. Omit the year for every ceremony. */
+  awards: (q: string, year?: number, limit = 300, signal?: AbortSignal): Promise<AwardResult> =>
+    request(`/ent/awards${query({ q, year, limit })}`, signal),
+
+  trends: (geo?: string, limit = 25, signal?: AbortSignal): Promise<TrendList> =>
+    request(`/ent/trends${query({ geo, limit })}`, signal),
+
+  releases: (q: string, kind?: string, limit = 25, signal?: AbortSignal): Promise<ReleaseList> =>
+    request(`/ent/releases${query({ q, kind, limit })}`, signal),
+
+  podcasts: (
+    view?: string,
+    country?: string,
+    limit = 50,
+    signal?: AbortSignal,
+  ): Promise<PodcastChart> => request(`/ent/podcasts${query({ view, country, limit })}`, signal),
 };
 
 /* ------------------------------------------------------------------ health */
