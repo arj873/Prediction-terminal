@@ -8,7 +8,6 @@ export type { BillboardEntry } from "./BillboardEntry";
 export type { BookLevel } from "./BookLevel";
 export type { BoxOfficeDay } from "./BoxOfficeDay";
 export type { BoxOfficeEntry } from "./BoxOfficeEntry";
-export type { CacheStats } from "./CacheStats";
 export type { Candle } from "./Candle";
 export type { CandlesResponse } from "./CandlesResponse";
 export type { CatalogueSnapshot } from "./CatalogueSnapshot";

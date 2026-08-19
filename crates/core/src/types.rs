@@ -1382,17 +1382,18 @@ pub struct TvSchedule {
 
 /* ------------------------------------------------------------------ health */
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, TS)]
+/// What the cache has been doing.
+///
+/// Not a wire type — it used to ride on `/api/health` and no longer does, so it
+/// carries no `TS` derive and generates no declaration. It stays because the
+/// cache's own tests read it, and because an operator debugging a cold panel
+/// wants these numbers in a log rather than in a public response.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
 pub struct CacheStats {
-    #[ts(type = "number")]
     pub hits: u64,
-    #[ts(type = "number")]
     pub misses: u64,
-    #[ts(type = "number")]
     pub entries: u64,
-    #[ts(type = "number")]
     pub evictions: u64,
 }
 
@@ -1402,7 +1403,11 @@ pub struct CacheStats {
 pub struct HealthResponse {
     pub ok: bool,
     pub uptime_seconds: f64,
-    pub cache: CacheStats,
+    /// Which optional feeds this deployment can serve. Not a secret — it is the
+    /// difference between "this terminal cannot do that" and "that is broken",
+    /// and an operator needs it. The cache counters that used to sit beside
+    /// these are gone: nothing read them, and they described internal traffic
+    /// to anyone who asked.
     pub fred_api_key: bool,
     pub alpaca_keys: bool,
     pub time: String,

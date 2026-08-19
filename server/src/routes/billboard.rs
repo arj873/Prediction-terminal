@@ -121,7 +121,7 @@ pub async fn fetch_art(http: &Http, url: &str) -> Result<(Vec<u8>, String)> {
         .await?;
 
     let content_type = content_type.unwrap_or_default();
-    if !content_type.starts_with("image/") {
+    if !is_raster(&content_type) {
         return Err(UpstreamError::new(
             "Artwork URL did not return an image",
             codes::BAD_UPSTREAM_BODY,
@@ -129,6 +129,26 @@ pub async fn fetch_art(http: &Http, url: &str) -> Result<(Vec<u8>, String)> {
     }
 
     Ok((bytes, content_type))
+}
+
+/// The image types this origin will re-serve.
+///
+/// An allowlist rather than a `image/` prefix test, because `image/svg+xml` is
+/// a document: it carries script and it would be served from *this* origin,
+/// where it can read this origin. Album art is never an SVG, so nothing real is
+/// lost by naming the raster types and refusing the rest.
+fn is_raster(content_type: &str) -> bool {
+    let essence = content_type
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+
+    matches!(
+        essence.as_str(),
+        "image/jpeg" | "image/jpg" | "image/png" | "image/gif" | "image/webp" | "image/avif"
+    )
 }
 
 /// `GET /api/billboard/art?u=`

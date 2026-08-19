@@ -16,6 +16,8 @@ use regex::Regex;
 use terminal_core::types::{Market, MoverSort, Venue, VenueEvent};
 use terminal_core::util::round_to;
 
+use crate::error::{Result, UpstreamError};
+
 /// The shape a search answers in.
 ///
 /// These are wire types: they are what `/api/venue/:venue/search` serialises,
@@ -102,6 +104,30 @@ fn by_desc(a: Option<f64>, b: Option<f64>) -> Ordering {
         .unwrap_or(Ordering::Equal)
 }
 
+/// How many words a search may name.
+///
+/// Every term is matched against every event in a ten-thousand-event corpus, so
+/// the work is the product of the two and only one of them is bounded. Sixteen
+/// is far past any query a person types and far short of one that costs
+/// anything; [`refuse_overlong_query`] turns the rest away at the door.
+pub const MAX_TERMS: usize = 16;
+
+/// Refuse a query with more words than [`MAX_TERMS`].
+///
+/// Refused rather than truncated, because silently searching for some of what
+/// was asked returns a confident answer to a different question. The caller is
+/// told, and can shorten it.
+pub fn refuse_overlong_query(query: &str) -> Result<()> {
+    let words = query.split_whitespace().count();
+    if words > MAX_TERMS {
+        return Err(UpstreamError::bad_request(format!(
+            "Search takes at most {MAX_TERMS} words; this one had {words}"
+        ))
+        .with_hint("Narrow the query — the most distinctive few words rank best."));
+    }
+    Ok(())
+}
+
 /// Rank open events against a free-text query.
 ///
 /// Every whitespace-separated term must appear somewhere in the haystack
@@ -111,7 +137,9 @@ fn by_desc(a: Option<f64>, b: Option<f64>) -> Ordering {
 /// liquid event wins.
 pub fn search_corpus(snapshot: &Corpus, query: &str, limit: usize) -> SearchResponse {
     let lowered = query.to_lowercase();
-    let terms: Vec<&str> = lowered.split_whitespace().collect();
+    // The routes refuse an over-long query before reaching here; the cap is
+    // repeated as a backstop so no future caller can reintroduce the cost.
+    let terms: Vec<&str> = lowered.split_whitespace().take(MAX_TERMS).collect();
     let phrase = terms.join(" ");
     // One compile per term rather than one per term *per event*: the pattern
     // does not depend on the event, and the scan runs over ~10,000 of them.

@@ -28,6 +28,13 @@ pub struct Config {
     pub port: u16,
     /// API calls allowed per client IP per minute.
     pub rate_limit: u32,
+    /// Whether `X-Forwarded-For` and `X-Real-IP` may name the client.
+    ///
+    /// Off by default, and that default is the security-relevant half: with it
+    /// on and nothing in front of the server, a caller picks its own rate-limit
+    /// bucket by varying the header, which is the whole of the limit defeated.
+    /// Turn it on only where a proxy you control actually rewrites the chain.
+    pub trust_proxy: bool,
 
     /// Enables the FRED API arm of the provider chain. The scrape is always
     /// tried first; this is the fallback for hosts the scrape cannot reach.
@@ -68,6 +75,7 @@ impl Default for Config {
             host: IpAddr::V4(Ipv4Addr::LOCALHOST),
             port: 8787,
             rate_limit: 600,
+            trust_proxy: false,
             fred_api_key: None,
             alpaca: None,
             kalshi_api_base: defaults::KALSHI.into(),
@@ -95,6 +103,18 @@ impl Default for Config {
     }
 }
 
+/// What counts as "on" in an environment variable.
+///
+/// Deliberately generous about spelling and deliberately strict about default:
+/// anything unrecognised reads as off, because the one setting this gates is
+/// only safe when someone meant it.
+fn truthy(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
 impl Config {
     /// Read the environment, falling back to the defaults for anything unset or
     /// unparseable. A malformed `PORT` is not worth refusing to start over.
@@ -111,6 +131,9 @@ impl Config {
             rate_limit: var("RATE_LIMIT")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(defaults.rate_limit),
+            trust_proxy: var("TRUST_PROXY")
+                .map(|v| truthy(&v))
+                .unwrap_or(defaults.trust_proxy),
 
             fred_api_key: var("FRED_API_KEY"),
             alpaca: alpaca_from_env(),
