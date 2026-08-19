@@ -1,0 +1,3602 @@
+[
+ {
+  "context": "In 2026 Elections",
+  "id": "CONTROLH",
+  "title": "Which party will win the U.S. House?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "CONTROLS",
+  "title": "Which party will win the U.S. Senate?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "GOVPARTYFL",
+  "title": "Florida Governor winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Elections",
+  "id": "GOVPARTYKY",
+  "title": "Kentucky governor winner? (2027)",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Elections",
+  "id": "GOVPARTYMS",
+  "title": "Mississippi Governor winner? (2027)",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "GOVPARTYNY",
+  "title": "New York Governor winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "GOVPARTYTN",
+  "title": "Tennessee Governor winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSEAKAL",
+  "title": "Alaska House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSECA3",
+  "title": "CA-03 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSECT5",
+  "title": "CT-05 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSEMI10",
+  "title": "MI-10 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSENE2",
+  "title": "NE-02 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSENV4",
+  "title": "NV-04 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSEOH13",
+  "title": "OH-13 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSETX15",
+  "title": "TX-15 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "HOUSEWI3",
+  "title": "WI-03 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "nights & experiences booked in 2026 Financials",
+  "id": "KXABNBA",
+  "title": "Airbnb Inc. nights & experiences booked in fiscal 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2028 Financials",
+  "id": "KXACQANNOUNCESPACEX",
+  "title": "Will SpaceX acquire any major U.S. telecom business before 2028?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Sep 6, 2026 Elections",
+  "id": "KXAFDSACHSEN",
+  "title": "How many seats will AfD win in the Saxony-Anhalt state election?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2026 Elections",
+  "id": "KXAKSENATEROUND",
+  "title": "Alaska Senate election: number of rounds",
+  "venue": "kalshi"
+ },
+ {
+  "context": "in 2026 Financials",
+  "id": "KXAMZNA",
+  "title": "Amazon headcount in 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2028 President of the United States race Elections",
+  "id": "KXAOCRUN",
+  "title": "When will AOC announce her presidential candidacy?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Juan Manuel Cerundolo vs Felix Auger-Aliassime (Aug 18) Sports",
+  "id": "KXATPEXACTMATCH",
+  "title": "Juan Manuel Cerundolo vs Felix Auger-Aliassime: Exact Match Score",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2028 Elections",
+  "id": "KXAUSTRALIAHOUSE",
+  "title": "Australian House election winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Week of Aug 18 – Aug 24, 2026 Climate and Weather",
+  "id": "KXAVGTKMSY",
+  "title": "Consecutive days of average temperature in New Orleans above 90°F - week of Aug 18, 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "August 2026 Financials",
+  "id": "KXB200MS",
+  "title": "NVIDIA B200 · Average hourly price in August",
+  "venue": "kalshi"
+ },
+ {
+  "context": "domestic comparable store sales in Q2 2027 Financials",
+  "id": "KXBBY",
+  "title": "Best Buy domestic comparable store sales in Q2",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2027 Politics",
+  "id": "KXBIRTHTOURISMVOTE",
+  "title": "Will the House vote on a birth tourism crackdown?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Politics",
+  "id": "KXBLUEWAVECOMBO",
+  "title": "Blue wave in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Oct 4, 2026 Elections",
+  "id": "KXBRAZILSENATE",
+  "title": "Brazilian Senate election winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Brazilian presidential election Elections",
+  "id": "KXBRPRES1R",
+  "title": "Brazil presidential election: first round winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Aug 18 - 8:00PM EDT to 8:15PM EDT Crypto",
+  "id": "KXBTC15M",
+  "title": "BTC 15 min · $64,691.30 target",
+  "venue": "kalshi"
+ },
+ {
+  "context": "August Crypto",
+  "id": "KXBTCMAXMON",
+  "title": "How high will BTC get in August?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "funded accounts in 2026 Financials",
+  "id": "KXBULLA",
+  "title": "Webull funded accounts in fiscal 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Season Sports",
+  "id": "KXBUNDESLIGA",
+  "title": "Bundesliga Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Nov 3, 2026 Elections",
+  "id": "KXCAHOUSEDEM",
+  "title": "How many House seats will Democrats win in California?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "December, 2026 Economics",
+  "id": "KXCANHOME",
+  "title": "Canada home price above C$700K in December?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Entertainment",
+  "id": "KXCATALOGUE",
+  "title": "Will Garth Brooks' catalog sell for at least $1.5B this year?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Sep 24, 2026 meeting Economics",
+  "id": "KXCBDECISIONMEXICO",
+  "title": "Bank of Mexico rate decision in September",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2027 Economics",
+  "id": "KXCBRATEHIKE",
+  "title": "Which central banks will hike before 2027?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Aug 2026 Politics",
+  "id": "KXCENSURE",
+  "title": "When will the US House censure another member?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before July 2028 Elections",
+  "id": "KXCITRINI",
+  "title": "Will the Citrini scenario happen?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2026 Politics",
+  "id": "KXCLARITYVOTE",
+  "title": "When will the Senate vote on the Clarity Act?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Corporate announcement Companies",
+  "id": "KXCOMPANYACTIONLAYOFF",
+  "title": "One-time layoff greater than Block (40% of employees) in tech?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "TOL vs IND (Aug 18) Sports",
+  "id": "KXCONMEBOLLIBBTTS",
+  "title": "Tolima vs Ind. del Valle: BTTS",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Economics",
+  "id": "KXCOREUND",
+  "title": "Will core CPI fall below 2.2% in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Season Sports",
+  "id": "KXCPL",
+  "title": "Caribbean Premier League Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "canadian tire store comparable sales growth in 2026 Financials",
+  "id": "KXCTCA",
+  "title": "Canadian Tire comparable sales growth in fiscal 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Nov 3, 2026 Elections",
+  "id": "KXDEMCOREFOURSENATESWEEP",
+  "title": "Will Democrats sweep the \"core four\" Senate races?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Feb 1, 2027 Elections",
+  "id": "KXDHOUSESEATSDIR",
+  "title": "How many House seats will Democrats hold after the Midterms? (Directional)",
+  "venue": "kalshi"
+ },
+ {
+  "context": "August 31, 2026 Economics",
+  "id": "KXDIESELMON",
+  "title": "Diesel prices in Aug 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In September 2026 Economics",
+  "id": "KXDOTPLOTPUB",
+  "title": "Will the Fed publish a dot plot in September 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "as reported for December 2026 Politics",
+  "id": "KXDSAMEMBERSHIP",
+  "title": "How many DSA members will there be at the end of 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2028 Elections",
+  "id": "KXDTICKET",
+  "title": "2028 Democratic Presidential ticket",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Season Sports",
+  "id": "KXECULP",
+  "title": "Ecuador LigaPro Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 season Sports",
+  "id": "KXEFLPROMO",
+  "title": "EFL Championship: Promotion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "August 2026 Economics",
+  "id": "KXEHSALES",
+  "title": "US existing home sales for August",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Economics",
+  "id": "KXEMERCUTS",
+  "title": "Number of emergency rate cuts in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "78th Emmy Awards Entertainment",
+  "id": "KXEMMYDACTO",
+  "title": "Emmy Winner: Outstanding Lead Actor in a Drama Series",
+  "venue": "kalshi"
+ },
+ {
+  "context": "78th Emmy Awards Entertainment",
+  "id": "KXEMMYLSACTR",
+  "title": "Emmy Winner: Outstanding Supporting Actress in a Limited or Anthology Series or Movie ",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 19, 2026 at 5pm EDT Crypto",
+  "id": "KXETHD",
+  "title": "ETH price on Aug 19, 2026 at 5pm EDT?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "etsy marketplace gms in 2026 Financials",
+  "id": "KXETSYA",
+  "title": "Etsy marketplace gross merchandise sales in fiscal 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Season Sports",
+  "id": "KXFACUP",
+  "title": "FA Cup Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "FDA - BPC Science and Technology",
+  "id": "KXFDAANNOUNCE",
+  "title": "When will the FDA reclassify BPC-157 to Category 1?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Economics",
+  "id": "KXFEDEMPLOYEES",
+  "title": "How many government employees will Trump cut?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Sep 16, 2026 Mentions",
+  "id": "KXFEDMENTION",
+  "title": "What will Kevin Warsh say during his September press conference?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXFLINTMAYOR",
+  "title": "Flint Mayoral Election",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Apr 18, 2026 Elections",
+  "id": "KXFRPRESADVANCE",
+  "title": "French presidential election: who will advance?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2030 Companies",
+  "id": "KXFYREFESTPRICE",
+  "title": "How much will a Fyre Festival 2 General Admission Ticket cost?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Criminal charges Politics",
+  "id": "KXGAVOTECHARGE",
+  "title": "Will anyone face federal charges tied to Fulton County’s 2020 election?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "in 2029 Elections",
+  "id": "KXGERELECTION",
+  "title": "Next German federal election winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXGOVNHNOMD",
+  "title": "New Hampshire Democratic Governor nominee?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Entertainment",
+  "id": "KXGRAMAOTY",
+  "title": "Grammy winner: Album of the Year",
+  "venue": "kalshi"
+ },
+ {
+  "context": "ZAK vs KIF (Aug 17) Sports",
+  "id": "KXGRECUPADVANCE",
+  "title": "Zakynthos vs Kifisia",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jul 25, 2028 Elections",
+  "id": "KXGREEKPM",
+  "title": "Prime Minister of Greece after the next election?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 18, 2026 Climate and Weather",
+  "id": "KXHIGHAUS",
+  "title": "Highest temperature in Austin on Aug 18, 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 18, 2026 Climate and Weather",
+  "id": "KXHIGHTATL",
+  "title": "Highest temperature in Atlanta on Aug 18, 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 18, 2026 Climate and Weather",
+  "id": "KXHIGHTOKC",
+  "title": "Highest temperature in Oklahoma City on Aug 18, 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Economics",
+  "id": "KXHIVISITORS",
+  "title": "Hawaii total visitor arrivals in 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXHOUSEIN7",
+  "title": "IN-07 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXHOUSETX9",
+  "title": "TX-09 House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2027 Elections",
+  "id": "KXHUNGARYPRES",
+  "title": "Next President of Hungary?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Economics",
+  "id": "KXINCORNYIELD",
+  "title": "Will Indiana corn yield exceed 205 bushels per acre in 2027?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "December 2026 Economics",
+  "id": "KXINTRANSEMP",
+  "title": "Will Indiana transportation equipment jobs rise YoY?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Rippling Economics",
+  "id": "KXIPORIPPLING",
+  "title": "When will Rippling officially announce an IPO?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Oct 27, 2027 Elections",
+  "id": "KXISRAELPM",
+  "title": "Prime Minister of Israel after the 2026 election?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2028 President of the United States race Elections",
+  "id": "KXKAMALARUN",
+  "title": "When will Kamala Harris announce her presidential candidacy?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2026 Politics",
+  "id": "KXKATZOUT",
+  "title": "Israel Katz departure announced?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2027 Companies",
+  "id": "KXKRAKENBANKPUBLIC",
+  "title": "Which bank will take Kraken public before 2027?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Season Sports",
+  "id": "KXLALIGAPOINTMARGIN",
+  "title": "La Liga: Champion's Points Margin",
+  "venue": "kalshi"
+ },
+ {
+  "context": "ATM vs MCF (Aug 19) Sports",
+  "id": "KXLALIGATEAMTOTAL",
+  "title": "Atletico vs Malaga: Team Total",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-2027 Regular Season Sports",
+  "id": "KXLEADERNFLPINT",
+  "title": "Pro Football Passing Interceptions Leader",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Regular Season Sports",
+  "id": "KXLEADERWNBA3PT",
+  "title": "Women's Pro Basketball Total Three Pointers Made Leader",
+  "venue": "kalshi"
+ },
+ {
+  "context": "December 2026 Economics",
+  "id": "KXLFPRATE",
+  "title": "US labor force participation rate at year-end 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "JUA vs AME (Aug 21) Sports",
+  "id": "KXLIGAMXBTTS",
+  "title": "Juarez vs America: BTTS",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Dec 31, 2026 Science and Technology",
+  "id": "KXLLM1",
+  "title": "Best AI at the end of 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 elections Elections",
+  "id": "KXLOSEREELECTIONRSEN",
+  "title": "How many Republican senators will lose reelection in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 18, 2026 Climate and Weather",
+  "id": "KXLOWTDEN",
+  "title": "Lowest temperature in Denver on Aug 18, 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 18, 2026 Climate and Weather",
+  "id": "KXLOWTOKC",
+  "title": "Lowest temperature in Oklahoma City on Aug 18, 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 CPKC Women's Open Sports",
+  "id": "KXLPGAR2LEAD",
+  "title": "CPKC Women's Open End of Round 2 Leader",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXLTGOVTX",
+  "title": "Texas Lieutenant Governor winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Championship Game Sports",
+  "id": "KXMARMADROUND",
+  "title": "Men's Championship Game Qualifiers",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXMAYORLA",
+  "title": "Los Angeles Mayor winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 2027 Elections",
+  "id": "KXMESENOUTCOME",
+  "title": "Maine Senate Exact Outcome",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXMISC",
+  "title": "Michigan Supreme Court election winners?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 season Sports",
+  "id": "KXMLBALCY",
+  "title": "AL Cy Young Winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "STL vs CIN (Aug 18) Sports",
+  "id": "KXMLBSB",
+  "title": "St. Louis vs Cincinnati: Stolen Bases",
+  "venue": "kalshi"
+ },
+ {
+  "context": "CIN vs NYC (Aug 19) Sports",
+  "id": "KXMLS1HBTTS",
+  "title": "Cincinnati vs New York City: First Half BTTS",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Season Sports",
+  "id": "KXMLSEAST",
+  "title": "MLS Eastern Conference Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Economics",
+  "id": "KXMORTGAGERATE",
+  "title": "How high will 30yr mortgage rate get this year?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2027 Politics",
+  "id": "KXMUSKCHARGE",
+  "title": "Will Elon Musk be charged with a crime in Spain or France?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXNASCARCUPSEASON",
+  "title": "NASCAR Cup Series Regular Season Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 season Sports",
+  "id": "KXNBACONF",
+  "title": "Conference to Win Pro Basketball Finals",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Finalists - 2027 Class Sports",
+  "id": "KXNBAHALLOFFAME",
+  "title": "2027 Pro Basketball Hall of Fame Finalists",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNBAPACIFIC",
+  "title": "Pro Basketball Pacific Division Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2030 Sports",
+  "id": "KXNBASEATTLE",
+  "title": "Will a Seattle Pro Basketball team play a game before 2030?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNBAWEST",
+  "title": "Pro Basketball Western Conference Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXNCAAFACC",
+  "title": "College Football ACC Championship Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "AAC (2026) Sports",
+  "id": "KXNCAAFCONFMATCHUP",
+  "title": "AAC Conference Championship Matchup",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXNCAAFPAC12",
+  "title": "College Football Pac-12 Championship Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "UNC vs TCU (Aug 29) Sports",
+  "id": "KXNCAAFSPREAD",
+  "title": "North Carolina vs TCU: Spread",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Sports",
+  "id": "KXNCAAMBACC",
+  "title": "ACC Men's Conference Tournament Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Men's Big East Tournament Sports",
+  "id": "KXNCAAMBBIGEAST",
+  "title": "Big East Men's Conference Tournament Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Sports",
+  "id": "KXNCAAMBIVY",
+  "title": "Ivy League Men's Conference Tournament Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Sports",
+  "id": "KXNCAAMBPAC12",
+  "title": "Pac-12 Men's Conference Tournament Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Sports",
+  "id": "KXNCAAMBUAC",
+  "title": "United Athletic Conference Men's Tournament Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Sep 23, 2027 Companies",
+  "id": "KXNETFLIXSTUDIO",
+  "title": "Will Netflix Studios Fort Monmouth Phase 1A be completed before fall 2027?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "During the 2025-2029 term Politics",
+  "id": "KXNEWSCOTUSCONF",
+  "title": "How many Supreme Court justices will the President confirm?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "LV vs HOU (Aug 20) Sports",
+  "id": "KXNFL1H",
+  "title": "Las Vegas vs Houston: 1st Half Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "SF vs LAC (Aug 20) Sports",
+  "id": "KXNFL2HSPREAD",
+  "title": "San Francisco vs Los Angeles: 2nd Half Spread",
+  "venue": "kalshi"
+ },
+ {
+  "context": "CAR vs JAC (Aug 21) Sports",
+  "id": "KXNFL4Q",
+  "title": "Carolina vs Jacksonville: 4th Quarter Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "MVP (2026-27) Sports",
+  "id": "KXNFLAWARDFIN",
+  "title": "MVP Finalists",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Most Wins (2026-27) Sports",
+  "id": "KXNFLDIVMOSTWINS",
+  "title": "Division with the Most Total Wins",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 season Sports",
+  "id": "KXNFLEXECOTY",
+  "title": "Executive of the Year Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNFLLASTTOLOSE",
+  "title": "Pro Football Last Undefeated Team",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNFLNFCSOUTH",
+  "title": "NFC South Division Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 season Sports",
+  "id": "KXNFLPROOTY",
+  "title": "Protector of the Year Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "6+ Rushing Touchdowns Sports",
+  "id": "KXNFLSEASONRSHTD",
+  "title": "Pro Football: 6+ Rushing Touchdowns Season",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNFLTEAMDPTS",
+  "title": "Pro Football Team to Allow the Fewest Points",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNFLWINS-ANY",
+  "title": "Pro Football: Any Team 15+/16+/17 Wins",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Economics",
+  "id": "KXNFPROD",
+  "title": "U.S. nonfarm productivity YoY above 3% in any 2026 quarter?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026-27 Sports",
+  "id": "KXNHLATLANTIC",
+  "title": "NHL Atlantic Division Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXNPB",
+  "title": "Japan NPB Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "December 2026 Economics",
+  "id": "KXNYCASKRENT",
+  "title": "NYC median asking rent in December 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Criminal charges Politics",
+  "id": "KXNYTCHARGE",
+  "title": "Will a New York Times reporter be federally charged over Air Force One reporting?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Economics",
+  "id": "KXORDPAX",
+  "title": "Will O’Hare set a new passenger record in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Entertainment",
+  "id": "KXOSCARACTR",
+  "title": "Oscar winner: Best Actress",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Entertainment",
+  "id": "KXOSCARNOMACTR",
+  "title": "Oscar nominees: Best Actress",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Entertainment",
+  "id": "KXOSCARNOMPIC",
+  "title": "Oscar nominees: Best Picture",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Entertainment",
+  "id": "KXOSCARSCORE",
+  "title": "Oscar Winner: Best Music (Original Score)",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXPAHOUSE",
+  "title": "Pennsylvania State House winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In Aug 2026 Economics",
+  "id": "KXPAYROLLS",
+  "title": "Jobs numbers in Aug 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Travis Scott : Grammy Award Entertainment",
+  "id": "KXPERSONAWARD",
+  "title": "Will Travis Scott win a Grammy at the 69th Grammy Awards?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 BMW Championship Sports",
+  "id": "KXPGAR1TOP5",
+  "title": "Bmw Championship: Round 1 Top 5 Finishers",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 BMW Championship Sports",
+  "id": "KXPGATOP5",
+  "title": "Bmw Championship: Top 5 Finishers",
+  "venue": "kalshi"
+ },
+ {
+  "context": "total customers in Q3 2026 Financials",
+  "id": "KXPLTR",
+  "title": "Palantir total customers in Q3",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Between 2025 and 2035? Social",
+  "id": "KXPOPCHANGESTATE10",
+  "title": "Will any U.S. state experience a population decrease of at least 10% between 2025 and 2035?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2028 Elections",
+  "id": "KXPRESNOML",
+  "title": "2028 Libertarian Presidential nominee",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Elections",
+  "id": "KXPRIMARYCOUNTY",
+  "title": "Michigan Senate Democratic primary: which counties will Abdul El-Sayed win?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In Aug 2026 Climate and Weather",
+  "id": "KXRAINSFOM",
+  "title": "Rain in San Francisco in Aug 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2026 Economics",
+  "id": "KXRATECUTCOUNT",
+  "title": "Number of rate cuts in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "once all gubernatorial elections scheduled for Nov 3, 2026 (including runoffs) are conclusively called or certified, per the USELECTION contract Elections",
+  "id": "KXRGOVCOUNT",
+  "title": "Number of Republican governors after the midterms?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2028 Companies",
+  "id": "KXRIPPLINGDEEL",
+  "title": "Will Rippling win its lawsuit against Deel?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXSAILGP",
+  "title": "SailGP Championship",
+  "venue": "kalshi"
+ },
+ {
+  "context": "in 2026 Elections",
+  "id": "KXSAXONYANHALT",
+  "title": "Saxony-Anhalt state election winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "total global stores in Q1 2027 Financials",
+  "id": "KXSBUX",
+  "title": "Starbucks total global stores in Q1 2027",
+  "venue": "kalshi"
+ },
+ {
+  "context": "December 2026 Economics",
+  "id": "KXSCTRANSEMP",
+  "title": "Will South Carolina transportation equipment jobs rise YoY?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2028 Elections",
+  "id": "KXSENATENYD",
+  "title": "New York Democratic Senate nominee in 2028?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "In 2027 Elections",
+  "id": "KXSENMAJ",
+  "title": "120th Congress: Who will be Senate Majority Leader?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "ATA vs SAS (Aug 23) Sports",
+  "id": "KXSERIEATOTAL",
+  "title": "Atalanta vs Sassuolo: Total Goals",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXSLRCHAMP",
+  "title": "Super League Rugby Champion",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Aug 18 - 8:00PM EDT to 8:15PM EDT Crypto",
+  "id": "KXSOL15M",
+  "title": "SOL 15 min · $77.0123 target",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 2027 Entertainment",
+  "id": "KXSONGRELEASEDATE",
+  "title": "Will NewJeans release a new song this year?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Maine State Senate Elections",
+  "id": "KXSTATELEG",
+  "title": "Maine State Senate winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "gross merchandise sales in 2026 Financials",
+  "id": "KXSTUBA",
+  "title": "StubHub gross merchandise sales in fiscal 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2028 Elections",
+  "id": "KXSWEDENPM",
+  "title": "Prime Minister of Sweden after the general election?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Jan 1, 2027 Politics",
+  "id": "KXTARIFFRATEMEX",
+  "title": "What will the tariff rate on Mexican imports be on Jan 1, 2027?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "On Aug 18, 2026 at 9pm EDT Climate and Weather",
+  "id": "KXTEMPMIAH",
+  "title": "Temperature in Miami on Aug 18, 2026 at 9pm EDT? (Synoptic)",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 2027 Companies",
+  "id": "KXTESLASEMI",
+  "title": "How many Semi Trucks will Tesla Produce in a quarter in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Economics",
+  "id": "KXTNTRANSEMP",
+  "title": "Will Tennessee transportation equipment jobs rise YoY?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "in 2026 Financials",
+  "id": "KXTOSTA",
+  "title": "Toast total locations in 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2027 Politics",
+  "id": "KXTRUMPSTATES",
+  "title": "Which states will Trump visit in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2027 Politics",
+  "id": "KXTRUMPTHUNEOUT",
+  "title": "Will Trump publicly call for John Thune to step down as Senate Majority Leader?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2029 Climate and Weather",
+  "id": "KXTXURI",
+  "title": "Will the average minimum temperature in Texas (DFW & IAH) fall below 20°F for at least 2 days within a 4-day span?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "CEL vs ASK (Aug 19) Sports",
+  "id": "KXUCL1HSPREAD",
+  "title": "Celtic vs LASK: First Half Spread",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Elections",
+  "id": "KXUKBYELECTIONCOUNT",
+  "title": "How many UK parliamentary by-elections in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2030 Elections",
+  "id": "KXUKCOALITION",
+  "title": "Next government of the United Kingdom?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "in 2026 Elections",
+  "id": "KXUSINDEPENDENTCONGRESS",
+  "title": "Will any independent or 3rd party candidate win a House or Senate race in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before Jan 1, 2027 Politics",
+  "id": "KXUSMCAOUTCOMES",
+  "title": "Which USMCA outcomes will occur in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Q4 2026 Economics",
+  "id": "KXUTHOMEPRICE",
+  "title": "Will Utah's House Price Index exceed 722.63 in Q4 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "lng volumes in Q3 2026 Financials",
+  "id": "KXVG",
+  "title": "Venture Global LNG volumes in Q3",
+  "venue": "kalshi"
+ },
+ {
+  "context": "in 2026 Elections",
+  "id": "KXVICTORIANSTATE",
+  "title": "Victorian state election winner?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "u.s. same-restaurant sales growth in 2026 Companies",
+  "id": "KXWENA",
+  "title": "Wendy's US same-restaurant sales growth in fiscal 2026",
+  "venue": "kalshi"
+ },
+ {
+  "context": "Before 2027 Politics",
+  "id": "KXWHPRESSBRIEFING",
+  "title": "Who will attend a White House Press Briefing in 2026?",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2027 Championship Game Sports",
+  "id": "KXWMARMADROUND",
+  "title": "Women's Championship Game Qualifiers",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXWNBA1SEED",
+  "title": "Women's Pro Basketball #1 Seed",
+  "venue": "kalshi"
+ },
+ {
+  "context": "LA at CONN (Aug 18) Sports",
+  "id": "KXWNBA3QSPREAD",
+  "title": "Los Angeles vs Connecticut: 3rd Quarter Spread",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXWNBAALLROOKIE",
+  "title": "Women's Pro Basketball All-Rookie Team",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 season Sports",
+  "id": "KXWNBAFINALSMVP",
+  "title": "Women's Pro Basketball Finals MVP Winner",
+  "venue": "kalshi"
+ },
+ {
+  "context": "2026 Sports",
+  "id": "KXWNBAPLAYOFF",
+  "title": "Women's Pro Basketball Playoff Qualifiers",
+  "venue": "kalshi"
+ },
+ {
+  "context": " Iran",
+  "id": "0-ships-transit-hormuz-on-any-date-byptpt",
+  "title": "0 ships transit Hormuz on any date by..?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Celebrities",
+  "id": "1-searched-actor-on-google",
+  "title": "#1 Searched Actor on Google 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "2026-mens-us-open-winner-tennis",
+  "title": "2026 Men’s US Open Winner (Tennis)",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "2027-french-presidential-election-who-will-be-on-the-ballot",
+  "title": "2027 French Presidential Election: who will be on the ballot?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "afd-wins-the-most-seats-in-how-many-september-state-elections",
+  "title": "AfD wins the most seats in how many September state elections?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Airbnb Hit Price Weekly Finance",
+  "id": "airbnb-hit-price-weekly",
+  "title": "What will Airbnb, Inc. (ABNB) hit Week of August 17 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "alaska-governor-election-winner",
+  "title": "Alaska Governor Election Winner  ",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "altai-krai-parliament-election-party-winner",
+  "title": "Altai Krai Parliament Election: Party Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "amapa-senate-election-1st-place",
+  "title": "Amapá Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "amazonas-senate-election-2nd-place",
+  "title": "Amazonas Senate Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Anthropic Valuation Finance",
+  "id": "anthropic-valuation",
+  "title": "Will Anthropic’s valuation hit __ by December 31?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "argentina-presidential-election-winner",
+  "title": "Argentina Presidential Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Austin Daily Weather Weather",
+  "id": "austin-daily-weather",
+  "title": "Highest temperature in Austin on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "baja-california-sur-governor-election-winner",
+  "title": "Baja California Sur Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "ballon-dor-top-3-finish",
+  "title": "Ballon d'Or Top 3 Finish 2026",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "berlin-state-election-winner",
+  "title": "Berlin State Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "berlin-state-elections-linke-of-seats",
+  "title": "Berlin State Elections: Linke # of seats?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Best AI model AI",
+  "id": "best-ai-model",
+  "title": "Best AI model on August 31?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Best Text-to-Image AI AI",
+  "id": "best-text-to-image-ai",
+  "title": "Which company has the best Text-to-Image AI end of October?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Music",
+  "id": "billboard-1-artist",
+  "title": "Billboard #1 Artist 2026",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "billionaire-one-time-wealth-tax-passes-in-california-election",
+  "title": "Billionaire one-time wealth tax passes in California election 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Bitcoin Hit Price Daily Crypto",
+  "id": "bitcoin-hit-price-daily",
+  "title": "What price will Bitcoin hit on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Bitcoin Neg Risk Weekly Crypto",
+  "id": "bitcoin-neg-risk-weekly",
+  "title": "Bitcoin price on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Bonbast  Iran",
+  "id": "bonbast",
+  "title": "USD x Iranian rials End of August?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-alagoas",
+  "title": "Brazil Presidential Election First Round: 1st Place in Alagoas",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-ceara",
+  "title": "Brazil Presidential Election First Round: 1st Place in Ceará",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-goias",
+  "title": "Brazil Presidential Election First Round: 1st Place in Goiás",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-mato-grosso-do-sul",
+  "title": "Brazil Presidential Election First Round: 1st Place in Mato Grosso do Sul",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-pernambuco",
+  "title": "Brazil Presidential Election First Round: 1st Place in Pernambuco",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-rio-grande-do-sul",
+  "title": "Brazil Presidential Election First Round: 1st Place in Rio Grande do Sul",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-1st-place-in-santa-catarina",
+  "title": "Brazil Presidential Election First Round: 1st Place in Santa Catarina",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "brazil-presidential-election-first-round-2nd-place",
+  "title": "Brazil Presidential Election First Round: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": "BTC Multi Strikes Weekly Crypto",
+  "id": "btc-multi-strikes-weekly",
+  "title": "Bitcoin above ___ on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "BTC Up or Down Daily Crypto",
+  "id": "btc-up-or-down-daily",
+  "title": "Bitcoin Up or Down on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "bulgaria-presidential-election",
+  "title": "Bulgaria Presidential Election",
+  "venue": "polymarket"
+ },
+ {
+  "context": "ByteDance Valuation Finance",
+  "id": "bytedance-valuation",
+  "title": "Will ByteDance's valuation hit __ by August 31?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ca-04-house-election-winner-by-individual",
+  "title": "CA-04 House Election Winner (by individual)",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ca-16-house-election-winner",
+  "title": "CA-16 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ca-26-house-election-winner",
+  "title": "CA-26 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Cape Town Daily Weather Weather",
+  "id": "cape-town-daily-weather",
+  "title": "Highest temperature in Cape Town on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ceara-senate-election-1st-place",
+  "title": "Ceará Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "changhua-county-magistrate-election-winner",
+  "title": "Changhua County Magistrate Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Chicago Daily Weather Weather",
+  "id": "chicago-daily-weather",
+  "title": "Highest temperature in Chicago on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Chinese AI #1 China",
+  "id": "chinese-ai-1",
+  "title": "Best Chinese AI Company end of August?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Chongqing Daily Weather Weather",
+  "id": "chongqing-daily-weather",
+  "title": "Highest temperature in Chongqing on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "christopher-luxon-out-by-september",
+  "title": "Christopher Luxon out by September 30?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Coinbase Hit Price Weekly Finance",
+  "id": "coinbase-hit-price-weekly",
+  "title": "What will Coinbase Global, Inc. (COIN) hit Week of August 17 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Core CPI Inflation",
+  "id": "core-cpi",
+  "title": "Core CPI YoY - August 2026",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Critical Cloudflare Incident Politics",
+  "id": "critical-cloudflare-incident",
+  "title": "Another critical Cloudflare incident by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Dallas Daily Weather Weather",
+  "id": "dallas-daily-weather",
+  "title": "Highest temperature in Dallas on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "democratic-nominee-for-florida-governor",
+  "title": "Florida Governor Democratic Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Dissent at Fed meeting federal reserve",
+  "id": "dissent-at-fed-meeting",
+  "title": "How many dissent at the January Fed meeting?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Dota 2 Sports",
+  "id": "dota-2",
+  "title": "Dota 2: TEAM VISION vs BoomBoys (BO3) - The International Playoffs",
+  "venue": "polymarket"
+ },
+ {
+  "context": "EFL Championship Sports",
+  "id": "efl-championship",
+  "title": "Queens Park Rangers FC vs. Bolton Wanderers FC - More Markets",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "emmys-2026-outstanding-guest-actress-in-a-comedy-series",
+  "title": "Emmys 2026: Outstanding guest actress in a comedy series",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "emmys-2026-outstanding-lead-actress-in-a-comedy-series",
+  "title": "Emmys 2026: Outstanding lead actress in a comedy series",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "emmys-2026-outstanding-realitycompetition-series",
+  "title": "Emmys 2026: Outstanding reality/competition series",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "emmys-2026-outstanding-supporting-actress-in-a-drama-series",
+  "title": "Emmys 2026: Outstanding supporting actress in a drama series",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "emmys-2026-outstanding-variety-special-live",
+  "title": "Emmys 2026: Outstanding variety special (live)",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "esports-awards-esports-content-group-of-the-year",
+  "title": "Esports Awards: Esports Content Group of the Year",
+  "venue": "polymarket"
+ },
+ {
+  "context": "ETH Up or Down 15m Crypto",
+  "id": "eth-up-or-down-15m",
+  "title": "Ethereum Up or Down - August 18, 8:00PM-8:15PM ET",
+  "venue": "polymarket"
+ },
+ {
+  "context": "ETH Up or Down Hourly Crypto",
+  "id": "eth-up-or-down-hourly",
+  "title": "Ethereum Up or Down - August 18, 7PM ET",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Ethereum Hit Price Monthly Crypto",
+  "id": "ethereum-hit-price-monthly",
+  "title": "What price will Ethereum hit in August?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Ethereum Multi Strikes Weekly Crypto",
+  "id": "ethereum-multi-strikes-weekly",
+  "title": "Ethereum above ___ on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "f1-constructors-champion",
+  "title": "F1 Constructors' Champion",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Finance",
+  "id": "fed-rate-cut-by",
+  "title": "Fed rate cut by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "federal-district-senate-election-1st-place",
+  "title": "Federal District Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Crypto",
+  "id": "felix-fdv-above-one-day-after-launch",
+  "title": "Felix FDV above ___ one day after launch?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "fl-06-house-election-winner",
+  "title": "FL-06 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "fl-21-democratic-primary-winner",
+  "title": "FL-21 Democratic Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "florida-democratic-senate-primary-winner",
+  "title": "Florida Democratic Senate Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "florida-governor-winner",
+  "title": "Florida Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "florida-senate-election-winner",
+  "title": "Florida Senate Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Elections",
+  "id": "french-presidential-election-who-will-announce-a-run-in",
+  "title": "French Presidential Election: who will announce a run in 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "georgia-governor-winner",
+  "title": "Georgia Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "gianni-infantino-out-as-fifa-president-by-december",
+  "title": "Gianni Infantino out as FIFA President by December 31?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Google Hit Price Monthly Finance",
+  "id": "google-hit-price-monthly",
+  "title": "What will Alphabet Inc. (GOOGL) hit in August 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "grammys-2027-album-of-the-year-winner",
+  "title": "Grammys 2027: Album of the Year Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Guangzhou Daily Weather Weather",
+  "id": "guangzhou-daily-weather",
+  "title": "Highest temperature in Guangzhou on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " AI",
+  "id": "highest-kimi-score-on-humanitys-last-exam-in",
+  "title": "Highest Kimi score on Humanity’s Last Exam in 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Hong Kong Daily Lowest Temperature Weather",
+  "id": "hong-kong-daily-lowest-temperature",
+  "title": "Lowest temperature in Hong Kong on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Houston Daily Weather Weather",
+  "id": "houston-daily-weather",
+  "title": "Highest temperature in Houston on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "how-many-democratic-senate-incumbents-will-not-win-their-primary",
+  "title": "How many Democratic Senate Incumbents will not win their Primary? ",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "how-many-emmys-will-widows-bay-win",
+  "title": "How many Emmys will “Widow's Bay” win?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "how-many-house-seats-will-the-democrats-win-in-california",
+  "title": "How many House seats will the Democrats win in California?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Science",
+  "id": "how-many-tornadoes-in-the-us-in-august",
+  "title": "How many Tornadoes in the US in August 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "huancayo-mayoral-election-winner",
+  "title": "Huancayo Mayoral Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "in-07-house-election-winner",
+  "title": "IN-07 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Inflation UK - Annual Inflation",
+  "id": "inflation-uk-annual",
+  "title": "U.K. Annual Inflation 2026",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Iran",
+  "id": "iran-invades-kuwait-byptptpt",
+  "title": "Iran invades Kuwait by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "israel-election-likud-of-seats",
+  "title": "Israel Election: Likud # of seats?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Israel x Lebanon diplomatic meeting Politics",
+  "id": "israel-x-lebanon-diplomatic-meeting",
+  "title": "Israel x Lebanon diplomatic meeting by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "james-fishback-vote-share-in-2026-florida-republican-governor-primary",
+  "title": "James Fishback vote share in 2026 Florida Republican Governor Primary?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "jerome-powell-out-from-fed-board-by",
+  "title": "Jerome Powell out of Fed Board by…?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Jesus Christ return Culture",
+  "id": "jesus-christ-return",
+  "title": "Will Jesus Christ return before 2027?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "kansas-governor-winner",
+  "title": "Kansas Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "kazakhstan-kurultai-election-2nd-place",
+  "title": "Kazakhstan Kurultai Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "krasnoyarsk-krai-parliament-election-party-winner",
+  "title": "Krasnoyarsk Krai Parliament Election: Party Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "laliga-top-goalscorer-2026",
+  "title": "LaLiga: Top Goalscorer 2026-27",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "latvian-parliamentary-election-winner",
+  "title": "Latvian Parliamentary Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "lee-jae-myung-out-as-president-of-south-korea-in",
+  "title": "Lee Jae-myung out as president of South Korea in 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Ligue 2 Sports",
+  "id": "ligue-2",
+  "title": "US Boulogne Côte d'Opale vs. Red Star FC",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "lima-mayoral-election-winner",
+  "title": "Lima Mayoral Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "LiveBench (Overall) Monthly AI",
+  "id": "livebench-overall-monthly",
+  "title": "Which company has the best AI model on LiveBench (Overall) end of August?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Los Angeles Daily Weather Weather",
+  "id": "los-angeles-daily-weather",
+  "title": "Highest temperature in Los Angeles on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Lucknow Daily Weather Weather",
+  "id": "lucknow-daily-weather",
+  "title": "Highest temperature in Lucknow on August 20?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Madrid Daily Weather Weather",
+  "id": "madrid-daily-weather",
+  "title": "Highest temperature in Madrid on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Mamdani Announcement Mentions Politics",
+  "id": "mamdani-announcement-mentions",
+  "title": "What will Mamdani say during next live announcement?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Manila Daily Weather Weather",
+  "id": "manila-daily-weather",
+  "title": "Highest temperature in Manila on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "massachusetts-democratic-senate-primary-winner",
+  "title": "Massachusetts Democratic Senate Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "mato-grosso-do-sul-senate-election-1st-place",
+  "title": "Mato Grosso do Sul Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "mato-grosso-senate-election-1st-place",
+  "title": "Mato Grosso Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "mecklenburg-vorpommern-parliamentary-election-winner",
+  "title": "Mecklenburg-Vorpommern Parliamentary Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Meta Hit Price Monthly Finance",
+  "id": "meta-hit-price-monthly",
+  "title": "What will Meta Platforms, Inc. (META) hit in August 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Mexico City Daily Weather Weather",
+  "id": "mexico-city-daily-weather",
+  "title": "Highest temperature in Mexico City on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Miami Daily Lowest Temperature Weather",
+  "id": "miami-daily-lowest-temperature",
+  "title": "Lowest temperature in Miami on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "michigan-senate-election-winner",
+  "title": "Michigan Senate Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "minas-gerais-governor-election-winner",
+  "title": "Minas Gerais Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "minnesota-senate-election-winner",
+  "title": "Minnesota Senate Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "mlb-2026-american-league-champion",
+  "title": "MLB: 2026 American League Champion",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "mlb-2026-regular-season-win-totals",
+  "title": "MLB: 2026 Regular Season Win Totals",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "mlb-world-series-champion",
+  "title": "MLB World Series Champion 2026",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Monthly Listeners Music",
+  "id": "monthly-listeners",
+  "title": "Shakira monthly listeners hits __ by August 31?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Moscow Daily Weather Weather",
+  "id": "moscow-daily-weather",
+  "title": "Highest temperature in Moscow on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "nanaimo-mayoral-election",
+  "title": "Nanaimo Mayoral Election",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "nba-2026-27-rookie-of-the-year",
+  "title": "NBA: 2026-27 Rookie of the Year",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "nba-free-agency-peyton-watson-next-team",
+  "title": "NBA Free Agency: Peyton Watson Next Team",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "nba-lebron-james-and-bronny-james-jrpt-to-play-together-in-2026",
+  "title": "NBA: LeBron James and Bronny James Jr. to Play Together in 2026-27?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "nc-12-house-election-winner",
+  "title": "NC-12 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Netflix Hit Price Monthly Finance",
+  "id": "netflix-hit-price-monthly",
+  "title": "What will Netflix, Inc. (NFLX) hit in August 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Neurolink Valuation Finance",
+  "id": "neurolink-valuation",
+  "title": "Will Neuralink’s valuation hit __ by August 31?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "nevada-governor-margin-of-victory",
+  "title": "Nevada Governor Election Margin of Victory",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "new-hampshire-governor-winner",
+  "title": "New Hampshire Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "new-york-governor-winner",
+  "title": "New York Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "next-french-presidential-election-who-will-advance-to-the-2nd-round",
+  "title": "Next French Presidential Election: who will advance to the 2nd round?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "next-prime-minister-of-spain",
+  "title": "Next Prime Minister of Spain?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "next-serbia-presidential-election-winner",
+  "title": "Next Serbia Presidential Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "NFLX Neg Risk Weekly Finance",
+  "id": "nflx-neg-risk-weekly",
+  "title": "Netflix (NFLX) closes week of Aug 17 at ___?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "north-carolina-senate-election-winner",
+  "title": "North Carolina Senate Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Nothing Ever Happens Geopolitics",
+  "id": "nothing-ever-happens",
+  "title": "Nothing Ever Happens: August",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "nv-03-house-election-winner",
+  "title": "NV-03 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ny-17-house-election-winner",
+  "title": "NY-17 House Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "nz-election-national-party-of-seats",
+  "title": "NZ Election: National Party # of seats?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ohio-senate-election-winner",
+  "title": "Ohio Senate Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "oklahoma-governor-republican-primary-winner",
+  "title": "Oklahoma Governor Republican Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "oscars-2027-best-actress-winner",
+  "title": "Oscars 2027: Best Actress Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "oscars-2027-best-director-winner",
+  "title": "Oscars 2027: Best Director Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Awards",
+  "id": "oscars-2027-best-supporting-actor-winner",
+  "title": "Oscars 2027: Best Supporting Actor Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Crypto",
+  "id": "ostium-fdv-above-one-day-after-launch",
+  "title": "Ostium FDV above ___ one day after launch?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "ottawa-mayoral-election-winner",
+  "title": "Ottawa Mayoral Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "para-senate-election-1st-place",
+  "title": "Pará Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "paraiba-senate-election-1st-place",
+  "title": "Paraíba Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "parana-senate-election-1st-place",
+  "title": "Paraná Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "pennsylvania-governor-margin-of-victory",
+  "title": "Pennsylvania Governor Election Margin of Victory",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "pernambuco-senate-election-2nd-place",
+  "title": "Pernambuco Senate Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "piaui-governor-election-winner",
+  "title": "Piauí Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Primera Division Sports",
+  "id": "primera-division",
+  "title": "CD La Serena vs. CD Cobresal",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "pro-football-2027-nfc-champion",
+  "title": "Pro Football: 2027 NFC Champion ",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Putin out as President Politics",
+  "id": "putin-out-as-president",
+  "title": "Putin out as President of Russia by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "queretaro-governor-election-winner",
+  "title": "Querétaro Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "RBRK Earnings Finance",
+  "id": "rbrk-earnings",
+  "title": "Will Rubrik (RBRK) beat quarterly earnings?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "republican-senate-seats-after-the-2026-midterm-elections",
+  "title": "Republican Senate seats after the 2026 midterm elections?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "rhode-island-governor-democratic-primary-winner",
+  "title": "Rhode Island Governor Democratic Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "rio-grande-do-sul-governor-election-winner",
+  "title": "Rio Grande do Sul Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "rondonia-senate-election-1st-place",
+  "title": "Rondônia Senate Election: 1st Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "roraima-senate-election-2nd-place",
+  "title": "Roraima Senate Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "russia-nuclear-test-by",
+  "title": "Russia nuclear test by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "russia-parliamentary-election-2nd-place",
+  "title": "Russia Parliamentary Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "sachsen-anhalt-parliamentary-elections-2nd-place",
+  "title": "Sachsen-Anhalt Parliamentary Elections: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "santa-catarina-senate-election-2nd-place",
+  "title": "Santa Catarina Senate Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "sao-paulo-senate-election-2nd-place",
+  "title": "São Paulo Senate Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "save-act-becomes-law-by",
+  "title": "SAVE Act becomes law by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Seattle Daily Weather Weather",
+  "id": "seattle-daily-weather",
+  "title": "Highest temperature in Seattle on August 18?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Second-Best Code Arena WebDev AI AI",
+  "id": "second-best-code-arena-webdev-ai",
+  "title": "Second-best Code Arena WebDev AI Lab end of September?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Seoul Daily Lowest Temperature Weather",
+  "id": "seoul-daily-lowest-temperature",
+  "title": "Lowest temperature in Seoul (Incheon) on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "sergipe-senate-election-2nd-place",
+  "title": "Sergipe Senate Election: 2nd Place",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Shanghai Daily Weather Weather",
+  "id": "shanghai-daily-weather",
+  "title": "Highest temperature in Shanghai on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "so-paulo-governor-election-winner",
+  "title": "São Paulo Governor Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Solana Hit Price Monthly Crypto",
+  "id": "solana-hit-price-monthly",
+  "title": "What price will Solana hit in August?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Solana Neg Risk Weekly Crypto",
+  "id": "solana-neg-risk-weekly",
+  "title": "Solana price on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "solo-q-challengelow-elo-winner",
+  "title": "Solo Q Challenge(Low Elo): Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "south-carolina-republican-senate-special-primary-winner",
+  "title": "South Carolina Republican Senate Special Primary Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "south-ossetia-presidential-election-winner",
+  "title": "South Ossetia Presidential Election Winner",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "surrey-mayoral-election",
+  "title": "Surrey Mayoral Election",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Switzerland Referenda Politics",
+  "id": "switzerland-referenda",
+  "title": "Switzerland’s September Referendum: What will pass?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Top AI Company (Style on) AI",
+  "id": "top-ai-company-style-on",
+  "title": "Which company has #1 AI model end of October? (Style Control On)",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Trump insult on Politics",
+  "id": "trump-insult-on",
+  "title": "Will Trump publicly insult someone on...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "uefa-europa-league-team-to-qualify-for-league-play",
+  "title": "UEFA Europa League: Team to Qualify for League Play",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Iran",
+  "id": "us-iran-hormuz-agreement-byptptpt",
+  "title": "US-Iran Hormuz Agreement by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "Valorant Sports",
+  "id": "valorant",
+  "title": "Valorant: ONSIDE GAMING vs Team Secret (BO3) - VCT Pacific Play-In",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Weather",
+  "id": "what-will-the-peak-roni-be-for-the-2026-27-el-nino",
+  "title": "What will the peak RONI be for the 2026–27 El Niño?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "where-will-marcus-rashford-transfer",
+  "title": "Where will Marcus Rashford transfer?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " us",
+  "id": "who-will-be-added-to-chinese-military-companies-list-by-june-30",
+  "title": "Who will be added to Chinese Military Companies list by June 30, 2027?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "will-afd-win-an-absolute-majority-of-seats-in-sachsen-anhalt",
+  "title": "Will AfD win an absolute majority of seats in Sachsen-Anhalt?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Sports",
+  "id": "will-faker-win-a-finals-mvp-award-at-an-international-event-in",
+  "title": "Will Faker win a Finals MVP Award at an international event in 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Finance",
+  "id": "will-paramount-close-warner-bros-acquisition-by-end-of",
+  "title": "Will Paramount close Warner Bros. acquisition by end of 2026?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Geopolitics",
+  "id": "will-russia-capture-kucheriv-yar-byptptpt",
+  "title": "Will Russia capture Kucheriv Yar by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Politics",
+  "id": "will-russia-enter-havrylivka-by-february",
+  "title": "Will Russia enter Havrylivka by...?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " Weather",
+  "id": "will-tropical-storm-lala-make-landfall-in-hawaii-as-a-hurricane",
+  "title": "Will Tropical Storm Lala make landfall in Hawaii as a hurricane?",
+  "venue": "polymarket"
+ },
+ {
+  "context": "WTI Daily Close U/O Finance",
+  "id": "wti-daily-close-uo",
+  "title": "WTI Crude Oil (WTI) closes above ___ on August 19?",
+  "venue": "polymarket"
+ },
+ {
+  "context": " culture",
+  "id": "2026",
+  "title": "TIME Person of the Year 2026",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "2026ipos",
+  "title": "Which Companies Will Confirm an IPO in 2026?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "agt",
+  "title": "America's Got Talent Season 21: Runner-Up",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "aliens",
+  "title": "US Confirms That Aliens Exist?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "alito",
+  "title": "Samuel Alito Announced Out as SCOTUS Justice?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "altman-openai-ceo",
+  "title": "Sam Altman Announced Out As OpenAI CEO?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "andburpm",
+  "title": "Andy Burnham Announced Out as UK PM?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "anthropic",
+  "title": "Anthropic IPO Officially Confirmed?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " science",
+  "id": "anydis",
+  "title": "Pandemic?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "atp-2026",
+  "title": "Men's US Open Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " geopolitics",
+  "id": "bab-el-mandeb-clsd",
+  "title": "Bab el-Mandeb Strait Effectively Closed?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "balpow",
+  "title": "2026 Midterms: Balance of Power",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "banxico",
+  "title": "Bank of Mexico Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bbus-s28-2",
+  "title": "Big Brother Season 28: 2nd Place",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bbus-s28-3",
+  "title": "Big Brother Season 28: 3rd Place",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bbus-s28-elim",
+  "title": "Big Brother S28: Week 6 Elimination",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bbus-s28-winner",
+  "title": "Big Brother Season 28 Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "bcb",
+  "title": "Bank of Brazil Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bilbrd-1album",
+  "title": "Billboard #1 Album Week of August 29?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bilbrd-1album-any2026",
+  "title": "Who Will Have a #1 Album in 2026?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bilbrd-1song",
+  "title": "Billboard #1 Song Week of August 29?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bilbrd-1song-any-aug2026",
+  "title": "Which Songs Will Be Billboard #1 in August?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "bilbrd-1song-any2026",
+  "title": "Who Will Have a #1 Song in 2026?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "boc",
+  "title": "Bank of Canada Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "boe",
+  "title": "Bank of England Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "boi",
+  "title": "Bank of Israel Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "boj",
+  "title": "Bank of Japan Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "boxing-2026",
+  "title": "WBC Bantamweight Champion on Dec 31, 2026",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "cbb-2025",
+  "title": "2027 Men's College Basketball National Champion",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "cbr",
+  "title": "Bank of Russia Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "cfb-2025",
+  "title": "West Virginia Regular Season Win Total",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " technology",
+  "id": "chinese-arena-ovrall-1",
+  "title": "Chinese AI Model Ranked #1?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " technology",
+  "id": "code1",
+  "title": "Which Company Has #1 AI Coding Model end of 2026?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " technology",
+  "id": "company1",
+  "title": "Which Company Has #1 AI Model end of August?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " technology",
+  "id": "company1-dur2026",
+  "title": "Which Companies will have #1 AI Model in 2026?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "congress-trump",
+  "title": "Trump Impeached?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "cryptoleg",
+  "title": "Crypto Market Structure Legislation Becomes Law?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " science",
+  "id": "cyclo",
+  "title": "US Cyclosporiasis cases by August 31? (Domestically Acquired)",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "daramo",
+  "title": "Dario Amodei Announced Out as Anthropic CEO?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "ecb",
+  "title": "European Central Bank Decision in September?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "elonmusk",
+  "title": "Elon Musk Net Worth on December 31?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "elonmusk-above",
+  "title": "Elon Musk Net Worth on August 31?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "elonmusk-by-hit",
+  "title": "What Will Elon's Net Worth Hit By December 31?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " finance",
+  "id": "elonmusk-tsla-ceo",
+  "title": "Elon Musk Announced Out As Tesla CEO?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-cs",
+  "title": "Emmys: Outstanding Comedy Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-gfds",
+  "title": "Emmys: Outstanding Guest Actress in a Drama Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-lfcs",
+  "title": "Emmys: Outstanding Lead Actress in a Comedy Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-lmcs",
+  "title": "Emmys: Outstanding Lead Actor in a Comedy Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-ls",
+  "title": "Emmys: Outstanding Limited Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-sfds",
+  "title": "Emmys: Outstanding Supporting Actress in a Drama Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-smds",
+  "title": "Emmys: Outstanding Supporting Actor in a Drama Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "emmys-vs",
+  "title": "Emmys: Outstanding Variety Series",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "epl-2025",
+  "title": "Men's PFA Player of the Year",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " technology",
+  "id": "gemini-3pt5pro",
+  "title": "Gemini 3.5 Pro Released?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "group",
+  "title": "Who will be arrested in 2026?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "gtavi",
+  "title": "GTA VI Released?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " geopolitics",
+  "id": "hormuz-normal",
+  "title": "Strait of Hormuz Traffic Returns to Normal?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "hrep-rep",
+  "title": "2026 Midterms: Republican House Seats?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "isrpol-pm",
+  "title": "Prime Minister of Israel After the Next Election",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "kashpatel",
+  "title": "Kash Patel Announced Out as FBI Director?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "lal-2025",
+  "title": "LALIGA Champion",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "league-of-legends",
+  "title": "SPIKE Syndicate vs. Lupus Esports",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "masters-2026",
+  "title": "2027 Ryder Cup Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "misc",
+  "title": "FIDE World Chess Championship Winner 2026",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "nba-2025",
+  "title": "NBA Western Conference #1 Seed",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "oscars-bestacto",
+  "title": "Oscar Winner: Best Actor",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " culture",
+  "id": "oscars-nom-bestpic",
+  "title": "Oscar Nominees: Best Picture",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "pres-bra",
+  "title": "2026 Brazil Presidential Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "sea-2025",
+  "title": "Serie A Champion",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " sports",
+  "id": "ucl-2025",
+  "title": "UEFA Champions League Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " macro",
+  "id": "uscpi-yoy",
+  "title": "CPI YoY in August",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usfedgvmt-by",
+  "title": "Government Shutdown?",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-ar",
+  "title": "Arkansas Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-co",
+  "title": "Colorado Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-ga",
+  "title": "Georgia Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-id",
+  "title": "Idaho Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-ma",
+  "title": "Massachusetts Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-mi",
+  "title": "Michigan Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-nh",
+  "title": "New Hampshire Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-ny",
+  "title": "New York Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-or",
+  "title": "Oregon Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-sc",
+  "title": "South Carolina Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-tx",
+  "title": "Texas Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgub-wy",
+  "title": "Wyoming Governor Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "usgubp-ok-rep",
+  "title": "Oklahoma Governor Republican Primary Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-al-03",
+  "title": "AL-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-al-06",
+  "title": "AL-06 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ar-02",
+  "title": "AR-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-az-01",
+  "title": "AZ-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-az-05",
+  "title": "AZ-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-az-08",
+  "title": "AZ-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-02",
+  "title": "CA-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-05",
+  "title": "CA-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-08",
+  "title": "CA-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-11",
+  "title": "CA-11 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-14",
+  "title": "CA-14 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-17",
+  "title": "CA-17 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-20",
+  "title": "CA-20 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-23",
+  "title": "CA-23 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-26",
+  "title": "CA-26 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-29",
+  "title": "CA-29 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-32",
+  "title": "CA-32 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-35",
+  "title": "CA-35 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-38",
+  "title": "CA-38 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-41",
+  "title": "CA-41 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-44",
+  "title": "CA-44 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-47",
+  "title": "CA-47 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ca-50",
+  "title": "CA-50 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-co-01",
+  "title": "CO-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-co-04",
+  "title": "CO-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-co-07",
+  "title": "CO-07 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ct-02",
+  "title": "CT-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ct-05",
+  "title": "CT-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-02",
+  "title": "FL-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-05",
+  "title": "FL-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-08",
+  "title": "FL-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-12",
+  "title": "FL-12 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-15",
+  "title": "FL-15 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-18",
+  "title": "FL-18 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-21",
+  "title": "FL-21 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-24",
+  "title": "FL-24 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-fl-27",
+  "title": "FL-27 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ga-02",
+  "title": "GA-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ga-05",
+  "title": "GA-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ga-08",
+  "title": "GA-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ga-11",
+  "title": "GA-11 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ga-14",
+  "title": "GA-14 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ia-01",
+  "title": "IA-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ia-04",
+  "title": "IA-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-il-01",
+  "title": "IL-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-il-04",
+  "title": "IL-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-il-07",
+  "title": "IL-07 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-il-10",
+  "title": "IL-10 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-il-13",
+  "title": "IL-13 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-il-16",
+  "title": "IL-16 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-in-02",
+  "title": "IN-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-in-05",
+  "title": "IN-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-in-08",
+  "title": "IN-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ks-02",
+  "title": "KS-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ky-01",
+  "title": "KY-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ky-04",
+  "title": "KY-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-la-01",
+  "title": "LA-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-la-05",
+  "title": "LA-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ma-06",
+  "title": "MA-06 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-md-01",
+  "title": "MD-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-md-04",
+  "title": "MD-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-md-07",
+  "title": "MD-07 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-me-02",
+  "title": "ME-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mi-03",
+  "title": "MI-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mi-06",
+  "title": "MI-06 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mi-09",
+  "title": "MI-09 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mi-12",
+  "title": "MI-12 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mn-02",
+  "title": "MN-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mn-05",
+  "title": "MN-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mn-08",
+  "title": "MN-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mo-03",
+  "title": "MO-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-mo-06",
+  "title": "MO-06 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ms-01",
+  "title": "MS-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ms-04",
+  "title": "MS-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nc-01",
+  "title": "NC-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nc-04",
+  "title": "NC-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nc-07",
+  "title": "NC-07 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nc-10",
+  "title": "NC-10 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nc-13",
+  "title": "NC-13 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ne-01",
+  "title": "NE-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nh-01",
+  "title": "NH-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nj-02",
+  "title": "NJ-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nj-05",
+  "title": "NJ-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nj-09",
+  "title": "NJ-09 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nj-12",
+  "title": "NJ-12 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nm-03",
+  "title": "NM-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-nv-03",
+  "title": "NV-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-02",
+  "title": "NY-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-05",
+  "title": "NY-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-08",
+  "title": "NY-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-11",
+  "title": "NY-11 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-14",
+  "title": "NY-14 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-17",
+  "title": "NY-17 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-20",
+  "title": "NY-20 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-23",
+  "title": "NY-23 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ny-26",
+  "title": "NY-26 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-oh-03",
+  "title": "OH-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-oh-06",
+  "title": "OH-06 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-oh-09",
+  "title": "OH-09 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-oh-12",
+  "title": "OH-12 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-oh-15",
+  "title": "OH-15 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-ok-03",
+  "title": "OK-03 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-or-01",
+  "title": "OR-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-or-04",
+  "title": "OR-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-pa-01",
+  "title": "PA-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-pa-05",
+  "title": "PA-05 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-pa-08",
+  "title": "PA-08 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-pa-11",
+  "title": "PA-11 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-pa-14",
+  "title": "PA-14 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-pa-17",
+  "title": "PA-17 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-sc-01",
+  "title": "SC-01 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-sc-04",
+  "title": "SC-04 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-sc-07",
+  "title": "SC-07 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-tn-02",
+  "title": "TN-02 House Election Winner",
+  "venue": "polymarket-us"
+ },
+ {
+  "context": " politics",
+  "id": "ushr-tn-05",
+  "title": "TN-05 House Election Winner",
+  "venue": "polymarket-us"
+ }
+]

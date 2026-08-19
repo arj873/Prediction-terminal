@@ -1,0 +1,36 @@
+{
+  "news": [
+    {
+      "id": 47374123,
+      "headline": "Nvidia Q3 Beat: Data Center Revenue Tops Street&#39;s $30B View",
+      "author": "Benzinga Newsdesk",
+      "created_at": "2026-08-14T20:31:07Z",
+      "updated_at": "2026-08-14T20:33:41Z",
+      "summary": "<p>Shares of <b>NVIDIA</b> rose  in after-hours trade.</p>",
+      "url": "https://www.benzinga.com/news/26/08/47374123/nvidia-q3",
+      "images": [{ "size": "large", "url": "https://cdn.benzinga.com/files/nvda.jpeg" }],
+      "symbols": ["NVDA", "amd"],
+      "source": "benzinga"
+    },
+    {
+      "id": "47370001",
+      "headline": "AT&amp;T Names New CFO",
+      "author": "",
+      "created_at": "2026-08-14T13:02:00Z",
+      "updated_at": "2026-08-14T21:10:00Z",
+      "summary": "",
+      "url": null,
+      "symbols": ["T"],
+      "source": "benzinga"
+    },
+    {
+      "id": 47369000,
+      "headline": "",
+      "created_at": "2026-08-14T12:00:00Z",
+      "updated_at": "2026-08-14T12:00:00Z",
+      "symbols": [],
+      "source": "benzinga"
+    }
+  ],
+  "next_page_token": null
+}

@@ -1,0 +1,16 @@
+{
+  "news": [
+    {
+      "id": 47374123,
+      "headline": "Nvidia Q3 Beat: Data Center Revenue Tops Street&#39;s View",
+      "author": "Benzinga Newsdesk",
+      "created_at": "2026-08-14T20:31:07Z",
+      "updated_at": "2026-08-14T20:33:41Z",
+      "summary": "<p>Shares rose in after-hours trade.</p>",
+      "url": "https://www.benzinga.com/news/26/08/47374123/nvidia-q3",
+      "symbols": ["NVDA"],
+      "source": "benzinga"
+    }
+  ],
+  "next_page_token": null
+}

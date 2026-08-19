@@ -1,0 +1,50 @@
+[workspace]
+members = ["crates/core", "server"]
+resolver = "2"
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+terminal-core = { path = "crates/core" }
+
+anyhow = "1"
+axum = "0.8"
+csv = "1"
+fancy-regex = "0.14"
+futures = "0.3"
+html-escape = "0.2"
+moka = { version = "0.12", features = ["future"] }
+rand = "0.8"
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = [
+  "json",
+  "gzip",
+  "brotli",
+  "deflate",
+  "stream",
+  "rustls-tls-native-roots",
+] }
+scraper = "0.20"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "set-header", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ts-rs = "10"
+unicode-normalization = "0.1"
+urlencoding = "2"
+
+# dev
+wiremock = "0.6"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4

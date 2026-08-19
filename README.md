@@ -28,9 +28,12 @@ code path. It is meant to be driven without the mouse at all: see
 
 ## Quick start
 
+The terminal is two programs: a Rust API server and a SvelteKit client. You
+need a Rust toolchain (1.85 or newer) and Node 20.11 or newer.
+
 ```bash
-npm install
-npm run dev          # API on :8787, client on :5173 with proxying
+make install         # client dependencies
+make dev             # API on :8787, client on :5173 with proxying
 ```
 
 Open http://localhost:5173 and type `HELP`.
@@ -38,9 +41,11 @@ Open http://localhost:5173 and type `HELP`.
 For a single-process production build:
 
 ```bash
-npm run build
-npm start            # serves the built client and the API on :8787
+make build
+make start           # serves the built client and the API on :8787
 ```
+
+`make` on its own lists every target.
 
 ---
 
@@ -200,7 +205,7 @@ every curated entry is re-checked against the live catalogues on each request:
 an identifier that no longer exists is dropped, so the table can go stale
 without ever quoting a market that is gone.
 
-The matcher itself lives in `src/shared/match.ts` and touches no network, so its
+The matcher itself lives in `crates/core/src/matching.rs` and touches no network, so its
 judgement is tested against fixed strings rather than against whatever happens
 to be listed today. The cases that matter are the near misses:
 
@@ -221,6 +226,24 @@ to be listed today. The cases that matter are the near misses:
   because a five-rung ladder of near-identical labels will otherwise map two of
   one venue's rungs onto one of the other's. Anything left over is reported
   under the table rather than dropped.
+
+**The board is built once per catalogue refresh, not once per request.** Reading
+five thousand series against each other is the largest piece of arithmetic in
+the terminal, and it depends on nothing a request supplies — `XV fed` and a row
+limit only narrow a board that already exists. So the pairing runs with the
+index it is derived from, on a blocking thread rather than on the async runtime,
+and every request is a scan of the finished list. Two things make that fast
+enough to do at all: each listing's half of a comparison — its terms, its
+numbers, its flattened identifier — is derived once and reused against every
+candidate, and a pair whose token overlap makes the match floor arithmetically
+unreachable is declined before any of the rest runs. The second is exact rather
+than approximate: only the identifier boost and the number reward can raise a
+score, both are bounded, and the caller discards anything below the floor
+anyway, so declining early turns away precisely the pairs a full scoring pass
+would have thrown out. On the live catalogues that is a board in well under a
+second where it was six and a half minutes, with every score unchanged —
+`crates/core/examples/matchbench.rs` is the harness that proves both halves of
+that sentence.
 
 ### Entertainment markets, and what settles them
 
@@ -338,8 +361,8 @@ stays off across a reload.
 ## How it works
 
 ```
-browser (Vite + TypeScript, no framework)
-  └── /api/*  ──► Express server
+browser (SvelteKit, static, no server rendering)
+  └── /api/*  ──► Rust API server (axum)
                     ├── Kalshi     trade-api v2  (JSON)
                     ├── Polymarket gamma-api  catalogue
                     │   ├ clob       book and price history
@@ -365,15 +388,22 @@ key are collapsed onto a single in-flight request.
 
 Charts are [lightweight-charts](https://github.com/tradingview/lightweight-charts)
 v5. The chart theme is read from live CSS custom properties, so `THEME` restyles
-every open chart with no per-panel bookkeeping.
+every open chart with no per-panel bookkeeping. A chart instance outlives its
+data: a poll calls `setData` rather than rebuilding, so a view you have zoomed
+into stays where you put it.
 
 There is one dispatch path in the client, and everything funnels into it. A
 typed line, a clicked row and a key press all end up in the same `run()`: a
-binding is a chord and a command string, and a row records the command it runs
+binding is a chord and a command string, and a row registers the command it runs
 so the keyboard can read it back. That is what keeps the three in step — a
 shortcut can only do something you could also have typed, `KEYS` can only rebind
 what the router already fires, and a row that gains a click handler gains a
 keyboard cursor the same day.
+
+Panels are descriptions rather than objects — an id, a kind and its arguments —
+rendered through a keyed list. Re-running a command for a panel already on
+screen is therefore a change of arguments, not a teardown, which is what makes
+`GP X` safe to mash.
 
 ### A few things worth knowing
 
@@ -545,6 +575,21 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
 | `ALPACA_DATA_BASE` | `https://data.alpaca.markets/v1beta1` | Override the news upstream |
+| `BILLBOARD_BASE` | `https://www.billboard.com` | Override the charts upstream |
+| `BOXOFFICE_BASE` | `https://www.boxofficemojo.com` | Override the box-office upstream |
+| `NETFLIX_BASE` | `https://www.netflix.com` | Override the Top 10 upstream |
+| `ROTTENTOMATOES_BASE` | `https://www.rottentomatoes.com` | Override the scores upstream |
+| `KWORB_BASE` | `https://kworb.net` | Override the Spotify/YouTube chart mirror |
+| `STEAMCHARTS_BASE` | `https://steamcharts.com` | Override the concurrents leaderboard |
+| `STEAM_API_BASE` | `https://api.steampowered.com` | Override the live player-count API |
+| `STEAM_STORE_BASE` | `https://store.steampowered.com` | Override the Steam store search |
+| `TVMAZE_API_BASE` | `https://api.tvmaze.com` | Override the TV schedule upstream |
+| `CLIENT_DIR` | — | Where the built client lives. Unset in development |
+| `RUST_LOG` | `info` | Log filter, in `tracing-subscriber` syntax |
+
+Every upstream base is overridable, which is what lets each scraper be tested
+against a fixture server rather than the live internet. Seven of them were
+hardcoded before and so could only ever be exercised against the real site.
 
 ### About FRED and `FRED_API_KEY`
 
@@ -594,7 +639,7 @@ no trading permissions needed for this feed.
 ```bash
 export ALPACA_API_KEY_ID=PK...
 export ALPACA_API_SECRET_KEY=...
-npm run dev
+make dev
 ```
 
 Alpaca's own SDK variable names (`APCA_API_KEY_ID`, `APCA_API_SECRET_KEY`) are
@@ -668,38 +713,78 @@ a person and is surfaced verbatim in the panel.
 ## Development
 
 ```bash
-npm run dev          # server + client with reload
-npm test             # 433 tests
-npm run typecheck    # client and server
-npm run check        # typecheck + test
+make dev             # server + client, both reloading
+make test            # the whole suite, Rust and client
+make check           # what CI runs: fmt, clippy, tests, type-gen drift, build
 ```
 
-Tests cover the parsers and normalisers rather than the network: the scraped
-parsers run against fixtures captured from the real pages, the Kalshi, Yahoo,
-Nasdaq and Coinbase normalisers against trimmed real API responses, and
-`test/fred.integration.test.ts` exercises the whole FRED scrape path against a
-local fixture server — which is how that path stays covered on networks where
-the live host refuses to answer. `test/news.integration.test.ts` does the same
-for the news wire, which nothing in CI has a key for: it asserts that the key
-pair goes in the headers rather than the query string, that the request
-overrides the two upstream defaults that would otherwise cost headlines, and
-that a missing key and a rejected key are different, actionable errors.
+### How it is laid out
 
-The implied-price maths in `src/shared/implied.ts` is the most heavily tested
-part of the codebase, because it is the one piece whose output looks plausible
-when it is wrong: a mishandled ladder shape still returns a number near the
-money. `test/implied.test.ts` checks each stage against arithmetic, including
-that an "or above" ladder and the equivalent range ladder price to the same
-level, and `test/implied-series.test.ts` covers the historical assembly — a rung
-that stops printing carries forward, and no rung is ever priced with a candle it
-did not yet have.
+```
+crates/core/     terminal-core: the wire contract, the implied-price maths,
+                 the cross-venue matcher, the venue registry. No I/O.
+server/          the axum API. sources/ speak to upstreams and normalise;
+                 routes/ put HTTP in front of them and know no upstream.
+client/          the SvelteKit terminal.
+contract/        parity fixtures shared by both halves of the venue registry.
+```
+
+The client's TypeScript types are **generated** from the Rust structs with
+`ts-rs`, so the two cannot disagree about the wire: `make gen-types` rewrites
+`client/src/lib/api/gen/`, and CI regenerates and diffs to prove nobody edited
+one side without the other. That matters most for the distinctions the contract
+used to state in prose and hope both sides remembered — that a `null` volume
+means the venue does not publish the figure and must never render as a zero,
+and that a candle's timestamp is the period *end* for a prediction market but
+the period *start* for spot.
+
+The venue registry is the one thing deliberately written twice, because the
+client needs `parseRef` synchronously at the prompt and codegen cannot emit
+logic. `contract/venue-cases.json` pins the two implementations against each
+other, and both suites read it.
+
+### What the tests cover
+
+Everything runs offline. Parsers and normalisers are tested rather than the
+network: the scraped parsers against fixtures captured from the real pages, the
+Kalshi, Yahoo, Nasdaq and Coinbase normalisers against trimmed real API
+responses, and every upstream base URL is overridable so a source can be pointed
+at a `wiremock` fixture instead of the internet. `server/tests/fred_integration.rs`
+exercises the whole FRED scrape path that way — which is how it stays covered on
+networks where the live host refuses to answer — and `news_integration.rs` does
+the same for the wire nothing in CI has a key for: it asserts the key pair goes
+in the headers rather than the query string, that the request overrides the two
+upstream defaults that would otherwise cost headlines, and that a missing key
+and a rejected key are different, actionable errors.
+
+The implied-price maths in `crates/core/src/implied.rs` is the most heavily
+tested part of the codebase, because it is the one piece whose output looks
+plausible when it is wrong: a mishandled ladder shape still returns a number
+near the money. Each stage is checked against arithmetic, including that an "or
+above" ladder and the equivalent range ladder price to the same level, and the
+historical assembly is covered separately — a rung that stops printing carries
+forward, and no rung is ever priced with a candle it did not yet have.
+
+The cross-venue matcher was ported by differential testing rather than by
+reading: both implementations were run over the same corpus and their scores,
+confidence bands, shared terms and reason strings diffed to fifteen decimal
+places. The same harness is how it is kept honest through changes meant only to
+make it faster — `crates/core/examples/matchbench.rs` dumps every score, band,
+shared-term list and reason for a corpus and the two runs are diffed. The corpus
+is real: `crates/core/tests/fixtures/series.json` is six hundred titles taken
+from the live catalogues by the server's `dump_descriptors` example, sampled
+towards the families that are hard — House districts all three venues word
+almost identically, Emmy categories that differ by one qualifier, rate ladders
+that differ by one number. `crates/core/tests/matching_corpus.rs` asserts over
+all of them that the prefilter never declines a pair that could have cleared the
+floor, which is the property the whole board's speed rests on.
 
 The entertainment tests lean on the cases where a plausible-looking parser reads
 the wrong number without ever failing: the two header collisions above, a film
 with no Tomatometer, a chart with no movement column, and an upstream that
 answers `200 OK` with "no data available" instead of an error.
 
-`test/match.test.ts` covers the cross-venue matcher for the same reason: pairing
+The cross-venue matcher is covered for the same reason: pairing
 two brokers' listings incorrectly still produces a tidy table of two prices, and
 a reader will take the gap between them for an edge. So the cases are the near
 misses — `2nd place` against `3rd place`, October's Fed meeting against
@@ -707,7 +792,7 @@ January's, `NFL Champion` against `NFL Rookie of the Year` — alongside the rea
 five-rung FOMC ladder, which must line up across all three venues without ever
 mapping two rungs onto one.
 
-`test/polymarketus.test.ts` pins down the field the normaliser deliberately does
+The Polymarket US tests pin down the field the normaliser deliberately does
 not read. `outcomePrices` exists on every Polymarket US market and means
 different things on different endpoints: in a nested event listing it holds
 `[bestBid, bestAsk]`, and the same market fetched by slug holds
