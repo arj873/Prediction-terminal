@@ -274,7 +274,7 @@ async fn a_symbol_the_feed_cannot_filter_by_is_refused_before_the_credentials_ar
 /* ------------------------------------------------------------------- health */
 
 #[tokio::test]
-async fn health_reports_liveness_credentials_and_the_cache() {
+async fn health_reports_liveness_and_credentials_but_no_internals() {
     let app = app(config());
 
     let (status, body) = get_json(&app, "/api/health").await;
@@ -291,10 +291,12 @@ async fn health_reports_liveness_credentials_and_the_cache() {
         body["time"]
     );
 
-    let cache = &body["cache"];
-    for field in ["hits", "misses", "entries", "evictions"] {
-        assert!(cache[field].is_u64(), "cache.{field}: {cache}");
-    }
+    // Internal counters are deliberately absent. Nothing read them, and they
+    // described this deployment's traffic to anyone who asked.
+    assert!(
+        body.get("cache").is_none(),
+        "health leaked cache counters: {body}"
+    );
 }
 
 #[tokio::test]
@@ -516,4 +518,114 @@ async fn the_static_chart_lists_need_no_upstream() {
     let (_, body) = get_json(&app, "/api/ent/charts?source=napster").await;
     let all = body["charts"].as_array().expect("an array of charts");
     assert!(all.len() > charts.len());
+}
+
+/* ------------------------------------------------------------- hardening */
+
+/// Every API answer carries the headers that stop it being read as a document.
+///
+/// `nosniff` is the load-bearing one: without it a browser that decides a JSON
+/// body looks like HTML will run it as HTML, from this origin.
+#[tokio::test]
+async fn every_api_response_carries_its_security_headers() {
+    let app = app(config());
+
+    let response = app
+        .oneshot(
+            Request::get("/api/health")
+                .body(Body::empty())
+                .expect("a valid request"),
+        )
+        .await
+        .expect("the router is infallible");
+
+    let headers = response.headers();
+    assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
+    assert_eq!(headers.get("x-frame-options").unwrap(), "DENY");
+    assert_eq!(headers.get("referrer-policy").unwrap(), "no-referrer");
+    assert_eq!(
+        headers.get("content-security-policy").unwrap(),
+        "default-src 'none'; frame-ancestors 'none'"
+    );
+}
+
+/// A refusal carries them too — an error body is still a body.
+#[tokio::test]
+async fn a_refused_request_is_hardened_the_same_way() {
+    let app = app(config());
+
+    let response = app
+        .oneshot(
+            Request::get("/api/venue/nosuchvenue/search?q=fed")
+                .body(Body::empty())
+                .expect("a valid request"),
+        )
+        .await
+        .expect("the router is infallible");
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        response.headers().get("x-content-type-options").unwrap(),
+        "nosniff"
+    );
+}
+
+/// Search cost is terms x events, and only one of those is bounded by the
+/// corpus. A query naming more words than anyone types is refused rather than
+/// quietly truncated, so the caller learns why they got a different answer.
+#[tokio::test]
+async fn an_overlong_search_query_is_refused_rather_than_truncated() {
+    let query: String = (0..40)
+        .map(|i| format!("term{i}"))
+        .collect::<Vec<_>>()
+        .join("+");
+
+    let app = app(config());
+    let (status, body) = get_json(&app, &format!("/api/venue/kalshi/search?q={query}")).await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["code"], codes::BAD_REQUEST);
+    assert!(
+        body["error"].as_str().is_some_and(|e| e.contains("16")),
+        "the refusal should name the cap: {body}"
+    );
+}
+
+/// The artwork proxy re-serves bytes from this origin, so what it will accept
+/// decides what can run here. An SVG is a document, not a picture.
+#[tokio::test]
+async fn the_artwork_proxy_refuses_an_svg_however_it_is_labelled() {
+    let upstream = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/art.svg"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(
+            b"<svg xmlns=\"http://www.w3.org/2000/svg\"/>".to_vec(),
+            "image/svg+xml",
+        ))
+        .mount(&upstream)
+        .await;
+
+    let refused = fetch_art(art_http(), &format!("{}/art.svg", upstream.uri())).await;
+
+    let error = refused.expect_err("an SVG must not pass the artwork proxy");
+    assert_eq!(error.code, codes::BAD_UPSTREAM_BODY);
+}
+
+/// …and still passes the raster types album art actually uses.
+#[tokio::test]
+async fn the_artwork_proxy_still_passes_a_real_image() {
+    const PIXEL: &[u8] = b"GIF89a";
+    let upstream = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/art.gif"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(PIXEL, "image/gif"))
+        .mount(&upstream)
+        .await;
+
+    let (bytes, content_type) = fetch_art(art_http(), &format!("{}/art.gif", upstream.uri()))
+        .await
+        .expect("a gif is artwork");
+
+    assert_eq!(bytes, PIXEL);
+    assert_eq!(content_type, "image/gif");
 }

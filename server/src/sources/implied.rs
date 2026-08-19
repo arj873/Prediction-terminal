@@ -22,6 +22,9 @@ use std::collections::{BTreeSet, HashMap};
 use std::sync::LazyLock;
 
 use futures::StreamExt;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
+
 use terminal_core::implied::{implied_price, leg_from_strike, quote_probability, ImpliedLeg};
 use terminal_core::types::{
     AssetClass, Candle, CandleInterval, ImpliedCandidate, ImpliedCandidatesResponse, ImpliedMethod,
@@ -436,6 +439,13 @@ fn describe_candidate(event: &VenueEvent, markets: &[Market]) -> ImpliedCandidat
 }
 
 /// Every rung of a ladder closes together, so the first close time is the expiry.
+/// An ISO close time as epoch seconds, or `None` when Kalshi stated none.
+fn epoch_seconds(iso: &str) -> Option<i64> {
+    OffsetDateTime::parse(iso, &Rfc3339)
+        .ok()
+        .map(OffsetDateTime::unix_timestamp)
+}
+
 fn first_close_time(markets: &[Market]) -> String {
     for market in markets {
         if !market.close_time.is_empty() {
@@ -625,12 +635,13 @@ async fn compute_implied_series(
         .into_iter()
         .filter(|s| !s.candles.is_empty())
         .collect();
-    let points = build_points(&contributing, method);
+    let strike_date = first_close_time(&markets);
+    let points = build_points(&contributing, method, epoch_seconds(&strike_date));
 
     Ok(ImpliedSeriesResponse {
         event_ticker: event.event_ticker.clone(),
         title: event.title.clone(),
-        strike_date: first_close_time(&markets),
+        strike_date,
         method,
         interval,
         contributors: contributing
@@ -649,10 +660,24 @@ async fn compute_implied_series(
 /// over a year of hourly bars is otherwise a few hundred million comparisons.
 /// That cursor is the reason this is written as an index walk rather than a
 /// search per bucket; it is ported as written.
-pub fn build_points(series: &[RungSeries], method: ImpliedMethod) -> Vec<ImpliedPoint> {
+///
+/// `close_ts` ends the line at the ladder's expiry. Kalshi keeps printing
+/// candles after settlement, but a settled ladder is no longer a distribution
+/// over where the price *might* land — every rung is already worth exactly 0 or
+/// 1, most books empty out, and the crossing collapses onto whatever still
+/// quotes. On a settled S&P ladder that phantom bucket read 7575 against a
+/// 7785.76 close, and because it is the last point it was both the end of the
+/// drawn line and the number the legend reported. A ladder implies nothing once
+/// it has settled.
+pub fn build_points(
+    series: &[RungSeries],
+    method: ImpliedMethod,
+    close_ts: Option<i64>,
+) -> Vec<ImpliedPoint> {
     let timeline: BTreeSet<i64> = series
         .iter()
         .flat_map(|s| s.candles.iter().map(|c| c.time))
+        .filter(|time| close_ts.is_none_or(|close| *time <= close))
         .collect();
 
     let mut cursors: Vec<Option<usize>> = vec![None; series.len()];
@@ -807,7 +832,7 @@ mod tests {
             ),
         ];
 
-        let points = build_points(&series, ImpliedMethod::Median);
+        let points = build_points(&series, ImpliedMethod::Median, None);
         assert_eq!(
             points.iter().map(|p| p.time).collect::<Vec<i64>>(),
             [10, 20]
@@ -817,6 +842,62 @@ mod tests {
         assert_eq!(points[0].strikes, 3);
         // At t=20 survival falls 0.8 -> 0.4 across [100, 110]: crossing at 107.5.
         assert_eq!(points[1].value, Some(107.5));
+    }
+
+    #[test]
+    fn stops_the_line_at_the_ladder_close_because_a_settled_ladder_implies_nothing() {
+        // Kalshi keeps printing candles after settlement. Those price a book
+        // where every rung is already worth 0 or 1, so the crossing lands on
+        // whatever still quotes — and being the last point, it is both the end
+        // of the drawn line and the number the legend reports.
+        let series = vec![
+            rung_series(
+                "A",
+                100.0,
+                vec![candle(10, 0.89, 0.91), candle(20, 0.99, 1.0)],
+            ),
+            rung_series(
+                "B",
+                110.0,
+                vec![candle(10, 0.49, 0.51), candle(20, 0.0, 0.01)],
+            ),
+            rung_series(
+                "C",
+                120.0,
+                vec![candle(10, 0.09, 0.11), candle(20, 0.0, 0.01)],
+            ),
+        ];
+
+        let live = build_points(&series, ImpliedMethod::Median, Some(15));
+        assert_eq!(
+            live.iter().map(|p| p.time).collect::<Vec<i64>>(),
+            [10],
+            "the post-settlement bucket must not be priced"
+        );
+
+        // Without the close time the phantom bucket comes back, which is
+        // exactly the reading this guards against.
+        let unbounded = build_points(&series, ImpliedMethod::Median, None);
+        assert_eq!(unbounded.len(), 2);
+    }
+
+    #[test]
+    fn keeps_every_bucket_when_the_ladder_has_not_settled_yet() {
+        let series = vec![
+            rung_series(
+                "A",
+                100.0,
+                vec![candle(10, 0.89, 0.91), candle(20, 0.89, 0.91)],
+            ),
+            rung_series(
+                "B",
+                110.0,
+                vec![candle(10, 0.49, 0.51), candle(20, 0.49, 0.51)],
+            ),
+        ];
+
+        let points = build_points(&series, ImpliedMethod::Median, Some(9_999));
+        assert_eq!(points.len(), 2);
     }
 
     #[test]
@@ -837,7 +918,7 @@ mod tests {
             ),
         ];
 
-        let points = build_points(&series, ImpliedMethod::Median);
+        let points = build_points(&series, ImpliedMethod::Median, None);
         assert_eq!(points.len(), 2);
         assert_eq!(
             points[1].strikes, 3,
@@ -864,7 +945,7 @@ mod tests {
             rung_series("C", 120.0, vec![candle(20, 0.09, 0.11)]),
         ];
 
-        let points = build_points(&series, ImpliedMethod::Median);
+        let points = build_points(&series, ImpliedMethod::Median, None);
         assert_eq!(points[0].strikes, 2);
         assert_eq!(points[1].strikes, 3);
     }
@@ -876,14 +957,14 @@ mod tests {
             rung_series("B", 110.0, vec![candle(20, 0.49, 0.51)]),
         ];
 
-        let points = build_points(&series, ImpliedMethod::Median);
+        let points = build_points(&series, ImpliedMethod::Median, None);
         assert_eq!(points[0].value, None);
         assert_eq!(points[0].strikes, 1);
     }
 
     #[test]
     fn returns_nothing_for_an_empty_ladder() {
-        assert!(build_points(&[], ImpliedMethod::Median).is_empty());
+        assert!(build_points(&[], ImpliedMethod::Median, None).is_empty());
     }
 
     /* -------------------------------------------------------- selectStrikes */

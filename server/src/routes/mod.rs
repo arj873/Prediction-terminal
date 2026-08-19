@@ -19,14 +19,54 @@ pub mod news;
 pub mod spot;
 pub mod venue;
 
+use axum::http::header::{HeaderValue, CONTENT_SECURITY_POLICY, REFERRER_POLICY};
+use axum::http::HeaderName;
 use axum::routing::any;
 use axum::Router;
+use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::AppState;
 
+/// Headers every API response carries.
+///
+/// The API answers JSON to a fetch, never a document to a browser's address
+/// bar, so the useful set is short and strict. `nosniff` is the one that
+/// matters: without it a response whose body a browser decides looks like HTML
+/// can be executed as HTML from this origin. The empty CSP and `DENY` close the
+/// two ways a JSON endpoint gets turned into a page — being framed, and being
+/// navigated to directly — and `no-referrer` keeps a market ticker in a query
+/// string from reaching an upstream in a `Referer`.
+fn security_headers(router: Router) -> Router {
+    const NOSNIFF: HeaderName = HeaderName::from_static("x-content-type-options");
+    const FRAME: HeaderName = HeaderName::from_static("x-frame-options");
+
+    router
+        .layer(SetResponseHeaderLayer::overriding(
+            NOSNIFF,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            FRAME,
+            HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            REFERRER_POLICY,
+            HeaderValue::from_static("no-referrer"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
+        ))
+}
+
 /// Everything under `/api`, with the per-IP rate limit in front of it.
 pub fn api_router(state: AppState) -> Router {
-    let limiter = crate::rate_limit::RateLimiter::new(state.config().rate_limit);
+    security_headers(api_routes(state))
+}
+
+fn api_routes(state: AppState) -> Router {
+    let limiter =
+        crate::rate_limit::RateLimiter::new(state.config().rate_limit, state.config().trust_proxy);
 
     Router::new()
         // The venue-agnostic surface every command actually uses.
@@ -84,7 +124,6 @@ mod health {
         Json(HealthResponse {
             ok: true,
             uptime_seconds: state.uptime_seconds().round(),
-            cache: state.cache().stats(),
             fred_api_key: state.config().has_fred_key(),
             alpaca_keys: state.config().has_alpaca_keys(),
             time: now_iso8601(),

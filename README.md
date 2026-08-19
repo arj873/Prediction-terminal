@@ -565,6 +565,7 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `ALPACA_API_KEY_ID` | — | Enables `NEWS`. Also read from `APCA_API_KEY_ID` |
 | `ALPACA_API_SECRET_KEY` | — | The other half of the pair. Also `APCA_API_SECRET_KEY` |
 | `RATE_LIMIT` | `600` | Max API calls per IP per minute |
+| `TRUST_PROXY` | off | Let `X-Forwarded-For` name the client. **Only behind a proxy that rewrites it** — otherwise a caller picks its own rate-limit bucket |
 | `KALSHI_API_BASE` | Kalshi v2 | Override the upstream base URL |
 | `POLYMARKET_GAMMA_BASE` | `https://gamma-api.polymarket.com` | Polymarket catalogue |
 | `POLYMARKET_CLOB_BASE` | `https://clob.polymarket.com` | Polymarket book and price history |

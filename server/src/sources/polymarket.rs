@@ -35,7 +35,9 @@ use crate::app::AppState;
 use crate::cache::ttl;
 use crate::error::{Result, UpstreamError};
 use crate::http::FetchOptions;
-use crate::sources::corpus::{rank_markets, search_corpus, Corpus, SearchResponse};
+use crate::sources::corpus::{
+    rank_markets, refuse_overlong_query, search_corpus, Corpus, SearchResponse,
+};
 
 const VENUE: Venue = Venue::Polymarket;
 
@@ -1213,6 +1215,7 @@ pub fn warm_corpus(state: &AppState) {
 
 pub async fn search(state: &AppState, query: &str, limit: usize) -> Result<SearchResponse> {
     let snapshot = corpus_snapshot(state).await?;
+    refuse_overlong_query(query)?;
     Ok(search_corpus(&snapshot, query, limit))
 }
 
