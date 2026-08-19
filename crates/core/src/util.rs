@@ -31,7 +31,17 @@ pub fn round_to(n: f64, places: u32) -> f64 {
 /// The equivalent of `str.normalize('NFKD').replace(/\p{M}/gu, '')`, which is
 /// how both the matcher and the Rotten Tomatoes slug builder flatten accented
 /// titles so `Amélie` and `Amelie` compare equal.
+///
+/// ASCII is answered without decomposing anything. NFKD is a no-op on it by
+/// definition, and the overwhelming majority of what the matcher reads is a
+/// plain ASCII market title — this runs on both sides of every comparison the
+/// cross-venue board makes, so the case worth being quick about is the common
+/// one, not the accented one.
 pub fn fold_diacritics(input: &str) -> String {
+    if input.is_ascii() {
+        return input.to_string();
+    }
+
     input
         .nfkd()
         .filter(|c| !is_combining_mark(*c))

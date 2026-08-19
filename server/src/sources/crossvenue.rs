@@ -28,7 +28,8 @@ use time::format_description::BorrowedFormatItem;
 use time::{Date, OffsetDateTime};
 
 use terminal_core::matching::{
-    pair_labels, score_event, score_series, tokenise, MatchScore, SeriesDescriptor, MATCH_FLOOR,
+    could_reach_floor, pair_labels, prepare, score_event, score_series_prepared, tokenise,
+    MatchScore, Prepared, SeriesDescriptor, MATCH_FLOOR,
 };
 use terminal_core::types::{
     CompareEventLeg, CompareLeg, CompareResponse, CompareRow, CompareUnmatched, LinkedSeries,
@@ -92,16 +93,17 @@ struct IndexedSeries {
     volume24h: Option<f64>,
     close_time: String,
     sample_event: String,
-    /// The exemplar's sub-title and category, which is what the descriptor
-    /// offers the matcher beyond the title.
-    context: String,
+    /// Every token the title and its context — the exemplar's sub-title and
+    /// category — yield, for the blocking index.
     tokens: TokenSet,
-}
-
-impl IndexedSeries {
-    fn descriptor(&self) -> SeriesDescriptor<'_> {
-        SeriesDescriptor::new(&self.series_ticker, &self.title).with_context(&self.context)
-    }
+    /// This series' half of a comparison, derived once.
+    ///
+    /// The matcher's per-pair cost is almost entirely one-sided work — content
+    /// tokens, the numbers in the title, the flattened identifier — and an
+    /// anchor is offered to hundreds of candidates. Deriving it here, once per
+    /// series per catalogue refresh, is the difference between a board that
+    /// answers and one that does not.
+    prepared: Prepared,
 }
 
 /// One venue's series, with the two lookups the pairing pass needs.
@@ -203,6 +205,8 @@ fn build_index(venue: Venue, events: &[VenueEvent], truncated: bool) -> VenueInd
         let tokens: TokenSet = tokenise(&format!("{} {context}", lead.title))
             .into_iter()
             .collect();
+        let prepared =
+            prepare(&SeriesDescriptor::new(&series_ticker, &lead.title).with_context(&context));
 
         series.push(IndexedSeries {
             venue,
@@ -213,8 +217,8 @@ fn build_index(venue: Venue, events: &[VenueEvent], truncated: bool) -> VenueInd
             volume24h: published.then_some(volume),
             close_time: closes.first().map(|s| (*s).to_string()).unwrap_or_default(),
             sample_event: lead.event_ticker.clone(),
-            context,
             tokens,
+            prepared,
         });
     }
 
@@ -257,6 +261,18 @@ struct Indexes {
     ok: Vec<VenueIndex>,
     unavailable: Vec<VenueUnavailable>,
     built_at: Instant,
+    /// The finished board: every series more than one broker lists, sorted, and
+    /// not yet filtered by anyone's query.
+    ///
+    /// It lives here rather than being computed per request because it is a
+    /// function of these indexes and nothing else — the query and the row limit
+    /// only ever narrow it. Pairing thousands of series against thousands more
+    /// is not work to repeat for a panel that polls, and doing it here means it
+    /// happens once per catalogue refresh, inside the same single-flight, and
+    /// can never be out of step with the index it was derived from.
+    links: Vec<LinkedSeries>,
+    /// How many series each venue offered, for the panel's footer.
+    scanned: BTreeMap<String, u32>,
 }
 
 /// One venue's cached catalogue snapshot.
@@ -303,6 +319,9 @@ fn collect_indexes(venues: &[Venue], settled: Vec<Result<VenueIndex>>) -> Indexe
         ok,
         unavailable,
         built_at: Instant::now(),
+        // Filled by `link_all`, which is CPU-bound and belongs off the reactor.
+        links: Vec::new(),
+        scanned: BTreeMap::new(),
     }
 }
 
@@ -317,12 +336,48 @@ async fn build_indexes(state: &AppState) -> Indexes {
     collect_indexes(&venues, settled)
 }
 
+/// Crawl the three catalogues and pair them up, ready to be served.
+///
+/// The pairing runs on a blocking thread. It is the one piece of arithmetic in
+/// this server large enough to matter — thousands of series against thousands
+/// more — and it contains no `await`, so a request that started it could not be
+/// cancelled and a runtime worker running it could not be yielded. Left on the
+/// reactor it would not merely be slow: with four workers and a panel that
+/// polls, requests would pile up faster than they retired until nothing on the
+/// server answered at all, including the health check. Here it can take as long
+/// as it takes without holding anything else up.
+async fn build_board(state: &AppState) -> Result<Indexes> {
+    let built = build_indexes(state).await;
+
+    // A join failure means the pairing panicked, which is a bug. Refusing is the
+    // only honest answer and — because the cache stores results and not
+    // rejections — it is also the only one that does not pin an empty board in
+    // front of every reader for a fifteen-minute catalogue TTL.
+    tokio::task::spawn_blocking(move || paired(built))
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "[xvenue] pairing pass failed");
+            UpstreamError::new(
+                "The cross-venue board could not be built.",
+                crate::error::codes::INTERNAL,
+            )
+        })
+}
+
+/// Run the pairing pass over a set of indexes and hand back the finished board.
+fn paired(built: Indexes) -> Indexes {
+    let (links, scanned) = link_all(&built);
+    Indexes {
+        links,
+        scanned,
+        ..built
+    }
+}
+
 async fn indexes(state: &AppState) -> Result<Arc<Indexes>> {
     state
         .cache()
-        .cached(INDEX_KEY, ttl::CATALOGUE, || async {
-            Ok(build_indexes(state).await)
-        })
+        .cached(INDEX_KEY, ttl::CATALOGUE, || build_board(state))
         .await
 }
 
@@ -479,9 +534,19 @@ fn candidates_for(anchor: &IndexedSeries, other: &VenueIndex) -> Vec<(usize, Mat
         }
     }
 
+    // Sharing one token is what the blocking index asks for, and it is a low
+    // bar: a catalogue of thousands offers hundreds of candidates that share an
+    // incidental word and nothing else. Turning those away on a token count,
+    // before any phrase folding or number arithmetic, is what keeps the board
+    // answering — and it turns exactly the same pairs away that the floor test
+    // below would have, two orders of magnitude later.
     let mut scored: Vec<(usize, MatchScore)> = Vec::new();
     for candidate in candidates {
-        let matched = score_series(&anchor.descriptor(), &other.series[candidate].descriptor());
+        let other_series = &other.series[candidate];
+        if !could_reach_floor(&anchor.prepared, &other_series.prepared, MATCH_FLOOR) {
+            continue;
+        }
+        let matched = score_series_prepared(&anchor.prepared, &other_series.prepared);
         if matched.score >= MATCH_FLOOR {
             scored.push((candidate, matched));
         }
@@ -612,9 +677,9 @@ struct Group {
 
 /// Series that more than one broker lists.
 ///
-/// Curated links are resolved first and claim their legs; everything left is
-/// matched on wording, anchored at the venue with the most series so the pass
-/// covers the widest catalogue.
+/// The pairing itself happens with the index, in [`link_all`]; what is left for
+/// a request is to narrow the finished board to what was asked for. So `?q=fed`
+/// costs a scan of a few hundred rows rather than a re-run of the whole pass.
 pub async fn linked_series(
     state: &AppState,
     query: &str,
@@ -628,6 +693,37 @@ fn link_series(built: &Indexes, query: &str, limit: usize) -> LinkedSeriesRespon
     let lowered = query.to_lowercase();
     let terms: Vec<String> = lowered.split_whitespace().map(str::to_string).collect();
 
+    // Filtering a sorted list keeps it sorted, so the row order a reader sees is
+    // the board's order whether or not they typed a query.
+    let series: Vec<LinkedSeries> = built
+        .links
+        .iter()
+        .filter(|s| matches_query(s, &terms))
+        .take(limit)
+        .cloned()
+        .collect();
+
+    LinkedSeriesResponse {
+        query: query.to_string(),
+        series,
+        scanned: built.scanned.clone(),
+        unavailable: built.unavailable.clone(),
+        // Read at answer time, not at build time: a panel needs to know how old
+        // the universe it is looking at is, and that grows between requests.
+        snapshot_age_seconds: round_to(built.built_at.elapsed().as_secs_f64(), 0),
+    }
+}
+
+/// Pair every venue's series against every other's.
+///
+/// This is the board itself, and it depends on nothing but the indexes: no
+/// query, no row limit, no clock. That is what lets it be built once with the
+/// index and read by every request until the catalogue is crawled again.
+///
+/// Curated links are resolved first and claim their legs; everything left is
+/// matched on wording, anchored at the venue with the most series so the pass
+/// covers the widest catalogue.
+fn link_all(built: &Indexes) -> (Vec<LinkedSeries>, BTreeMap<String, u32>) {
     let mut scanned: BTreeMap<String, u32> = BTreeMap::new();
     for index in &built.ok {
         scanned.insert(
@@ -819,11 +915,7 @@ fn link_series(built: &Indexes, query: &str, limit: usize) -> LinkedSeriesRespon
         });
     }
 
-    let mut series: Vec<LinkedSeries> = found
-        .into_iter()
-        .filter(|s| matches_query(s, &terms))
-        .collect();
-    series.sort_by(|a, b| {
+    found.sort_by(|a, b| {
         b.legs
             .len()
             .cmp(&a.legs.len())
@@ -835,15 +927,8 @@ fn link_series(built: &Indexes, query: &str, limit: usize) -> LinkedSeriesRespon
                 )
             })
     });
-    series.truncate(limit);
 
-    LinkedSeriesResponse {
-        query: query.to_string(),
-        series,
-        scanned,
-        unavailable: built.unavailable.clone(),
-        snapshot_age_seconds: round_to(built.built_at.elapsed().as_secs_f64(), 0),
-    }
+    (found, scanned)
 }
 
 /* --------------------------------------------------------------- compare */
@@ -1183,11 +1268,13 @@ pub async fn compare(
     })
 }
 
-/// Build the per-venue series index the cross-venue board reads.
+/// Build the cross-venue board: crawl the three catalogues, then pair them up.
 ///
 /// Fired once at startup and never awaited by a request; a failure is logged and
 /// dropped, because everything here is cached and the first `XV` simply pays for
-/// the crawl instead.
+/// the crawl instead. Since the pairing now lives with the index it is derived
+/// from, this warms the board a request actually reads and not merely the raw
+/// material for it.
 pub async fn warm_indexes(state: &AppState) {
     match indexes(state).await {
         Ok(built) => {
@@ -1197,7 +1284,7 @@ pub async fn warm_indexes(state: &AppState) {
                 .map(|i| format!("{} {}", venue_info(i.venue).code, i.series.len()))
                 .collect::<Vec<_>>()
                 .join(", ");
-            tracing::info!(shape, "[xvenue] series index warm");
+            tracing::info!(shape, linked = built.links.len(), "[xvenue] board warm");
             for miss in &built.unavailable {
                 tracing::warn!(
                     venue = miss.venue.as_str(),
@@ -1223,7 +1310,7 @@ mod tests {
     use super::*;
 
     use serde_json::json;
-    use terminal_core::matching::confidence_of;
+    use terminal_core::matching::{confidence_of, score_series};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -1308,15 +1395,19 @@ mod tests {
         )
     }
 
+    /// A board built the way the server builds one, minus the crawl.
+    ///
+    /// The pairing pass is run here rather than left to the caller so that every
+    /// test below reads `built.links` exactly as a request does, and a change to
+    /// where that work happens cannot quietly stop being tested.
     fn indexes_of(venues: Vec<(Venue, Vec<VenueEvent>)>) -> Indexes {
-        Indexes {
-            ok: venues
+        paired(collect_indexes(
+            &venues.iter().map(|(venue, _)| *venue).collect::<Vec<_>>(),
+            venues
                 .into_iter()
-                .map(|(venue, events)| build_index(venue, &events, false))
+                .map(|(venue, events)| Ok(build_index(venue, &events, false)))
                 .collect(),
-            unavailable: Vec::new(),
-            built_at: Instant::now(),
-        }
+        ))
     }
 
     fn keys(response: &LinkedSeriesResponse) -> Vec<&str> {
@@ -1502,7 +1593,7 @@ mod tests {
         assert_eq!(built.unavailable[0].error, "Polymarket timed out after 20s");
 
         // …and the rest of the board still prints.
-        let response = link_series(&built, "", 40);
+        let response = link_series(&paired(built), "", 40);
         assert_eq!(response.unavailable.len(), 1);
         assert_eq!(response.series.len(), 1);
         assert_eq!(response.series[0].legs.len(), 2);

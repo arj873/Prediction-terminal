@@ -20,6 +20,7 @@
 //! The module is `matching` rather than `match` only because the latter is a
 //! keyword; it is the Rust reading of `src/shared/match.ts`, rule for rule.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
@@ -358,28 +359,48 @@ static LETTER_THEN_DIGIT: LazyLock<Regex> =
 
 static WHITESPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").expect("whitespace"));
 
+/// Apply a rewrite, and only pay for it if it fired.
+///
+/// `replace_all` hands back a `Cow`, and on a pattern that did not match that
+/// `Cow` borrows the input. Taking ownership of it unconditionally therefore
+/// copies the whole string to produce a value identical to the one already in
+/// hand. [`normalise`] runs forty-odd of these passes and a typical title
+/// trips one or two, so nearly every copy bought nothing — and [`tokenise`]
+/// runs on both sides of every comparison the cross-venue board makes.
+fn rewrite(out: &mut String, pattern: &Regex, replacement: &str) {
+    if let Cow::Owned(rewritten) = pattern.replace_all(out, replacement) {
+        *out = rewritten;
+    }
+}
+
 /// Lower-case, strip accents and punctuation, collapse whitespace.
 pub fn normalise(text: &str) -> String {
     let mut out = fold_diacritics(text).to_lowercase();
 
     for (pattern, replacement) in PUNCTUATED_PHRASES.iter() {
-        out = pattern.replace_all(&out, *replacement).into_owned();
+        rewrite(&mut out, pattern, replacement);
     }
 
-    out = GROUPED_NUMBER.replace_all(&out, "${1}").into_owned();
-    out = PUNCTUATION.replace_all(&out, " ").into_owned();
-    out = DIGIT_THEN_LETTER
-        .replace_all(&out, "${1} ${2}")
-        .into_owned();
-    out = LETTER_THEN_DIGIT
-        .replace_all(&out, "${1} ${2}")
-        .into_owned();
+    // Spelled out rather than routed through `rewrite`, because this pass needs
+    // the lookahead only `fancy_regex` compiles, and that is a different type.
+    if let Cow::Owned(rewritten) = GROUPED_NUMBER.replace_all(&out, "${1}") {
+        out = rewritten;
+    }
+
+    rewrite(&mut out, &PUNCTUATION, " ");
+    rewrite(&mut out, &DIGIT_THEN_LETTER, "${1} ${2}");
+    rewrite(&mut out, &LETTER_THEN_DIGIT, "${1} ${2}");
 
     for (pattern, replacement) in PHRASES.iter() {
-        out = pattern.replace_all(&out, *replacement).into_owned();
+        rewrite(&mut out, pattern, replacement);
     }
 
-    WHITESPACE.replace_all(&out, " ").trim().to_string()
+    rewrite(&mut out, &WHITESPACE, " ");
+    let trimmed = out.trim();
+    if trimmed.len() != out.len() {
+        out = trimmed.to_string();
+    }
+    out
 }
 
 /// A title's meaningful terms.
@@ -456,8 +477,11 @@ fn js_number(text: &str) -> f64 {
 /// Only a bare number can be: `$2026` is a price target and `2026%` is not a
 /// year either. Reading the mark rather than only the digits is what keeps a
 /// four-figure dollar strike out of the year filter.
-fn is_calendar_year(token: &str) -> bool {
-    !token.contains('$') && !token.contains('%') && is_year(numeric_value(token))
+///
+/// Takes the quantity the caller has already read off the token, because the
+/// only caller needs it either way and parsing it twice was pure waste.
+fn is_calendar_year(token: &str, value: f64) -> bool {
+    !token.contains('$') && !token.contains('%') && is_year(value)
 }
 
 /// A title's terms with its numbers taken out.
@@ -512,17 +536,7 @@ pub fn identity_key(id: &str) -> String {
 /// `Oct 2026` and `October` have to agree on the month, and only tokenising
 /// makes them comparable.
 pub fn numbers_in(text: &str) -> Vec<f64> {
-    tokenise(text)
-        .into_iter()
-        .filter(|token| is_numeric(token) || is_month(token))
-        .map(|token| {
-            if is_month(&token) {
-                js_number(&token[1..])
-            } else {
-                numeric_value(&token)
-            }
-        })
-        .collect()
+    title_numbers(text).all
 }
 
 fn is_year(n: f64) -> bool {
@@ -546,11 +560,39 @@ fn is_year(n: f64) -> bool {
 /// `$63,000` and `$71,000` reported the same non-number and were rewarded for
 /// agreeing on it.
 pub fn significant_numbers(text: &str) -> Vec<f64> {
-    tokenise(text)
-        .into_iter()
-        .filter(|token| is_numeric(token) && !is_calendar_year(token))
-        .map(|token| numeric_value(&token))
-        .collect()
+    title_numbers(text).significant
+}
+
+/// Both readings of a title's numbers, off one tokenisation.
+///
+/// [`numbers_in`] and [`significant_numbers`] differ only in whether a year
+/// counts, and [`prepare`] wants both. Reading them together also stops each
+/// numeric token being parsed twice — once to ask whether it is a year and once
+/// to record what it is.
+struct TitleNumbers {
+    /// Every number, months included. What [`score_event`] weighs.
+    all: Vec<f64>,
+    /// Every number except the calendar year. What [`score_series`] weighs.
+    significant: Vec<f64>,
+}
+
+fn title_numbers(text: &str) -> TitleNumbers {
+    let mut all: Vec<f64> = Vec::new();
+    let mut significant: Vec<f64> = Vec::new();
+
+    for token in tokenise(text) {
+        if is_month(&token) {
+            all.push(js_number(&token[1..]));
+        } else if is_numeric(&token) {
+            let value = numeric_value(&token);
+            all.push(value);
+            if !is_calendar_year(&token, value) {
+                significant.push(value);
+            }
+        }
+    }
+
+    TitleNumbers { all, significant }
 }
 
 /* ---------------------------------------------------------------- scoring */
@@ -596,6 +638,11 @@ impl<'a> FromIterator<&'a String> for TokenSet {
     }
 }
 
+/// How many terms two sets state in common.
+fn shared_count(a: &TokenSet, b: &TokenSet) -> usize {
+    a.iter().filter(|term| b.contains(term)).count()
+}
+
 /// How much two token sets have in common, allowing for one being terser.
 ///
 /// Dice alone — `2|A∩B| / (|A|+|B|)` — punishes a short title for being short,
@@ -610,20 +657,18 @@ impl<'a> FromIterator<&'a String> for TokenSet {
 /// reads any subset as a perfect match, so "NFL Champion" would score 1.0
 /// against "NFL Champion Rookie of the Year". Blending the two keeps Dice's
 /// scepticism about loose subsets while letting a genuinely terser title compete.
-fn overlap(a: &TokenSet, b: &TokenSet) -> f64 {
-    if a.len() == 0 || b.len() == 0 {
+///
+/// Takes the count rather than the sets because [`could_reach_floor`] has to
+/// reproduce this arithmetic exactly — a prefilter that rounds differently from
+/// the thing it filters for would silently drop matches — and the only way to
+/// guarantee that is for both to be the same code.
+fn overlap_of(shared: usize, a: usize, b: usize) -> f64 {
+    if a == 0 || b == 0 {
         return 0.0;
     }
 
-    let mut shared = 0usize;
-    for term in a.iter() {
-        if b.contains(term) {
-            shared += 1;
-        }
-    }
-
-    let coefficient = shared as f64 / a.len().min(b.len()) as f64;
-    let dice = (2.0 * shared as f64) / (a.len() + b.len()) as f64;
+    let coefficient = shared as f64 / a.min(b) as f64;
+    let dice = (2.0 * shared as f64) / (a + b) as f64;
     0.6 * dice + 0.4 * coefficient
 }
 
@@ -808,37 +853,106 @@ pub fn confidence_of(score: f64) -> MatchConfidence {
     }
 }
 
+/// Everything about one listing that can be worked out without seeing the other.
+///
+/// [`similarity`] and the number weighing between them tokenise four times and
+/// build two identity keys for every comparison, and every one of those is a
+/// function of a single side. At catalogue scale that *is* the cost: the
+/// cross-venue board scores millions of pairs, and each anchor's half was being
+/// rebuilt once per candidate it was offered. Deriving it once and handing the
+/// same value to every comparison turns that work into a lookup.
+///
+/// Nothing here is a judgement — no field depends on what the other side says.
+/// That is the whole invariant, and it is what makes preparing once safe.
+#[derive(Debug, Clone)]
+pub struct Prepared {
+    /// The identifier, kept because a reason line quotes it verbatim.
+    id: String,
+    /// Content terms of the title *and* its context, deduplicated, in the order
+    /// the listing stated them — which is the order a reason line reads back.
+    tokens: TokenSet,
+    /// Those of `tokens` that are qualifiers, in the same order.
+    qualifiers: Vec<String>,
+    /// How many of `tokens` are *not* qualifiers.
+    substance: usize,
+    /// [`significant_numbers`] of the title, which is what [`score_series`] weighs.
+    significant: Vec<f64>,
+    /// [`numbers_in`] of the title, which is what [`score_event`] weighs.
+    numbers: Vec<f64>,
+    /// [`identity_key`] of the identifier.
+    key: String,
+}
+
+/// Derive one listing's half of a comparison.
+pub fn prepare(d: &SeriesDescriptor) -> Prepared {
+    let joined = format!("{} {}", d.title, d.context.unwrap_or(""));
+    let tokens: TokenSet = content_tokens(&joined).iter().collect();
+    let title = title_numbers(d.title);
+
+    let qualifiers: Vec<String> = tokens
+        .iter()
+        .filter(|term| is_qualifier(term))
+        .cloned()
+        .collect();
+    let substance = tokens.len() - qualifiers.len();
+
+    Prepared {
+        id: d.id.to_string(),
+        tokens,
+        qualifiers,
+        substance,
+        significant: title.significant,
+        numbers: title.all,
+        key: identity_key(d.id),
+    }
+}
+
+/// What two identifiers say about each other.
+///
+/// Corroboration rather than evidence: when two exchanges independently arrive
+/// at `fed-decision` and `feddecision`, that is worth more than any single
+/// shared word. The length floors keep a two-letter stub from matching the
+/// world.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum KeyRelation {
+    Identical,
+    Contains,
+    Unrelated,
+}
+
+fn key_relation(a: &str, b: &str) -> KeyRelation {
+    if a.len() >= 4 && a == b {
+        KeyRelation::Identical
+    } else if a.len() >= 5 && b.len() >= 5 && (a.contains(b) || b.contains(a)) {
+        KeyRelation::Contains
+    } else {
+        KeyRelation::Unrelated
+    }
+}
+
 /// How alike two listings read, before any arithmetic on the numbers in them.
 ///
 /// Titles carry the signal, so they carry the weight; the identifiers are a
-/// corroborator, because when two exchanges independently arrive at
-/// `fed-decision` and `feddecision` that is worth more than any single shared
-/// word. What counts as a *disagreeing* number differs between a series and an
-/// expiry, so that judgement belongs to the two callers below, and each applies
-/// it exactly once.
-fn similarity(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
-    let left = content_tokens(&format!("{} {}", a.title, a.context.unwrap_or("")));
-    let right = content_tokens(&format!("{} {}", b.title, b.context.unwrap_or("")));
-    let left_set: TokenSet = left.iter().collect();
-    let right_set: TokenSet = right.iter().collect();
-
+/// corroborator. What counts as a *disagreeing* number differs between a series
+/// and an expiry, so that judgement belongs to the two callers below, and each
+/// applies it exactly once.
+fn similarity(a: &Prepared, b: &Prepared) -> MatchScore {
     let mut shared: Vec<String> = Vec::new();
-    let mut taken: HashSet<&str> = HashSet::new();
-    for term in &left {
-        if right_set.contains(term) && taken.insert(term.as_str()) {
+    let mut shared_substance = 0usize;
+    for term in a.tokens.iter() {
+        if b.tokens.contains(term) {
+            if !is_qualifier(term) {
+                shared_substance += 1;
+            }
             shared.push(term.clone());
         }
     }
 
-    let mut score = overlap(&left_set, &right_set);
+    let mut score = overlap_of(shared.len(), a.tokens.len(), b.tokens.len());
 
-    let key_a = identity_key(a.id);
-    let key_b = identity_key(b.id);
-    let identical = key_a.len() >= 4 && key_a == key_b;
-    let contains = !identical
-        && key_a.len() >= 5
-        && key_b.len() >= 5
-        && (key_a.contains(&key_b) || key_b.contains(&key_a));
+    let relation = key_relation(&a.key, &b.key);
+    let identical = relation == KeyRelation::Identical;
+    let contains = relation == KeyRelation::Contains;
 
     if identical {
         score = score * 0.6 + 0.4;
@@ -852,10 +966,7 @@ fn similarity(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
     // which is the entire question, is the part they differ on.
     // …but only where there was something else to agree on. A terse label like
     // "Lead Actor, Comedy" is *made* of qualifiers, and has nothing else to offer.
-    let substance = |tokens: &TokenSet| tokens.iter().filter(|term| !is_qualifier(term)).count();
-
-    let both_have_substance = substance(&left_set) > 0 && substance(&right_set) > 0;
-    let shared_substance = shared.iter().filter(|term| !is_qualifier(term)).count();
+    let both_have_substance = a.substance > 0 && b.substance > 0;
     if both_have_substance && shared_substance == 0 && !identical && !contains {
         score *= 0.4;
     }
@@ -864,13 +975,13 @@ fn similarity(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
     // however that word scored: "NFL Champion" and "NFL Rookie of the Year".
     // Only applied where there was room to share more — a two-word contract label
     // ("No change") has one word to offer, and offering it is not weak evidence.
-    let room_to_share = left_set.len() + right_set.len() >= 5;
+    let room_to_share = a.tokens.len() + b.tokens.len() >= 5;
     if shared.len() < 2 && room_to_share && !identical && !contains {
         score *= 0.5;
     }
 
     let mut reason = if identical {
-        format!("both listed as \"{key_a}\"")
+        format!("both listed as \"{}\"", a.key)
     } else if contains {
         format!("identifiers overlap ({} / {})", a.id, b.id)
     } else if !shared.is_empty() {
@@ -880,14 +991,14 @@ fn similarity(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
     };
 
     // A qualifier on one side and not the other is the whole question, whatever
-    // the rest of the words did.
-    let mut union = TokenSet::default();
-    for term in left_set.iter().chain(right_set.iter()) {
-        union.insert(term);
-    }
-    let lopsided: Vec<String> = union
+    // the rest of the words did. Read off each side's own qualifiers rather than
+    // their union: a qualifier missing from the right cannot also be missing
+    // from the left, so the two passes cover the union without building it.
+    let lopsided: Vec<String> = a
+        .qualifiers
         .iter()
-        .filter(|q| is_qualifier(q) && left_set.contains(q) != right_set.contains(q))
+        .filter(|q| !b.tokens.contains(q))
+        .chain(b.qualifiers.iter().filter(|q| !a.tokens.contains(q)))
         .cloned()
         .collect();
     if !lopsided.is_empty() {
@@ -905,6 +1016,43 @@ fn similarity(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
         shared,
         reason,
     }
+}
+
+/// The most the number weighing can ever multiply a score by.
+///
+/// [`weigh_numbers`] judges years and everything else separately and multiplies
+/// the two verdicts, so a pair that agrees on both collects the reward twice.
+/// `score_series` never does — it is handed [`significant_numbers`], which has
+/// no years in it — but a single ceiling that holds for both scorers is one
+/// fewer thing for [`could_reach_floor`] to be wrong about.
+const MAX_NUMBER_REWARD: f64 = 1.12 * 1.12;
+
+/// Whether a pair could possibly clear `floor`, without scoring it.
+///
+/// Every step of [`similarity`] after the overlap either multiplies the score
+/// downward or caps it; only two ever raise it, and both are bounded — the
+/// identity-key boost, and [`MAX_NUMBER_REWARD`]. So the best a pair could do is
+/// computable from the two prepared halves alone, and a pair whose best is below
+/// the floor cannot reach it however the rest of the arithmetic falls out.
+///
+/// This is exact, not a heuristic: a caller that discards sub-floor pairs gets
+/// the same set whether it calls this first or not. It exists because the
+/// cross-venue board offers the scorer millions of pairs that share one
+/// incidental word, and rejecting those on a token intersection is two orders of
+/// magnitude cheaper than rejecting them on a full score.
+#[must_use]
+pub fn could_reach_floor(a: &Prepared, b: &Prepared, floor: f64) -> bool {
+    let base = overlap_of(
+        shared_count(&a.tokens, &b.tokens),
+        a.tokens.len(),
+        b.tokens.len(),
+    );
+    let best = match key_relation(&a.key, &b.key) {
+        KeyRelation::Identical => base * 0.6 + 0.4,
+        KeyRelation::Contains => base * 0.75 + 0.25,
+        KeyRelation::Unrelated => base,
+    };
+    best.min(1.0) * MAX_NUMBER_REWARD >= floor
 }
 
 fn join_first(items: &[String], limit: usize, separator: &str) -> String {
@@ -1068,11 +1216,13 @@ fn format_number(n: f64) -> String {
 /// event's title says so. Every other number counts — a "2nd place" market and a
 /// "3rd place" market are two questions however alike they read.
 pub fn score_series(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
-    weigh_numbers(
-        similarity(a, b),
-        &significant_numbers(a.title),
-        &significant_numbers(b.title),
-    )
+    score_series_prepared(&prepare(a), &prepare(b))
+}
+
+/// [`score_series`] on two halves already derived.
+#[must_use]
+pub fn score_series_prepared(a: &Prepared, b: &Prepared) -> MatchScore {
+    weigh_numbers(similarity(a, b), &a.significant, &b.significant)
 }
 
 /// Score two specific events, or two contracts — one expiry against another.
@@ -1082,7 +1232,13 @@ pub fn score_series(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
 /// without counting the date the terminal would happily quote one against the
 /// other.
 pub fn score_event(a: &SeriesDescriptor, b: &SeriesDescriptor) -> MatchScore {
-    weigh_numbers(similarity(a, b), &numbers_in(a.title), &numbers_in(b.title))
+    score_event_prepared(&prepare(a), &prepare(b))
+}
+
+/// [`score_event`] on two halves already derived.
+#[must_use]
+pub fn score_event_prepared(a: &Prepared, b: &Prepared) -> MatchScore {
+    weigh_numbers(similarity(a, b), &a.numbers, &b.numbers)
 }
 
 /// One rung of a ladder married to one rung of another venue's.

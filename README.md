@@ -227,6 +227,24 @@ to be listed today. The cases that matter are the near misses:
   one venue's rungs onto one of the other's. Anything left over is reported
   under the table rather than dropped.
 
+**The board is built once per catalogue refresh, not once per request.** Reading
+five thousand series against each other is the largest piece of arithmetic in
+the terminal, and it depends on nothing a request supplies — `XV fed` and a row
+limit only narrow a board that already exists. So the pairing runs with the
+index it is derived from, on a blocking thread rather than on the async runtime,
+and every request is a scan of the finished list. Two things make that fast
+enough to do at all: each listing's half of a comparison — its terms, its
+numbers, its flattened identifier — is derived once and reused against every
+candidate, and a pair whose token overlap makes the match floor arithmetically
+unreachable is declined before any of the rest runs. The second is exact rather
+than approximate: only the identifier boost and the number reward can raise a
+score, both are bounded, and the caller discards anything below the floor
+anyway, so declining early turns away precisely the pairs a full scoring pass
+would have thrown out. On the live catalogues that is a board in well under a
+second where it was six and a half minutes, with every score unchanged —
+`crates/core/examples/matchbench.rs` is the harness that proves both halves of
+that sentence.
+
 ### Entertainment markets, and what settles them
 
 `ENT` exists because Kalshi files ~2,500 series under one flat `Entertainment`
@@ -750,7 +768,16 @@ forward, and no rung is ever priced with a candle it did not yet have.
 The cross-venue matcher was ported by differential testing rather than by
 reading: both implementations were run over the same corpus and their scores,
 confidence bands, shared terms and reason strings diffed to fifteen decimal
-places.
+places. The same harness is how it is kept honest through changes meant only to
+make it faster — `crates/core/examples/matchbench.rs` dumps every score, band,
+shared-term list and reason for a corpus and the two runs are diffed. The corpus
+is real: `crates/core/tests/fixtures/series.json` is six hundred titles taken
+from the live catalogues by the server's `dump_descriptors` example, sampled
+towards the families that are hard — House districts all three venues word
+almost identically, Emmy categories that differ by one qualifier, rate ladders
+that differ by one number. `crates/core/tests/matching_corpus.rs` asserts over
+all of them that the prefilter never declines a pair that could have cleared the
+floor, which is the property the whole board's speed rests on.
 
 The entertainment tests lean on the cases where a plausible-looking parser reads
 the wrong number without ever failing: the two header collisions above, a film
