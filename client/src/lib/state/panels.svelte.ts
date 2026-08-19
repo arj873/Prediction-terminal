@@ -45,6 +45,10 @@ export type PanelKind =
   | 'boxoffice'
   | 'steam'
   | 'tv'
+  | 'awards'
+  | 'trends'
+  | 'releases'
+  | 'podcasts'
   | 'help'
   | 'keys';
 

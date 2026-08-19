@@ -20,6 +20,7 @@ fancy-regex.workspace = true
 futures.workspace = true
 html-escape.workspace = true
 moka.workspace = true
+quick-xml.workspace = true
 rand.workspace = true
 regex.workspace = true
 reqwest.workspace = true

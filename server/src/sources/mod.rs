@@ -27,6 +27,7 @@ pub fn warm(state: AppState) {
 }
 
 pub mod alpaca;
+pub mod awards;
 pub mod billboard;
 pub mod boxoffice;
 pub mod corpus;
@@ -37,11 +38,14 @@ pub mod fred;
 pub mod implied;
 pub mod kalshi;
 pub mod netflix;
+pub mod podcasts;
 pub mod polymarket;
 pub mod polymarketus;
+pub mod releases;
 pub mod rottentomatoes;
 pub mod steam;
 pub mod stocks;
 pub mod streamcharts;
+pub mod trends;
 pub mod tvmaze;
 pub mod venues;

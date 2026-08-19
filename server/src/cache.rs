@@ -280,6 +280,18 @@ pub mod ttl {
     pub const STEAM: Duration = Duration::from_secs(120);
     /// TV schedules: fixed a day ahead, occasionally amended.
     pub const TV_SCHEDULE: Duration = Duration::from_secs(30 * 60);
+
+    /// An award's record changes when a ceremony happens, which is a handful of
+    /// evenings a year — but a nominee slate fills in over the days after one,
+    /// so an hour is short enough to follow that without hammering WDQS.
+    pub const AWARDS: Duration = Duration::from_secs(60 * 60);
+    /// Google rebuilds the trending list through the day.
+    pub const TRENDS: Duration = Duration::from_secs(15 * 60);
+    /// A discography gains a row on release day and not otherwise.
+    pub const RELEASES: Duration = Duration::from_secs(60 * 60);
+    /// Apple recomputes its charts daily; an hour keeps a guest booking fresh
+    /// without asking for a chart that has not moved.
+    pub const PODCASTS: Duration = Duration::from_secs(60 * 60);
 }
 
 #[cfg(test)]

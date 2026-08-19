@@ -1,0 +1,542 @@
+{
+ "feed": {
+  "title": "Top Shows",
+  "id": "https://rss.marketingtools.apple.com/api/v2/us/podcasts/top/100/podcasts.json",
+  "author": {
+   "name": "Apple",
+   "url": "https://www.apple.com/"
+  },
+  "links": [
+   {
+    "self": "https://rss.marketingtools.apple.com/api/v2/us/podcasts/top/100/podcasts.json"
+   }
+  ],
+  "copyright": "Copyright \u00a9 2026 Apple Inc. All rights reserved.",
+  "country": "us",
+  "icon": "https://www.apple.com/favicon.ico",
+  "updated": "Wed, 19 Aug 2026 23:17:51 +0000",
+  "results": [
+   {
+    "artistName": "The New York Times",
+    "id": "1200361736",
+    "name": "The Daily",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/ab/64/66/ab6466a9-9a7d-e20e-7a3d-bc5be37d29ce/mza_15084852813176276273.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1489",
+      "name": "News",
+      "url": "https://itunes.apple.com/us/genre/id1489"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-daily/id1200361736"
+   },
+   {
+    "artistName": "Audiochuck",
+    "id": "1750724132",
+    "name": "The Truth About Natalie",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/bc/cf/87/bccf8777-9738-53fb-9686-3cb507397551/mza_16959504360317618270.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     },
+     {
+      "genreId": "1324",
+      "name": "Society & Culture",
+      "url": "https://itunes.apple.com/us/genre/id1324"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-truth-about-natalie/id1750724132"
+   },
+   {
+    "artistName": "Audiochuck",
+    "id": "1322200189",
+    "name": "Crime Junkie",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts126/v4/8c/35/04/8c350430-2fbf-98d0-0a25-00b76550ffeb/mza_13445204151221888086.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/crime-junkie/id1322200189"
+   },
+   {
+    "artistName": "NBC News",
+    "id": "1464919521",
+    "name": "Dateline NBC",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts115/v4/8c/00/7a/8c007a42-e550-0214-d4cb-b59cd7edf194/mza_5305664083935674472.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     },
+     {
+      "genreId": "1489",
+      "name": "News",
+      "url": "https://itunes.apple.com/us/genre/id1489"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/dateline-nbc/id1464919521"
+   },
+   {
+    "artistName": "Joe Rogan",
+    "id": "360084272",
+    "name": "The Joe Rogan Experience",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/55/27/6b/55276bd9-c638-2c12-32cc-d4a010c0ddc0/mza_18179661083595555224.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1303",
+      "name": "Comedy",
+      "url": "https://itunes.apple.com/us/genre/id1303"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272"
+   },
+   {
+    "artistName": "NPR",
+    "id": "1222114325",
+    "name": "Up First from NPR",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/0e/35/25/0e352569-e694-81d9-ea55-5f935981c15a/mza_1788275989855583986.png/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1489",
+      "name": "News",
+      "url": "https://itunes.apple.com/us/genre/id1489"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/up-first-from-npr/id1222114325"
+   },
+   {
+    "artistName": "Barstool Sports",
+    "id": "1089022756",
+    "name": "Pardon My Take",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/35/74/6a/35746a0c-7687-7dde-ff04-338d93e78303/mza_10377078556009223546.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1545",
+      "name": "Sports",
+      "url": "https://itunes.apple.com/us/genre/id1545"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/pardon-my-take/id1089022756"
+   },
+   {
+    "artistName": "The Ringer",
+    "id": "1795483480",
+    "name": "Good Hang with Amy Poehler",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/2b/94/bb/2b94bb6e-44f1-9d57-7748-b7456072806d/mza_1064202164981856225.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1303",
+      "name": "Comedy",
+      "url": "https://itunes.apple.com/us/genre/id1303"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/good-hang-with-amy-poehler/id1795483480"
+   },
+   {
+    "artistName": "Pod Save America",
+    "id": "1192761536",
+    "name": "Pod Save America",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/44/dc/61/44dc6141-25e9-5bb3-e19e-a2337233d19e/mza_5506771870755587769.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1489",
+      "name": "News",
+      "url": "https://itunes.apple.com/us/genre/id1489"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/pod-save-america/id1192761536"
+   },
+   {
+    "artistName": "Ash Kelley & Alaina Urquhart",
+    "id": "1379959217",
+    "name": "Morbid",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/78/e9/0e/78e90ee0-567d-1ad8-17a0-17d7c988c4bd/mza_8425901783365617933.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     },
+     {
+      "genreId": "1303",
+      "name": "Comedy",
+      "url": "https://itunes.apple.com/us/genre/id1303"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/morbid/id1379959217"
+   },
+   {
+    "artistName": "The Ringer",
+    "id": "1043699613",
+    "name": "The Bill Simmons Podcast",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/c6/b7/60/c6b7608b-8fba-be51-b2f1-5791b5c1df74/mza_16907875688841172667.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1545",
+      "name": "Sports",
+      "url": "https://itunes.apple.com/us/genre/id1545"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-bill-simmons-podcast/id1043699613"
+   },
+   {
+    "artistName": "SiriusXM",
+    "id": "1532976305",
+    "name": "The Megyn Kelly Show",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/3e/9f/c1/3e9fc13c-8030-b57e-f29e-0f14dc8db10d/mza_602213930944272333.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1489",
+      "name": "News",
+      "url": "https://itunes.apple.com/us/genre/id1489"
+     },
+     {
+      "genreId": "1324",
+      "name": "Society & Culture",
+      "url": "https://itunes.apple.com/us/genre/id1324"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-megyn-kelly-show/id1532976305"
+   },
+   {
+    "artistName": "CBS News",
+    "id": "965818306",
+    "name": "48 Hours",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/c8/4f/8f/c84f8fa2-074d-6023-7f31-9c781b80dedc/mza_7616553513239265555.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     },
+     {
+      "genreId": "1309",
+      "name": "TV & Film",
+      "url": "https://itunes.apple.com/us/genre/id1309"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/48-hours/id965818306"
+   },
+   {
+    "artistName": "Mick Hunt",
+    "id": "1731755953",
+    "name": "Mick Unplugged",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/f8/75/0c/f8750cf1-ca31-5d55-00a1-ce86329309d5/mza_11785095184998327365.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1304",
+      "name": "Education",
+      "url": "https://itunes.apple.com/us/genre/id1304"
+     },
+     {
+      "genreId": "1321",
+      "name": "Business",
+      "url": "https://itunes.apple.com/us/genre/id1321"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/mick-unplugged/id1731755953"
+   },
+   {
+    "artistName": "ABC News",
+    "id": "987967575",
+    "name": "20/20",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/81/6c/5d/816c5d57-7c3f-3df9-1557-08e17469dfe4/mza_1433648970787567135.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/20-20/id987967575"
+   },
+   {
+    "artistName": "Shawn Ryan",
+    "id": "1492492083",
+    "name": "The Shawn Ryan Show",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts112/v4/d0/b3/2d/d0b32d7f-ab2d-5791-83b0-854f698a9184/mza_13561258173056659752.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1324",
+      "name": "Society & Culture",
+      "url": "https://itunes.apple.com/us/genre/id1324"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-shawn-ryan-show/id1492492083"
+   },
+   {
+    "artistName": "Dylan Gemelli",
+    "id": "1780873400",
+    "name": "The Dylan Gemelli Podcast",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/65/4a/f4/654af4a7-d5cd-2317-91a1-b5913de83e6f/mza_12950421134232165951.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1512",
+      "name": "Health & Fitness",
+      "url": "https://itunes.apple.com/us/genre/id1512"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-dylan-gemelli-podcast/id1780873400"
+   },
+   {
+    "artistName": "ABC News",
+    "id": "6791300569",
+    "name": "What Happened to the McStays?",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/0f/4c/c2/0f4cc276-c560-32fc-8214-79c928ffc78a/mza_4680866050694825033.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1488",
+      "name": "True Crime",
+      "url": "https://itunes.apple.com/us/genre/id1488"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/what-happened-to-the-mcstays/id6791300569"
+   },
+   {
+    "artistName": "Goalhanger",
+    "id": "1537788786",
+    "name": "The Rest Is History",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/a3/05/8f/a3058ff1-eff9-036b-f412-8c4e96aad380/mza_221907431660085079.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1487",
+      "name": "History",
+      "url": "https://itunes.apple.com/us/genre/id1487"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-rest-is-history/id1537788786"
+   },
+   {
+    "artistName": "Fantasy Football",
+    "id": "917453719",
+    "name": "Fantasy Footballers - Fantasy Football Podcast",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/e0/f6/ed/e0f6edb8-b352-1dd1-1836-c77fdf5c6f17/mza_1578365354745278550.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1545",
+      "name": "Sports",
+      "url": "https://itunes.apple.com/us/genre/id1545"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/fantasy-footballers-fantasy-football-podcast/id917453719"
+   },
+   {
+    "artistName": "Andy Frisella",
+    "id": "1012570406",
+    "name": "REAL AF with Andy Frisella",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts115/v4/55/21/67/55216775-731a-1a0b-6c2a-81923902f058/mza_11706571282358600140.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1321",
+      "name": "Business",
+      "url": "https://itunes.apple.com/us/genre/id1321"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/real-af-with-andy-frisella/id1012570406"
+   },
+   {
+    "artistName": "New York Times Opinion",
+    "id": "1548604447",
+    "name": "The Ezra Klein Show",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/9d/ca/35/9dca35d8-e7d2-7e4f-63b5-c2ff4973a3f5/mza_16891544429738729361.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1324",
+      "name": "Society & Culture",
+      "url": "https://itunes.apple.com/us/genre/id1324"
+     },
+     {
+      "genreId": "1489",
+      "name": "News",
+      "url": "https://itunes.apple.com/us/genre/id1489"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-ezra-klein-show/id1548604447"
+   },
+   {
+    "artistName": "Jason Bateman, Sean Hayes, Will Arnett",
+    "id": "1521578868",
+    "name": "SmartLess",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/b1/93/5f/b1935f9f-35be-9144-e813-626bd8dabfb4/mza_4132654708551836825.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1303",
+      "name": "Comedy",
+      "url": "https://itunes.apple.com/us/genre/id1303"
+     },
+     {
+      "genreId": "1304",
+      "name": "Education",
+      "url": "https://itunes.apple.com/us/genre/id1304"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/smartless/id1521578868"
+   },
+   {
+    "artistName": "Ramsey Network",
+    "id": "77001367",
+    "name": "The Ramsey Show",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/52/5a/58/525a5881-56d7-af3a-b134-5917b08d6d0f/mza_1355546972903263890.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1321",
+      "name": "Business",
+      "url": "https://itunes.apple.com/us/genre/id1321"
+     },
+     {
+      "genreId": "1304",
+      "name": "Education",
+      "url": "https://itunes.apple.com/us/genre/id1304"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-ramsey-show/id77001367"
+   },
+   {
+    "artistName": "Mel Robbins",
+    "id": "1646101002",
+    "name": "The Mel Robbins Podcast",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/ab/66/a5/ab66a5f5-b52b-c70a-227b-0721bd9dc660/mza_13546984924981879479.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1304",
+      "name": "Education",
+      "url": "https://itunes.apple.com/us/genre/id1304"
+     },
+     {
+      "genreId": "1512",
+      "name": "Health & Fitness",
+      "url": "https://itunes.apple.com/us/genre/id1512"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-mel-robbins-podcast/id1646101002"
+   },
+   {
+    "artistName": "iHeartPodcasts",
+    "id": "278981407",
+    "name": "Stuff You Should Know",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/aa/82/91/aa82912f-23ee-6f6a-583c-a4e993164d0e/mza_12111158076643383507.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1324",
+      "name": "Society & Culture",
+      "url": "https://itunes.apple.com/us/genre/id1324"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/stuff-you-should-know/id278981407"
+   },
+   {
+    "artistName": "Armchair Umbrella",
+    "id": "1345682353",
+    "name": "Armchair Expert with Dax Shepard",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/f0/13/8f/f0138f4b-8bc3-0a64-2c11-ef566840f60f/mza_3062409012210474882.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1303",
+      "name": "Comedy",
+      "url": "https://itunes.apple.com/us/genre/id1303"
+     },
+     {
+      "genreId": "1309",
+      "name": "TV & Film",
+      "url": "https://itunes.apple.com/us/genre/id1309"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/armchair-expert-with-dax-shepard/id1345682353"
+   },
+   {
+    "artistName": "Perfect Strangers",
+    "id": "1450994021",
+    "name": "On Purpose with Jay Shetty",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/87/52/7a/87527ab3-7ac6-51b7-113c-22da4d083326/mza_7792914671925228549.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1512",
+      "name": "Health & Fitness",
+      "url": "https://itunes.apple.com/us/genre/id1512"
+     },
+     {
+      "genreId": "1321",
+      "name": "Business",
+      "url": "https://itunes.apple.com/us/genre/id1321"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/on-purpose-with-jay-shetty/id1450994021"
+   },
+   {
+    "artistName": "Hannah Berner & Paige DeSorbo",
+    "id": "1536352412",
+    "name": "Giggly Squad",
+    "kind": "podcasts",
+    "contentAdvisoryRating": "Explict",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/b1/0a/29/b10a293d-31bf-0e82-dd54-50452336f4c1/mza_908601013238146456.jpeg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1303",
+      "name": "Comedy",
+      "url": "https://itunes.apple.com/us/genre/id1303"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/giggly-squad/id1536352412"
+   },
+   {
+    "artistName": "Dan Le Batard",
+    "id": "934820588",
+    "name": "The Dan Le Batard Show",
+    "kind": "podcasts",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/57/d7/d9/57d7d9e0-cf27-7928-0650-578623e80c29/mza_14930160221470262963.jpg/100x100bb.png",
+    "genres": [
+     {
+      "genreId": "1545",
+      "name": "Sports",
+      "url": "https://itunes.apple.com/us/genre/id1545"
+     }
+    ],
+    "url": "https://podcasts.apple.com/us/podcast/the-dan-le-batard-show/id934820588"
+   }
+  ]
+ }
+}

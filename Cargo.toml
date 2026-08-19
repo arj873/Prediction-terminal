@@ -18,6 +18,10 @@ fancy-regex = "0.14"
 futures = "0.3"
 html-escape = "0.2"
 moka = { version = "0.12", features = ["future"] }
+# RSS. `scraper` is html5ever and cannot address a namespaced element
+# (`ht:approx_traffic`) the way a selector addresses a tag, so the one XML feed
+# here gets a real XML reader rather than a coerced HTML one.
+quick-xml = "0.37"
 rand = "0.8"
 regex = "1"
 reqwest = { version = "0.12", default-features = false, features = [

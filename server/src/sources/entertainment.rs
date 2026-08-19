@@ -187,6 +187,48 @@ const FEEDS: &[(&str, (&str, &str))] = &[
     ("KXBIGBROTHER", ("TV", "TV schedule")),
     ("KXDWTS", ("TV", "TV schedule")),
     ("KXSNL", ("TV", "TV schedule")),
+    // ---- awards -----------------------------------------------------------
+    // The largest gap the feed table had: award markets were ~61% of the
+    // entertainment volume with no companion command, and `KXOSCARPIC` alone
+    // carries more open interest than anything already covered here.
+    ("KXOSCAR", ("AWRD best picture", "Wikidata")),
+    ("KXOSCARPIC", ("AWRD best picture", "Wikidata")),
+    ("KXOSCARDIR", ("AWRD best director", "Wikidata")),
+    ("KXOSCARACTOR", ("AWRD best actor", "Wikidata")),
+    ("KXOSCARACTRESS", ("AWRD best actress", "Wikidata")),
+    ("KXOSCARSUPPACTOR", ("AWRD supporting actor", "Wikidata")),
+    (
+        "KXOSCARSUPPACTRESS",
+        ("AWRD supporting actress", "Wikidata"),
+    ),
+    ("KXOSCARANIMATED", ("AWRD animated", "Wikidata")),
+    ("KXOSCARINTL", ("AWRD international", "Wikidata")),
+    ("KXEMMY", ("AWRD drama series", "Wikidata")),
+    ("KXEMMYCOMEDY", ("AWRD comedy series", "Wikidata")),
+    ("KXEMMYDRAMA", ("AWRD drama series", "Wikidata")),
+    ("KXEMMYLIMITED", ("AWRD limited series", "Wikidata")),
+    ("KXGRAMMY", ("AWRD album of the year", "Wikidata")),
+    ("KXGRAMMYAOTY", ("AWRD album of the year", "Wikidata")),
+    ("KXGRAMMYROTY", ("AWRD record of the year", "Wikidata")),
+    ("KXGRAMMYSOTY", ("AWRD song of the year", "Wikidata")),
+    ("KXGRAMMYNEWARTIST", ("AWRD new artist", "Wikidata")),
+    ("KXGOLDENGLOBE", ("AWRD golden globe", "Wikidata")),
+    ("KXGAMEAWARD", ("AWRD game of the year", "Wikidata")),
+    ("KXGOTY", ("AWRD game of the year", "Wikidata")),
+    // ---- trending searches -------------------------------------------------
+    ("KXGOOGLESEARCH", ("TRND", "Google Trends")),
+    ("KXRANKLISTGOOGLESEARCH", ("TRND", "Google Trends")),
+    // ---- release dates -----------------------------------------------------
+    ("KXALBUMRELEASE", ("REL", "Apple Music")),
+    ("KXALBUMRELEASEDATE", ("REL", "Apple Music")),
+    ("KXSONGRELEASE", ("REL", "Apple Music")),
+    ("KXNEWTAYLOR", ("REL taylor swift", "Apple Music")),
+    ("KXCATALOGUE", ("REL", "Apple Music")),
+    // ---- podcasts ----------------------------------------------------------
+    ("KXTOPPOD", ("POD", "Apple Podcasts")),
+    ("KXROGANGUEST", ("POD episodes", "Apple Podcasts")),
+    ("KXPODCASTGUEST", ("POD episodes", "Apple Podcasts")),
+    ("KXCALLHERDADDY", ("POD episodes", "Apple Podcasts")),
 ];
 
 /// Longest matching prefix in `table`, or `None`.

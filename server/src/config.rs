@@ -63,6 +63,10 @@ pub struct Config {
     pub steam_api_base: String,
     pub steam_store_base: String,
     pub tvmaze_api_base: String,
+    pub wikidata_sparql_base: String,
+    pub google_trends_base: String,
+    pub itunes_api_base: String,
+    pub apple_rss_base: String,
 
     /// The built client, served as static files with an SPA fallback. Unset in
     /// development, where Vite serves the client and proxies `/api` here.
@@ -98,6 +102,10 @@ impl Default for Config {
             steam_api_base: defaults::STEAM_API.into(),
             steam_store_base: defaults::STEAM_STORE.into(),
             tvmaze_api_base: defaults::TVMAZE.into(),
+            wikidata_sparql_base: defaults::WIKIDATA_SPARQL.into(),
+            google_trends_base: defaults::GOOGLE_TRENDS.into(),
+            itunes_api_base: defaults::ITUNES.into(),
+            apple_rss_base: defaults::APPLE_RSS.into(),
             client_dir: None,
         }
     }
@@ -158,6 +166,10 @@ impl Config {
             steam_api_base: base("STEAM_API_BASE", defaults::STEAM_API),
             steam_store_base: base("STEAM_STORE_BASE", defaults::STEAM_STORE),
             tvmaze_api_base: base("TVMAZE_API_BASE", defaults::TVMAZE),
+            wikidata_sparql_base: base("WIKIDATA_SPARQL_BASE", defaults::WIKIDATA_SPARQL),
+            google_trends_base: base("GOOGLE_TRENDS_BASE", defaults::GOOGLE_TRENDS),
+            itunes_api_base: base("ITUNES_API_BASE", defaults::ITUNES),
+            apple_rss_base: base("APPLE_RSS_BASE", defaults::APPLE_RSS),
 
             client_dir: var("CLIENT_DIR").map(PathBuf::from),
         }
@@ -217,6 +229,17 @@ pub mod defaults {
     pub const STEAM_API: &str = "https://api.steampowered.com";
     pub const STEAM_STORE: &str = "https://store.steampowered.com";
     pub const TVMAZE: &str = "https://api.tvmaze.com";
+
+    /// Wikidata's SPARQL endpoint, not `wikidata.org/w/api.php`: the MediaWiki
+    /// API rate-limits shared egress hard enough to be unusable from a
+    /// container. Entity search still runs against MediaWiki, but server-side
+    /// through WDQS's own `wikibase:mwapi` service.
+    pub const WIKIDATA_SPARQL: &str = "https://query.wikidata.org/sparql";
+    /// The RSS surface. The JSON behind trends.google.com is a batchexecute RPC
+    /// needing a session token; the feed is a stable public document.
+    pub const GOOGLE_TRENDS: &str = "https://trends.google.com";
+    pub const ITUNES: &str = "https://itunes.apple.com";
+    pub const APPLE_RSS: &str = "https://rss.marketingtools.apple.com/api/v2";
 }
 
 #[cfg(test)]
