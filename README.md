@@ -284,6 +284,51 @@ resolves against. Those pairings are read off each series' own
 | `KEYS` | `KEYS` · `KEYS <chord> <command>` · `KEYS DEL <chord>` · `KEYS RESET` |
 | `HELP` | `HELP [command]` |
 
+### The menu bar
+
+Memorising a command table and a key map is the cost of admission to a terminal
+like this one, and there was nothing between "type `HELP` and read 35 verbs" and
+knowing them already. So: five menus across the top — MARKETS, PRICES, DATA,
+WORKSPACE, LEARN — with everything the terminal does under one of them.
+
+```
+MARKETS   PRICES   DATA   WORKSPACE   LEARN            Alt+M opens these menus
+
+  Search every venue at once…                SRCH …          Alt+S
+  What more than one broker lists            XV              Alt+X
+  Leaderboard                                TOP             Alt+T · NAV T
+  Leaderboard by…                                                  ▸
+  THE MARKET UNDER THE ROW CURSOR — this is what $ means
+  Chart it                                   GP $            NAV C
+```
+
+**It is a teaching surface, not a mouse convenience.** Every entry carries three
+columns: what it does, the command line it runs, and the key that runs it.
+Choosing one echoes the resolved command into the message log in the shape a
+typed line takes, pushes it onto the history where `↑` will find it, and says
+which key would have done the same. A week of using the menus should end the
+need for them.
+
+**Nothing here is a second dispatch path.** An entry hands its command line to
+the same `run()` a typed line goes to, `$` is filled the way a key binding fills
+it, and the chord column is read out of the live key map — so `KEYS alt+b OB $`
+relabels the menu with no code aware that it might. The columns are honest in
+the other direction too: `NAV` marks a key that only fires in NAV mode, an entry
+that would answer a bare verb with a usage error types it at the prompt instead
+(read off the usage line, not decided by hand), and an entry whose `$` cannot be
+filled greys out with the reason underneath.
+
+`MENU` drives the bar the way `FOCUS` drives the panels — `MENU`, `MENU markets`,
+`MENU NEXT|PREV|CLOSE` — with `Alt+M` and `F10` bound globally and `m` in NAV
+mode, so the menus are reachable by typing, by key and by mouse without any of
+the three being a special case.
+
+Only the curated entries are hand-written. LEARN's "Every command" is generated
+from the command table, so a verb added to the table is in the menus the same
+day — and `menu.test.ts` fails if it somehow is not, alongside checks that no
+entry names a command the terminal lacks and none runs a bare verb that needs an
+argument.
+
 ### Keys
 
 Run `KEYS` for the live map — like `HELP`, it is generated from the bindings

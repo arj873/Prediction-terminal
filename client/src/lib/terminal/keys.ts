@@ -321,6 +321,8 @@ const PRESET_TABLE: readonly (readonly [KeyScope, string, string, string])[] = [
   ['global', 'alt+g', '>GP', 'Start a GP command'],
   ['global', 'alt+s', '>SRCH', 'Start a SRCH command'],
   ['global', 'alt+d', '>DES', 'Start a DES command'],
+  ['global', 'alt+m', 'MENU', 'Open the menu bar'],
+  ['global', 'f10', 'MENU', 'Open the menu bar — where a menu bar has always been'],
 
   /* --- panel: NAV mode only, so plain letters are free. */
   ['panel', 'j', 'ROW NEXT', 'Row cursor down (or scroll, with no rows)'],
@@ -362,6 +364,7 @@ const PRESET_TABLE: readonly (readonly [KeyScope, string, string, string])[] = [
   ['panel', ':', 'FOCUS CMD', 'Back to the command line'],
   ['panel', 'i', 'FOCUS CMD', 'Back to the command line'],
   ['panel', 'escape', 'FOCUS CMD', 'Back to the command line'],
+  ['panel', 'm', 'MENU', 'Open the menu bar'],
 ];
 
 function buildPresets(): Binding[] {
@@ -578,6 +581,16 @@ export class Keymap {
  * Returns `null` when the command wants a subject and there is none, which the
  * caller reports rather than running a command with a literal `$` in it.
  */
+/**
+ * What to say when `$` has nothing to stand for.
+ *
+ * Named once because three places say it — the router, the menu's hint strip
+ * and the log line a disabled entry prints — and a reader who meets the same
+ * sentence in all three learns the rule once instead of three times.
+ */
+export const SUBJECT_HINT =
+  'needs a market: put the row cursor on one, or focus a panel that has one.';
+
 export function applySubject(command: string, subject: string | undefined): string | null {
   if (!command.includes('$')) return command;
 
@@ -628,6 +641,15 @@ export interface KeyRouterOptions {
   blurPrompt(): void;
   /** Give the workspace keyboard focus. False when there is no panel to focus. */
   focusWorkspace(): boolean;
+  /**
+   * Did the command that just ran take the keyboard deliberately?
+   *
+   * NAV mode hands focus back to the workspace after a binding fires, which is
+   * right for a binding that opened a panel and wrong for one that opened the
+   * menu — the menu asked for the keyboard, and snatching it back on the way
+   * out would close the thing the key was pressed to open.
+   */
+  keyboardClaimed?(): boolean;
   onMode?(mode: KeyMode): void;
 }
 
@@ -760,18 +782,18 @@ export class KeyRouter {
   #fire(command: string): void {
     const resolved = applySubject(command, this.#options.subject());
     if (resolved === null) {
-      this.#options.log(
-        `${command} needs a market: put the row cursor on one, or focus a panel that has one.`,
-        'warn',
-      );
+      this.#options.log(`${command} ${SUBJECT_HINT}`, 'warn');
       return;
     }
 
     this.#options.run(resolved);
 
     // Opening a panel from NAV mode should leave the keyboard in NAV mode, on
-    // the panel that just opened. A binding that types at the prompt is the one
-    // exception — it asked for the other mode.
-    if (this.#mode === 'nav' && !resolved.startsWith('>')) this.#options.focusWorkspace();
+    // the panel that just opened. Two exceptions, both of which asked for
+    // somewhere else: a binding that types at the prompt, and a command that
+    // took the keyboard for itself.
+    if (this.#mode === 'nav' && !resolved.startsWith('>') && !this.#options.keyboardClaimed?.()) {
+      this.#options.focusWorkspace();
+    }
   }
 }

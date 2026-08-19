@@ -751,6 +751,44 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    verb: 'MENU',
+    aliases: ['BAR'],
+    group: 'workspace',
+    summary: 'The menu bar: every command, grouped and labelled',
+    usage: 'MENU | MENU <name> | MENU NEXT|PREV|CLOSE',
+    examples: ['MENU', 'MENU markets', 'MENU learn', 'MENU CLOSE'],
+    handler(command, { menu }) {
+      const argument = command.args[0]?.toUpperCase();
+
+      switch (argument) {
+        case undefined:
+          menu.toggle();
+          return;
+        case 'CLOSE':
+        case 'HIDE':
+          menu.close();
+          return;
+        case 'NEXT':
+          menu.cycle(1);
+          return;
+        case 'PREV':
+        case 'PREVIOUS':
+          menu.cycle(-1);
+          return;
+        default:
+          break;
+      }
+
+      // A name, in full or by prefix. Naming the headings on failure is more
+      // use than "unknown menu" — there are five of them and they fit on a line.
+      if (!menu.open(command.args.join(' '))) {
+        throw new UsageError(
+          `No menu called "${command.args.join(' ')}". Try: ${menu.titles().join(', ')}.`,
+        );
+      }
+    },
+  },
+  {
     verb: 'KEYS',
     aliases: ['KEY', 'KEYMAP', 'BIND'],
     group: 'workspace',

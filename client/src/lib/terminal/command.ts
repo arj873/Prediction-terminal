@@ -38,6 +38,25 @@ import type { ParsedCommand } from './parser';
  * wipes, and the mode `FOCUS NAV` switches to — so the shell can build one
  * object and pass it as either.
  */
+/**
+ * The menu bar, as `MENU` needs to see it.
+ *
+ * An interface rather than the component, so the command table stays a pure
+ * module: it names what a menu must be able to do and knows nothing about how
+ * one is drawn.
+ */
+export interface MenuControl {
+  readonly isOpen: boolean;
+  /** The bar's headings, in order — for the usage line and for `MENU` itself. */
+  titles(): string[];
+  /** Open one by name or unambiguous prefix. False when nothing matches. */
+  open(name: string): boolean;
+  toggle(): void;
+  close(): void;
+  /** Walk to the next or previous heading, opening it. */
+  cycle(delta: number): void;
+}
+
 export interface CommandContext extends TerminalContext {
   /** The live key map, for `KEYS`. */
   keys: Keymap;
@@ -45,6 +64,8 @@ export interface CommandContext extends TerminalContext {
   clearLog(): void;
   /** Move the keyboard between the command line and the panels. */
   setMode(mode: KeyMode): void;
+  /** The menu bar, for `MENU`. */
+  menu: MenuControl;
 }
 
 export interface Command {
