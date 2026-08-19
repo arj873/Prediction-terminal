@@ -14,6 +14,7 @@
   import { onDestroy, onMount } from 'svelte';
 
   import CommandLine, { type LogLine } from '$lib/components/CommandLine.svelte';
+  import MenuBar from '$lib/components/MenuBar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
   import Tape from '$lib/components/Tape.svelte';
   import PanelGrid from '$lib/panels/PanelGrid.svelte';
@@ -35,6 +36,7 @@
   let lines = $state<LogLine[]>([]);
   let mode = $state<KeyMode>('cmd');
   let commandLine = $state<CommandLine | undefined>(undefined);
+  let menubar = $state<MenuBar | undefined>(undefined);
   let nextLineId = 0;
 
   function log(message: string, level: LogLevel = 'info') {
@@ -110,6 +112,18 @@
       lines = [];
     },
     setMode: (next: KeyMode) => router.setMode(next),
+    // The bar is constructed below this, so every call is deferred rather than
+    // captured. Before it mounts, `MENU` is a command with nothing to drive.
+    menu: {
+      get isOpen() {
+        return menubar?.opened() ?? false;
+      },
+      titles: () => menubar?.titles() ?? [],
+      open: (name: string) => menubar?.open(name) ?? false,
+      toggle: () => menubar?.toggle(),
+      close: () => menubar?.close(),
+      cycle: (delta: number) => menubar?.cycle(delta),
+    },
   };
 
   setTerminalContext(context);
@@ -122,6 +136,8 @@
     focusPrompt: () => commandLine?.focus(),
     blurPrompt: () => commandLine?.blur(),
     focusWorkspace: () => panels.focusElement(),
+    // The menu asked for the keyboard; NAV mode must not take it straight back.
+    keyboardClaimed: () => menubar?.opened() ?? false,
     onMode: (next) => {
       mode = next;
     },
@@ -147,6 +163,15 @@
 <svelte:window onkeydown={(event) => router.handle(event)} />
 
 <StatusBar {mode} />
+<MenuBar
+  bind:this={menubar}
+  {keymap}
+  {run}
+  {log}
+  subject={() => panels.subject()}
+  mode={() => mode}
+  setMode={(next) => router.setMode(next)}
+/>
 <Tape />
 <PanelGrid />
 <CommandLine
