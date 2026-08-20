@@ -30,8 +30,9 @@
   /**
    * The scan line, and the brokers that did not answer.
    *
-   * A board covering two of three brokers has to name the third: without it a
-   * "no match" reads as "no such market" rather than as "nobody asked".
+   * A board covering four of six brokers has to name the two that are missing:
+   * without that a "no match" reads as "no such market" rather than as "nobody
+   * asked".
    */
   function note(linked: LinkedSeriesResponse): NoteSegment[] {
     const scanned = Object.entries(linked.scanned)

@@ -1,11 +1,14 @@
 //! Deciding whether two brokers are listing the same question.
 //!
-//! Three exchanges word the same market three ways and name it three more:
+//! Six exchanges word the same market six ways and name it six more:
 //!
 //! ```text
 //!   Kalshi          KXFEDDECISION      "Fed decision in Oct 2026?"
 //!   Polymarket      fomc               "Fed Decision in October?"
 //!   Polymarket US   usfed-fomc         "Fed Decision in October"
+//!   Gemini          FED                "Fed decision in September?"
+//!   predict.fun     fed-decision-in    "Fed Decision in September?"
+//!   ForecastEx      FFDEC              "Fed Decision September 16 2026"
 //! ```
 //!
 //! Nothing in any payload connects those. What connects them is the language,
@@ -53,12 +56,19 @@ static STOPWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     .collect()
 });
 
-/// Terms the three venues use interchangeably, folded onto one word.
+/// Terms the venues use interchangeably, folded onto one word.
 ///
-/// Every entry is a pair actually observed across the three catalogues, not a
+/// Every entry is a pair actually observed across the live catalogues, not a
 /// general-purpose thesaurus: `fomc` and `fed` name one committee, `btc` and
 /// `bitcoin` one asset, `gop` and `republican` one party. Folding anything
 /// looser would start matching questions that merely share a subject.
+///
+/// `maintain` is deliberately not here, though Gemini words the middle FOMC
+/// rung "Fed maintains rate" where every other venue writes "No change". It is
+/// folded by the *phrase* rewrite below instead, because the bare verb also
+/// carries "Republicans maintain Senate majority" and a dozen other markets
+/// where turning it into `nochange` would pair a control race with a rate hold.
+/// A word that is only unambiguous next to its object belongs in a phrase rule.
 static SYNONYMS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     [
         ("fomc", "fed"),
@@ -646,7 +656,7 @@ fn shared_count(a: &TokenSet, b: &TokenSet) -> usize {
 /// How much two token sets have in common, allowing for one being terser.
 ///
 /// Dice alone — `2|A∩B| / (|A|+|B|)` — punishes a short title for being short,
-/// and the three venues are wildly asymmetric about length. Kalshi writes
+/// and the venues are wildly asymmetric about length. Kalshi writes
 /// "Bank of Japan rate decision in September" where Polymarket US writes "BoJ
 /// Decision"; Kalshi writes "Emmy Winner: Outstanding Lead Actor in a Comedy
 /// Series" where Polymarket US writes "Lead Actor, Comedy". Both pairs are
@@ -718,7 +728,7 @@ pub struct MatchScore {
 /// coefficient — so presence on exactly one side is scored in its own right.
 ///
 /// Only tokens whose absence is *meaningful* belong here. `high` qualifies
-/// because every temperature market on all three venues states whether it is the
+/// because every temperature market on every venue states whether it is the
 /// day's high or its low, so a title that omits it is not a title about
 /// temperature at all. A word that one venue simply happens to leave implicit
 /// would cause a correct pair to be rejected, and does not belong.

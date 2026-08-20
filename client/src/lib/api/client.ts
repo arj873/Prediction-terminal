@@ -123,7 +123,7 @@ function at(ref: VenueRef, path = ''): string {
 }
 
 /**
- * The market API, for any of the three brokers.
+ * The market API, for any of the brokers in the venue registry.
  *
  * Every call takes a {@link VenueRef} rather than a bare identifier, so a panel
  * cannot ask one venue for another's ticker — the mistake that would otherwise

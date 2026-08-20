@@ -26,14 +26,17 @@
 
   --accent: #4aa3ff;
   --accent-soft: rgba(74, 163, 255, 0.16);
-  /* Implied-price overlays. Cool and deliberately never green or red: an
-     overlay is a second series, not a direction, and a green line on a price
-     chart reads as "rising" to everyone who has ever looked at one. */
+  /* Implied-price overlays, and the venue badges, which take one hue each so a
+     broker is the same colour wherever it appears. Cool and deliberately never
+     green or red: an overlay is a second series, not a direction, and a green
+     line on a price chart reads as "rising" to everyone who has ever looked at
+     one. Six venues, six hues — a seventh needs another. */
   --overlay-1: #4aa3ff;
   --overlay-2: #c678dd;
   --overlay-3: #56b6c2;
   --overlay-4: #9aa8ff;
   --overlay-5: #ff79c6;
+  --overlay-6: #e5c07b;
   --up: #35d07f;
   --down: #ff5c5c;
   --warn: #ffb020;
@@ -60,6 +63,7 @@
   --overlay-3: #c678dd;
   --overlay-4: #ff9f4a;
   --overlay-5: #ff79c6;
+  --overlay-6: #b3a1ff;
   --up: #6bff9e;
   --down: #ff6b6b;
 }
@@ -84,6 +88,7 @@
   --overlay-3: #ff9f4a;
   --overlay-4: #ff79c6;
   --overlay-5: #b3a1ff;
+  --overlay-6: #56b6c2;
 }
 
 *,
@@ -958,6 +963,11 @@ button {
 .trade-sell {
   color: var(--down);
 }
+/* A print whose aggressor the venue does not state. Left in the body colour, so
+   the eye reads it as a price rather than as a direction that was never given. */
+.trade-unattributed {
+  color: var(--fg);
+}
 .tag-cell {
   font-size: var(--size-tiny);
   letter-spacing: 0.08em;
@@ -1442,6 +1452,24 @@ button {
   color: var(--overlay-3);
   border-color: color-mix(in srgb, var(--overlay-3) 40%, transparent);
   background: color-mix(in srgb, var(--overlay-3) 12%, transparent);
+}
+
+.venue-gemini {
+  color: var(--overlay-4);
+  border-color: color-mix(in srgb, var(--overlay-4) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-4) 12%, transparent);
+}
+
+.venue-predictfun {
+  color: var(--overlay-5);
+  border-color: color-mix(in srgb, var(--overlay-5) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-5) 12%, transparent);
+}
+
+.venue-forecastex {
+  color: var(--overlay-6);
+  border-color: color-mix(in srgb, var(--overlay-6) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-6) 12%, transparent);
 }
 
 .venue-cell {

@@ -1,5 +1,5 @@
 <!--
-  GP — the contract price chart, at any of the three venues.
+  GP — the contract price chart, at any venue that publishes bars.
 
   Candlesticks (or an area line) of the YES contract price, volume underneath,
   and a crosshair legend that reads out the bar under the cursor. Prices are

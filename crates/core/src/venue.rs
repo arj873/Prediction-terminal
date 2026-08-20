@@ -1,22 +1,33 @@
 //! The venues the terminal quotes: who they are, what they can answer, and how
 //! a contract at one of them is named.
 //!
-//! Three brokers list the same questions under three naming schemes. Kalshi has
-//! upper-case tickers (`KXFEDDECISION-26SEP-T3.75`), both Polymarkets have
+//! Six brokers list the same questions under six naming schemes. Kalshi and
+//! Gemini have upper-case tickers (`KXFEDDECISION-26SEP-T3.75`,
+//! `GEMI-FED260917-MAINTAIN`), ForecastEx has underscore-joined contract ids
+//! (`HORC_1126_Republican`), and both Polymarkets and predict.fun have
 //! lower-case slugs (`will-the-fed-decrease-interest-rates-…`,
-//! `tec-mlb-nlchamp-2026-09-27-lad`). Rather than three parallel command sets,
-//! every command takes one *reference* — an optional venue prefix and an
-//! identifier — and this module is the only place that knows how to read one.
+//! `tec-mlb-nlchamp-2026-09-27-lad`, `big-game-champion-2027~26952`). Rather
+//! than six parallel command sets, every command takes one *reference* — an
+//! optional venue prefix and an identifier — and this module is the only place
+//! that knows how to read one.
 //!
 //! ```text
 //! KXFEDDECISION-26SEP-T3.75      → kalshi (the default, so nothing changes)
 //! pm:fed-decision-in-september   → Polymarket International
 //! pmus:fed-decision-2026-09-16   → Polymarket US
+//! gem:FED260917                  → Gemini
+//! pf:big-game-champion-2027~26952 → predict.fun
+//! fx:FF_091726_3.625             → ForecastEx
 //! ```
 //!
 //! Case is part of the identifier, not decoration: Kalshi 404s a lower-case
 //! ticker and Polymarket 404s an upper-case slug, so folding happens here, once,
-//! per venue — never at the call site.
+//! per venue — never at the call site. Two venues need more than folding.
+//! ForecastEx answers `/api/prices` only to the exact case it publishes
+//! (`HORC_1126_Republican`), and its own catalogue endpoint is case-insensitive,
+//! so it folds to upper here and restores the canonical spelling from its
+//! catalogue on the way out. Gemini is case-insensitive throughout and folds to
+//! upper only because that is how it prints its own tickers.
 //!
 //! One table drives all of it. Everything a venue differs by — its aliases,
 //! whether it prints bare, whether it is the default for an unprefixed
@@ -83,7 +94,7 @@ impl fmt::Display for MoverSort {
     }
 }
 
-/// Identifier case. Kalshi shouts; the Polymarkets do not.
+/// Identifier case. Kalshi, Gemini and ForecastEx shout; the slug venues do not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IdCase {
     Upper,
@@ -98,6 +109,14 @@ pub enum IdCase {
 /// from "this venue is down". Both of those were live bugs.
 #[derive(Debug, Clone, Copy)]
 pub struct VenueCapabilities {
+    /// Publishes resting depth the terminal can ladder (`OB`).
+    ///
+    /// A venue can have a live market and no book to show: ForecastEx matches
+    /// by pairing a YES buyer with a NO buyer and publishes only the resulting
+    /// print, so there is no bid, no ask and no ladder anywhere in its public
+    /// API. That is a fact about how the exchange works, not an outage, and the
+    /// button says so.
+    pub book: bool,
     /// Publishes price history the terminal can chart (`GP`).
     pub candles: bool,
     /// Publishes a public print tape (`TAS`).
@@ -151,6 +170,15 @@ pub enum Venue {
     #[serde(rename = "polymarket-us")]
     #[ts(rename = "polymarket-us")]
     PolymarketUs,
+    #[serde(rename = "gemini")]
+    #[ts(rename = "gemini")]
+    Gemini,
+    #[serde(rename = "predictfun")]
+    #[ts(rename = "predictfun")]
+    PredictFun,
+    #[serde(rename = "forecastex")]
+    #[ts(rename = "forecastex")]
+    ForecastEx,
 }
 
 impl Venue {
@@ -160,6 +188,9 @@ impl Venue {
             Venue::Kalshi => "kalshi",
             Venue::Polymarket => "polymarket",
             Venue::PolymarketUs => "polymarket-us",
+            Venue::Gemini => "gemini",
+            Venue::PredictFun => "predictfun",
+            Venue::ForecastEx => "forecastex",
         }
     }
 
@@ -186,6 +217,9 @@ impl FromStr for Venue {
             "kalshi" => Ok(Venue::Kalshi),
             "polymarket" => Ok(Venue::Polymarket),
             "polymarket-us" => Ok(Venue::PolymarketUs),
+            "gemini" => Ok(Venue::Gemini),
+            "predictfun" => Ok(Venue::PredictFun),
+            "forecastex" => Ok(Venue::ForecastEx),
             _ => Err(()),
         }
     }
@@ -210,6 +244,7 @@ pub static VENUES: &[VenueInfo] = &[
         is_default: true,
         bare_ref: true,
         capabilities: VenueCapabilities {
+            book: true,
             candles: true,
             trades: true,
             series_category_filter: true,
@@ -236,6 +271,7 @@ pub static VENUES: &[VenueInfo] = &[
         is_default: false,
         bare_ref: false,
         capabilities: VenueCapabilities {
+            book: true,
             candles: true,
             trades: true,
             series_category_filter: false,
@@ -269,6 +305,7 @@ pub static VENUES: &[VenueInfo] = &[
         is_default: false,
         bare_ref: false,
         capabilities: VenueCapabilities {
+            book: true,
             candles: false,
             trades: false,
             series_category_filter: false,
@@ -278,6 +315,102 @@ pub static VENUES: &[VenueInfo] = &[
             note: "Polymarket US serves price history, prints and ranking figures only to an \
                    authenticated caller. The terminal reads public endpoints only, so quote \
                    and book (DES, OB) work and the rest say so.",
+        },
+    },
+    VenueInfo {
+        id: Venue::Gemini,
+        label: "Gemini",
+        code: "GEM",
+        prefix: "gem:",
+        id_label: "ticker",
+        // Case-insensitive everywhere — the catalogue, the single event and
+        // every api.gemini.com path answer a lower-case ticker. Folded up
+        // anyway, because upper is how the exchange prints its own.
+        case: IdCase::Upper,
+        site: "https://www.gemini.com/prediction-markets",
+        aliases: &["gemini", "gemi", "gem"],
+        is_default: false,
+        bare_ref: false,
+        capabilities: VenueCapabilities {
+            book: true,
+            candles: true,
+            trades: true,
+            series_category_filter: true,
+            // Turnover is stated per event, never per contract, so a volume
+            // board over contracts would rank on a figure no contract carries.
+            // The movers are ranked on each leg's own 24h move instead, gated
+            // on the parent event having traded.
+            sorts: &[MoverSort::Gainers, MoverSort::Losers],
+            note: "Gemini states turnover per event rather than per contract, and publishes no \
+                   open interest or resting-depth figure, so those boards are empty. The movers \
+                   are ranked on each contract\u{2019}s own 24h move, gated on its event trading.",
+        },
+    },
+    VenueInfo {
+        id: Venue::PredictFun,
+        label: "predict.fun",
+        code: "PF",
+        prefix: "pf:",
+        id_label: "slug",
+        case: IdCase::Lower,
+        site: "https://predict.fun",
+        aliases: &["predictfun", "predict-fun", "predict.fun", "pf", "predict"],
+        is_default: false,
+        bare_ref: false,
+        capabilities: VenueCapabilities {
+            book: true,
+            candles: true,
+            trades: true,
+            series_category_filter: true,
+            // No movers board: the venue's 24h change figure is a magnitude,
+            // not a move. Sorting its own catalogue ascending by that field
+            // returns 0.0 as the minimum across every page, and 259 sampled
+            // markets held not one negative value — so a `gainers` board built
+            // on it would rank the biggest falls alongside the biggest rises
+            // and call them all rises.
+            sorts: &[
+                MoverSort::Volume,
+                MoverSort::OpenInterest,
+                MoverSort::Liquidity,
+            ],
+            note: "predict.fun states volume and resting depth in US dollars rather than \
+                   contracts, publishes a probability sample series rather than OHLC bars, and \
+                   states a 24h move without a direction, so there is no movers board.",
+        },
+    },
+    VenueInfo {
+        id: Venue::ForecastEx,
+        label: "ForecastEx",
+        code: "FEX",
+        prefix: "fx:",
+        id_label: "contract id",
+        case: IdCase::Upper,
+        site: "https://forecastex.com",
+        aliases: &["forecastex", "forecast-ex", "fex", "fx", "forecast"],
+        is_default: false,
+        bare_ref: false,
+        capabilities: VenueCapabilities {
+            // The exchange matches by pairing a YES buyer with a NO buyer, so a
+            // print is all there is: no bid, no ask, no ladder anywhere in the
+            // public API.
+            book: false,
+            candles: true,
+            trades: true,
+            series_category_filter: true,
+            // Every ranking figure comes from the end-of-session archive rather
+            // than the live catalogue, except open interest, which the
+            // catalogue states.
+            sorts: &[
+                MoverSort::Volume,
+                MoverSort::Gainers,
+                MoverSort::Losers,
+                MoverSort::OpenInterest,
+            ],
+            note: "ForecastEx runs a paired auction and publishes no order book or quote at all, \
+                   so there is no ladder to draw \u{2014} DES gives the last YES and NO prints and \
+                   the open interest behind them. Turnover and the daily move come from the \
+                   exchange\u{2019}s end-of-session archive, so they are one session behind the \
+                   tape.",
         },
     },
 ];
@@ -315,7 +448,22 @@ pub enum AliasContext {
 /// out of free text, or `SRCH us election` quietly becomes "search Polymarket US
 /// for *election*" and `TV The Office US` searches the wrong book. A venue
 /// filter is a convenience; silently changing which exchange was searched is not.
-const PREFIX_ONLY_ALIASES: &[&str] = &["us", "k", "intl", "international"];
+///
+/// The newer venues bring four more of these. `gem` is a word, `fx` is what a
+/// trader calls the currency market, and `SRCH predict fed` and `SRCH forecast
+/// cpi` are both things someone would type meaning the words, not the exchange.
+/// Their unambiguous spellings — `gemini`, `fex`, `predictfun`, `forecastex` —
+/// stay claimable, so nothing is lost but the collisions.
+const PREFIX_ONLY_ALIASES: &[&str] = &[
+    "us",
+    "k",
+    "intl",
+    "international",
+    "gem",
+    "fx",
+    "predict",
+    "forecast",
+];
 
 /// Read a venue name or alias. `None` when the token names no venue.
 pub fn parse_venue(token: &str, context: AliasContext) -> Option<Venue> {
@@ -437,6 +585,7 @@ pub fn format_ref(reference: &VenueRef) -> String {
 /// A capability a UI might want to offer a button for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Capability {
+    Book,
     Candles,
     Trades,
 }
@@ -445,6 +594,7 @@ pub enum Capability {
 pub fn supports(venue: Venue, capability: Capability) -> bool {
     let caps = venue_info(venue).capabilities;
     match capability {
+        Capability::Book => caps.book,
         Capability::Candles => caps.candles,
         Capability::Trades => caps.trades,
     }
@@ -573,7 +723,7 @@ mod tests {
 
     #[test]
     fn every_variant_has_exactly_one_registry_row() {
-        assert_eq!(VENUES.len(), 3);
+        assert_eq!(VENUES.len(), 6);
         for venue in venue_ids() {
             assert_eq!(venue_info(venue).id, venue);
         }

@@ -3,4 +3,4 @@
 /**
  * The brokers the terminal quotes.
  */
-export type Venue = "kalshi" | "polymarket" | "polymarket-us";
+export type Venue = "kalshi" | "polymarket" | "polymarket-us" | "gemini" | "predictfun" | "forecastex";

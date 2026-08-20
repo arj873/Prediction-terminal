@@ -2,20 +2,31 @@
  * The venues the terminal quotes: who they are, what they can answer, and how
  * a contract at one of them is named.
  *
- * Three brokers list the same questions under three naming schemes. Kalshi has
- * upper-case tickers (`KXFEDDECISION-26SEP-T3.75`), both Polymarkets have
+ * Six brokers list the same questions under six naming schemes. Kalshi and
+ * Gemini have upper-case tickers (`KXFEDDECISION-26SEP-T3.75`,
+ * `GEMI-FED260917-MAINTAIN`), ForecastEx has underscore-joined contract ids
+ * (`HORC_1126_Republican`), and both Polymarkets and predict.fun have
  * lower-case slugs (`will-the-fed-decrease-interest-rates-…`,
- * `tec-mlb-nlchamp-2026-09-27-lad`). Rather than three parallel command sets,
- * every command takes one *reference* — an optional venue prefix and an
- * identifier — and this module is the only place that knows how to read one.
+ * `tec-mlb-nlchamp-2026-09-27-lad`, `big-game-champion-2027~26952`). Rather
+ * than six parallel command sets, every command takes one *reference* — an
+ * optional venue prefix and an identifier — and this module is the only place
+ * that knows how to read one.
  *
  *   KXFEDDECISION-26SEP-T3.75      → kalshi (the default, so nothing changes)
  *   pm:fed-decision-in-september   → Polymarket International
  *   pmus:fed-decision-2026-09-16   → Polymarket US
+ *   gem:FED260917                  → Gemini
+ *   pf:big-game-champion-2027~26952 → predict.fun
+ *   fx:FF_091726_3.625             → ForecastEx
  *
  * Case is part of the identifier, not decoration: Kalshi 404s a lower-case
  * ticker and Polymarket 404s an upper-case slug, so folding happens here, once,
- * per venue — never at the call site.
+ * per venue — never at the call site. Two venues need more than folding.
+ * ForecastEx answers `/api/prices` only to the exact case it publishes
+ * (`HORC_1126_Republican`), and its own catalogue endpoint is case-insensitive,
+ * so it folds to upper here and restores the canonical spelling from its
+ * catalogue on the way out. Gemini is case-insensitive throughout and folds to
+ * upper only because that is how it prints its own tickers.
  *
  * One table drives all of it. Everything a venue differs by — its aliases,
  * whether it prints bare, whether it is the default for an unprefixed
@@ -50,6 +61,15 @@ export type { MoverSort, Venue };
  * volume" apart from "this venue is down". Both of those were live bugs.
  */
 export interface VenueCapabilities {
+  /**
+   * Publishes resting depth the terminal can ladder (`OB`).
+   *
+   * A venue can have a live market and no book to show: ForecastEx matches by
+   * pairing a YES buyer with a NO buyer and publishes only the resulting print,
+   * so there is no bid, no ask and no ladder anywhere in its public API. That is
+   * a fact about how the exchange works, not an outage, and the button says so.
+   */
+  book: boolean;
   /** Publishes price history the terminal can chart (`GP`). */
   candles: boolean;
   /** Publishes a public print tape (`TAS`). */
@@ -76,7 +96,7 @@ interface VenueDefinition {
   prefix: string;
   /** What this venue calls a contract identifier, for usage text. */
   idLabel: string;
-  /** Identifier case. Kalshi shouts; the Polymarkets do not. */
+  /** Identifier case. Kalshi, Gemini and ForecastEx shout; the slug venues do not. */
   case: 'upper' | 'lower';
   /** Public web page for a market, so a panel can link out. */
   site: string;
@@ -109,6 +129,7 @@ const VENUE_TABLE = [
     isDefault: true,
     bareRef: true,
     capabilities: {
+      book: true,
       candles: true,
       trades: true,
       seriesCategoryFilter: true,
@@ -125,6 +146,7 @@ const VENUE_TABLE = [
     site: 'https://polymarket.com',
     aliases: ['polymarket', 'poly', 'pm', 'intl', 'international', 'polymarket-intl'],
     capabilities: {
+      book: true,
       candles: true,
       trades: true,
       seriesCategoryFilter: false,
@@ -144,6 +166,7 @@ const VENUE_TABLE = [
     site: 'https://polymarket.us',
     aliases: ['polymarketus', 'polymarket-us', 'polyus', 'pmus', 'pm-us', 'us'],
     capabilities: {
+      book: true,
       candles: false,
       trades: false,
       seriesCategoryFilter: false,
@@ -154,6 +177,86 @@ const VENUE_TABLE = [
         'Polymarket US serves price history, prints and ranking figures only to an ' +
         'authenticated caller. The terminal reads public endpoints only, so quote ' +
         'and book (DES, OB) work and the rest say so.',
+    },
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini',
+    code: 'GEM',
+    prefix: 'gem:',
+    idLabel: 'ticker',
+    // Case-insensitive everywhere — the catalogue, the single event and every
+    // api.gemini.com path answer a lower-case ticker. Folded up anyway, because
+    // upper is how the exchange prints its own.
+    case: 'upper',
+    site: 'https://www.gemini.com/prediction-markets',
+    aliases: ['gemini', 'gemi', 'gem'],
+    capabilities: {
+      book: true,
+      candles: true,
+      trades: true,
+      seriesCategoryFilter: true,
+      // Turnover is stated per event, never per contract, so a volume board over
+      // contracts would rank on a figure no contract carries. The movers are
+      // ranked on each leg's own 24h move instead, gated on the parent event
+      // having traded.
+      sorts: ['gainers', 'losers'],
+      note:
+        'Gemini states turnover per event rather than per contract, and publishes no ' +
+        'open interest or resting-depth figure, so those boards are empty. The movers ' +
+        'are ranked on each contract\u2019s own 24h move, gated on its event trading.',
+    },
+  },
+  {
+    id: 'predictfun',
+    label: 'predict.fun',
+    code: 'PF',
+    prefix: 'pf:',
+    idLabel: 'slug',
+    case: 'lower',
+    site: 'https://predict.fun',
+    aliases: ['predictfun', 'predict-fun', 'predict.fun', 'pf', 'predict'],
+    capabilities: {
+      book: true,
+      candles: true,
+      trades: true,
+      seriesCategoryFilter: true,
+      // No movers board: the venue's 24h change figure is a magnitude, not a
+      // move. Sorting its own catalogue ascending by that field returns 0.0 as
+      // the minimum across every page, and 259 sampled markets held not one
+      // negative value — so a `gainers` board built on it would rank the biggest
+      // falls alongside the biggest rises and call them all rises.
+      sorts: ['volume', 'open_interest', 'liquidity'],
+      note:
+        'predict.fun states volume and resting depth in US dollars rather than contracts, ' +
+        'publishes a probability sample series rather than OHLC bars, and states a 24h ' +
+        'move without a direction, so there is no movers board.',
+    },
+  },
+  {
+    id: 'forecastex',
+    label: 'ForecastEx',
+    code: 'FEX',
+    prefix: 'fx:',
+    idLabel: 'contract id',
+    case: 'upper',
+    site: 'https://forecastex.com',
+    aliases: ['forecastex', 'forecast-ex', 'fex', 'fx', 'forecast'],
+    capabilities: {
+      // The exchange matches by pairing a YES buyer with a NO buyer, so a print
+      // is all there is: no bid, no ask, no ladder anywhere in the public API.
+      book: false,
+      candles: true,
+      trades: true,
+      seriesCategoryFilter: true,
+      // Every ranking figure comes from the end-of-session archive rather than
+      // the live catalogue, except open interest, which the catalogue states.
+      sorts: ['volume', 'gainers', 'losers', 'open_interest'],
+      note:
+        'ForecastEx runs a paired auction and publishes no order book or quote at all, so ' +
+        'there is no ladder to draw \u2014 DES gives the last YES and NO prints and the open ' +
+        'interest behind them. Turnover and the daily move come from the exchange\u2019s ' +
+        'end-of-session archive, so they are one session behind the tape.',
     },
   },
 ] as const satisfies readonly VenueDefinition[];
@@ -193,8 +296,23 @@ const ALIASES: ReadonlyMap<string, Venue> = new Map(
  * out of free text, or `SRCH us election` quietly becomes "search Polymarket US
  * for *election*" and `TV The Office US` searches the wrong book. A venue
  * filter is a convenience; silently changing which exchange was searched is not.
+ *
+ * The newer venues bring four more of these. `gem` is a word, `fx` is what a
+ * trader calls the currency market, and `SRCH predict fed` and `SRCH forecast
+ * cpi` are both things someone would type meaning the words, not the exchange.
+ * Their unambiguous spellings — `gemini`, `fex`, `predictfun`, `forecastex` —
+ * stay claimable, so nothing is lost but the collisions.
  */
-const PREFIX_ONLY_ALIASES: ReadonlySet<string> = new Set(['us', 'k', 'intl', 'international']);
+const PREFIX_ONLY_ALIASES: ReadonlySet<string> = new Set([
+  'us',
+  'k',
+  'intl',
+  'international',
+  'gem',
+  'fx',
+  'predict',
+  'forecast',
+]);
 
 /**
  * Read a venue name or alias. `null` when the token names no venue.
@@ -259,7 +377,7 @@ export function formatRef(ref: VenueRef): string {
 }
 
 /** Whether a venue serves a given capability, for a UI deciding what to offer. */
-export function supports(venue: Venue, capability: 'candles' | 'trades'): boolean {
+export function supports(venue: Venue, capability: 'book' | 'candles' | 'trades'): boolean {
   return venueInfo(venue).capabilities[capability];
 }
 

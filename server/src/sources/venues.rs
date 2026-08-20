@@ -1,12 +1,13 @@
-//! One interface over the three brokers.
+//! One interface over the six brokers.
 //!
 //! Every venue module already exports the same handful of verbs; this states
 //! that as one function per verb, each taking the [`Venue`] and handing the call
 //! to the module that serves it, so the routes and the cross-venue code are
-//! written once instead of three times.
+//! written once instead of once per broker.
 //!
 //! The interface is deliberately the union of what the venues *can* answer, not
-//! the intersection — Polymarket US has no public candles or tape, and asking
+//! the intersection — Polymarket US has no public candles or tape, ForecastEx
+//! has no book at all, and asking
 //! for one fails with a described `unsupported` error rather than the surface
 //! pretending the verb is absent. A terminal that silently omitted a chart would
 //! be worse than one that says why there isn't one.
@@ -31,7 +32,7 @@ use terminal_core::venue::{
 use crate::app::AppState;
 use crate::error::{Result, UpstreamError};
 use crate::sources::corpus::{Corpus, SearchResponse};
-use crate::sources::{kalshi, polymarket, polymarketus};
+use crate::sources::{forecastex, gemini, kalshi, polymarket, polymarketus, predictfun};
 
 /* ------------------------------------------------------- declared refusals */
 
@@ -101,20 +102,36 @@ pub async fn get_market(state: &AppState, venue: Venue, id: &str) -> Result<Mark
         Venue::Kalshi => kalshi::get_market(state, id).await,
         Venue::Polymarket => polymarket::get_market(state, id).await,
         Venue::PolymarketUs => polymarketus::get_market(state, id).await,
+        Venue::Gemini => gemini::get_market(state, id).await,
+        Venue::PredictFun => predictfun::get_market(state, id).await,
+        Venue::ForecastEx => forecastex::get_market(state, id).await,
     }
 }
 
 /// The resting book, `depth` levels a side.
+///
+/// ForecastEx has a live market and no book: it matches by pairing a YES buyer
+/// with a NO buyer, so a print is the whole of what exists and there is no bid,
+/// no ask and no ladder anywhere in its public API. Refusing here rather than
+/// dressing the last print up as a one-level ladder is the difference between
+/// the panel saying how the exchange works and the panel inventing a quote.
 pub async fn get_order_book(
     state: &AppState,
     venue: Venue,
     id: &str,
     depth: usize,
 ) -> Result<OrderBook> {
+    if !supports(venue, Capability::Book) {
+        return Err(declined(venue, "an order book", &serving(Capability::Book)));
+    }
+
     match venue {
         Venue::Kalshi => kalshi::get_order_book(state, id, depth).await,
         Venue::Polymarket => polymarket::get_order_book(state, id, depth).await,
         Venue::PolymarketUs => polymarketus::get_order_book(state, id, depth).await,
+        Venue::Gemini => gemini::get_order_book(state, id, depth).await,
+        Venue::PredictFun => predictfun::get_order_book(state, id, depth).await,
+        Venue::ForecastEx => forecastex::get_order_book(state, id, depth).await,
     }
 }
 
@@ -141,6 +158,9 @@ pub async fn get_trades(
         Venue::Kalshi => kalshi::get_trades(state, id, limit, None).await,
         Venue::Polymarket => polymarket::get_trades(state, id, limit).await,
         Venue::PolymarketUs => polymarketus::get_trades(state, id, limit).await,
+        Venue::Gemini => gemini::get_trades(state, id, limit).await,
+        Venue::PredictFun => predictfun::get_trades(state, id, limit).await,
+        Venue::ForecastEx => forecastex::get_trades(state, id, limit).await,
     }
 }
 
@@ -163,6 +183,9 @@ pub async fn get_candles(
         Venue::PolymarketUs => {
             polymarketus::get_candles(state, id, interval, start_ts, end_ts).await
         }
+        Venue::Gemini => gemini::get_candles(state, id, interval, start_ts, end_ts).await,
+        Venue::PredictFun => predictfun::get_candles(state, id, interval, start_ts, end_ts).await,
+        Venue::ForecastEx => forecastex::get_candles(state, id, interval, start_ts, end_ts).await,
     }
 }
 
@@ -172,6 +195,9 @@ pub async fn get_event(state: &AppState, venue: Venue, id: &str) -> Result<Venue
         Venue::Kalshi => kalshi::get_event(state, id).await,
         Venue::Polymarket => polymarket::get_event(state, id).await,
         Venue::PolymarketUs => polymarketus::get_event(state, id).await,
+        Venue::Gemini => gemini::get_event(state, id).await,
+        Venue::PredictFun => predictfun::get_event(state, id).await,
+        Venue::ForecastEx => forecastex::get_event(state, id).await,
     }
 }
 
@@ -193,6 +219,9 @@ pub async fn list_series(
         Venue::Kalshi => kalshi::list_series(state, category).await,
         Venue::Polymarket => polymarket::list_series(state).await,
         Venue::PolymarketUs => polymarketus::list_series(state).await,
+        Venue::Gemini => gemini::list_series(state, category).await,
+        Venue::PredictFun => predictfun::list_series(state, category).await,
+        Venue::ForecastEx => forecastex::list_series(state, category).await,
     }
 }
 
@@ -207,6 +236,9 @@ pub async fn search(
         Venue::Kalshi => kalshi::search(state, query, limit).await,
         Venue::Polymarket => polymarket::search(state, query, limit).await,
         Venue::PolymarketUs => polymarketus::search(state, query, limit).await,
+        Venue::Gemini => gemini::search(state, query, limit).await,
+        Venue::PredictFun => predictfun::search(state, query, limit).await,
+        Venue::ForecastEx => forecastex::search(state, query, limit).await,
     }
 }
 
@@ -233,6 +265,9 @@ pub async fn top_markets(
         Venue::Kalshi => kalshi::top_markets(state, sort, limit).await,
         Venue::Polymarket => polymarket::top_markets(state, sort, limit).await,
         Venue::PolymarketUs => polymarketus::top_markets(state, sort, limit).await,
+        Venue::Gemini => gemini::top_markets(state, sort, limit).await,
+        Venue::PredictFun => predictfun::top_markets(state, sort, limit).await,
+        Venue::ForecastEx => forecastex::top_markets(state, sort, limit).await,
     }
 }
 
@@ -243,6 +278,9 @@ pub async fn corpus_snapshot(state: &AppState, venue: Venue) -> Result<Arc<Corpu
         Venue::Kalshi => kalshi::corpus_snapshot(state).await,
         Venue::Polymarket => polymarket::corpus_snapshot(state).await,
         Venue::PolymarketUs => polymarketus::corpus_snapshot(state).await,
+        Venue::Gemini => gemini::corpus_snapshot(state).await,
+        Venue::PredictFun => predictfun::corpus_snapshot(state).await,
+        Venue::ForecastEx => forecastex::corpus_snapshot(state).await,
     }
 }
 
@@ -252,6 +290,9 @@ pub fn warm_corpus(state: &AppState, venue: Venue) {
         Venue::Kalshi => kalshi::warm_corpus(state),
         Venue::Polymarket => polymarket::warm_corpus(state),
         Venue::PolymarketUs => polymarketus::warm_corpus(state),
+        Venue::Gemini => gemini::warm_corpus(state),
+        Venue::PredictFun => predictfun::warm_corpus(state),
+        Venue::ForecastEx => forecastex::warm_corpus(state),
     }
 }
 
@@ -260,12 +301,12 @@ pub fn warm_corpus(state: &AppState, venue: Venue) {
 ///
 /// Awaited rather than spawned per venue, because what runs after it —
 /// [`crate::sources::crossvenue::warm_indexes`] — reads these same snapshots,
-/// and would otherwise start three crawls of its own alongside these.
+/// and would otherwise start a crawl of its own per venue alongside these.
 ///
 /// A venue that is down is logged and skipped. This runs at startup with nobody
 /// to report to, and one broker refusing a datacentre IP must not cost the
-/// other two their warm catalogue: the failure is not cached, so the next
-/// reader retries it anyway.
+/// others their warm catalogue: the failure is not cached, so the next reader
+/// retries it anyway.
 pub async fn warm_all(state: &AppState) {
     let crawls = venue_ids()
         .into_iter()

@@ -8,6 +8,7 @@
 
 pub mod implied;
 pub mod matching;
+pub mod slug;
 pub mod types;
 pub mod util;
 pub mod venue;

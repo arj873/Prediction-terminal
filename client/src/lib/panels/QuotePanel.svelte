@@ -60,11 +60,12 @@
    * The obvious next commands, one click away.
    *
    * Only what this venue actually serves is offered. Polymarket US publishes no
-   * public price history or tape, so an enabled GP/TAS button here was a click
-   * that could only ever land on a 501 — the capability is declared on the venue
-   * registry precisely so the button can know before the reader does. A disabled
-   * one is still shown, wearing the venue's own explanation as its tooltip: the
-   * reader learns the book exists and the feed does not.
+   * public price history or tape and ForecastEx publishes no book at all, so an
+   * enabled GP/TAS/OB button there was a click that could only ever land on a
+   * 501 — the capability is declared on the venue registry precisely so the
+   * button can know before the reader does. A disabled one is still shown,
+   * wearing the venue's own explanation as its tooltip: the reader learns what
+   * the exchange does publish rather than that a button did nothing.
    */
   const actions = $derived.by(() => {
     const market = data.data?.market;
@@ -76,7 +77,7 @@
 
     return [
       { label: 'GP', command: `GP ${marketRef}`, disabled: caps.candles ? undefined : caps.note },
-      { label: 'OB', command: `OB ${marketRef}`, disabled: undefined },
+      { label: 'OB', command: `OB ${marketRef}`, disabled: caps.book ? undefined : caps.note },
       { label: 'TAS', command: `TAS ${marketRef}`, disabled: caps.trades ? undefined : caps.note },
       ...(market.eventTicker
         ? [

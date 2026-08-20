@@ -1,0 +1,843 @@
+{
+ "data": [
+  {
+   "id": "1889",
+   "ticker": "DEMNOM2028",
+   "slug": "2028-democratic-nominee-for-president",
+   "title": "2028 Democratic Nominee for President?",
+   "type": "categorical",
+   "category": "Politics",
+   "subcategory": {
+    "id": 150,
+    "slug": "politics_presidential",
+    "name": "Presidential",
+    "path": [
+     "Politics",
+     "Presidential"
+    ]
+   },
+   "status": "active",
+   "tags": [
+    "Presidential"
+   ],
+   "volume": "89527",
+   "volume24h": "6987",
+   "volumeDelta24hPct": "92.74",
+   "effectiveDate": "2026-02-19T22:02:11.412Z",
+   "expiryDate": "2028-11-10T00:00:00.000Z",
+   "shortSummary": "AOC leads early 2028 Democratic nomination polls in New Hampshire but a young Democrats survey favors Harris and she keeps Senate option open as alternative path forward.",
+   "contracts": [
+    {
+     "id": "1889-10934",
+     "label": "Alexandria Ocasio-Cortez",
+     "abbreviatedName": "AOC",
+     "ticker": "DEMNOM28AOC",
+     "instrumentSymbol": "GEMI-DEMNOM2028-DEMNOM28AOC",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "This market will resolve to “Yes” if Alexandria Ocasio-Cortez wins and formally accepts the 2028 Democratic Party nomination for U.S. Presid",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.18",
+       "no": "0.83"
+      },
+      "sell": {
+       "yes": "0.17",
+       "no": "0.82"
+      },
+      "bestBid": "0.17",
+      "bestAsk": "0.18",
+      "lastTradePrice": "0.18"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-02-20T14:00:00.000Z",
+     "expiryDate": "2028-11-10T00:00:00.000Z",
+     "priceDelta24hPct": "-10",
+     "priceDelta1hPct": "0",
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "1889-10935",
+     "label": "Gavin Newsom",
+     "abbreviatedName": "Newsom",
+     "ticker": "DEMNOM28NEWSOM",
+     "instrumentSymbol": "GEMI-DEMNOM2028-DEMNOM28NEWSOM",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "This market will resolve to “Yes” if Gavin Newsom wins and formally accepts the 2028 Democratic Party nomination for U.S. President. Otherwi",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.18",
+       "no": "0.83"
+      },
+      "sell": {
+       "yes": "0.17",
+       "no": "0.82"
+      },
+      "bestBid": "0.17",
+      "bestAsk": "0.18",
+      "lastTradePrice": "0.18"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-02-20T14:00:00.000Z",
+     "expiryDate": "2028-11-10T00:00:00.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "1889-10937",
+     "label": "Jon Ossoff",
+     "abbreviatedName": "Ossoff",
+     "ticker": "DEMNOM28OSS",
+     "instrumentSymbol": "GEMI-DEMNOM2028-DEMNOM28OSS",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "This market will resolve to “Yes” if Jon Ossoff wins and formally accepts the 2028 Democratic Party nomination for U.S. President. Otherwise",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.15",
+       "no": "0.86"
+      },
+      "sell": {
+       "yes": "0.14",
+       "no": "0.85"
+      },
+      "bestBid": "0.14",
+      "bestAsk": "0.15",
+      "lastTradePrice": "0.14"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-02-20T14:00:00.000Z",
+     "expiryDate": "2028-11-10T00:00:00.000Z",
+     "priceDelta24hPct": "-12.5",
+     "priceDelta1hPct": "0",
+     "priceMinimum": "0.01"
+    }
+   ]
+  },
+  {
+   "id": "194141",
+   "ticker": "BTC2608212100",
+   "slug": "btc-price-on-august-21",
+   "title": "BTC price on August 21",
+   "type": "categorical",
+   "category": "Crypto",
+   "subcategory": {
+    "id": 32,
+    "slug": "crypto_bitcoin",
+    "name": "Bitcoin",
+    "path": [
+     "Crypto",
+     "Bitcoin"
+    ]
+   },
+   "status": "active",
+   "series": "BTC1H",
+   "tags": [
+    "Bitcoin"
+   ],
+   "volume": "8583.11",
+   "volume24h": "2314.2",
+   "volumeDelta24hPct": "-6.21",
+   "effectiveDate": "2026-08-14T09:27:07.707Z",
+   "expiryDate": "2026-08-21T21:00:00.000Z",
+   "startTime": "2026-08-14T09:30:00.000Z",
+   "shortSummary": "Renewed U.S. Bitcoin ETF inflows of $189 million on August 18 are supporting prices near $64,700 despite ongoing macro headwinds from the Federal Reserve's rate stance and Treasury yields before today's minutes.",
+   "contracts": [
+    {
+     "id": "194141-464797",
+     "label": "$64,000 or above",
+     "abbreviatedName": ">$64,000",
+     "ticker": "HI64000",
+     "instrumentSymbol": "GEMI-BTC2608212100-HI64000",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the price of Bitcoin (BTC) is $64,000 or above on August 21, 2026 at 5pm ET, this market will resolve to Yes. Otherwise, it will resolve ",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.99",
+       "no": "0.04"
+      },
+      "sell": {
+       "yes": "0.96",
+       "no": "0.01"
+      },
+      "bestBid": "0.96",
+      "bestAsk": "0.99",
+      "lastTradePrice": "0.66"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-08-14T09:30:00.000Z",
+     "expiryDate": "2026-08-21T21:00:00.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "strike": {
+      "type": "above",
+      "value": "64000"
+     },
+     "sortOrder": 6,
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "194141-464798",
+     "label": "$64,500 or above",
+     "abbreviatedName": ">$64,500",
+     "ticker": "HI64500",
+     "instrumentSymbol": "GEMI-BTC2608212100-HI64500",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the price of Bitcoin (BTC) is $64,500 or above on August 21, 2026 at 5pm ET, this market will resolve to Yes. Otherwise, it will resolve ",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.99",
+       "no": "0.04"
+      },
+      "sell": {
+       "yes": "0.96",
+       "no": "0.01"
+      },
+      "bestBid": "0.96",
+      "bestAsk": "0.99",
+      "lastTradePrice": "0.58"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-08-14T09:30:00.000Z",
+     "expiryDate": "2026-08-21T21:00:00.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "strike": {
+      "type": "above",
+      "value": "64500"
+     },
+     "sortOrder": 7,
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "194141-464795",
+     "label": "$63,500 or above",
+     "abbreviatedName": ">$63,500",
+     "ticker": "HI63500",
+     "instrumentSymbol": "GEMI-BTC2608212100-HI63500",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the price of Bitcoin (BTC) is $63,500 or above on August 21, 2026 at 5pm ET, this market will resolve to Yes. Otherwise, it will resolve ",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.97",
+       "no": "0.03"
+      },
+      "sell": {
+       "yes": "0.97",
+       "no": "0.03"
+      },
+      "lastTradePrice": "0.97"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-08-14T09:30:00.000Z",
+     "expiryDate": "2026-08-21T21:00:00.000Z",
+     "priceDelta24hPct": "19.75",
+     "priceDelta1hPct": "0",
+     "strike": {
+      "type": "above",
+      "value": "63500"
+     },
+     "sortOrder": 5,
+     "priceMinimum": "0.01"
+    }
+   ]
+  },
+  {
+   "id": "203319",
+   "ticker": "WXHIGH-CHI-2608210359",
+   "slug": "highest-temperature-in-chicago-on-august-20-2026",
+   "title": "Highest temperature in Chicago on August 20, 2026?",
+   "type": "categorical",
+   "category": "Weather",
+   "subcategory": {
+    "id": 153,
+    "slug": "weather_daily-temperature",
+    "name": "Daily Temperature",
+    "path": [
+     "Weather",
+     "Daily Temperature"
+    ]
+   },
+   "status": "active",
+   "series": "WXHIGH",
+   "tags": [
+    "Daily Temperature"
+   ],
+   "volume": "0",
+   "volume24h": "0",
+   "volumeDelta24hPct": "0",
+   "effectiveDate": "2026-08-19T13:00:35.669Z",
+   "expiryDate": "2026-08-21T03:59:59.000Z",
+   "shortSummary": "The NWS point forecast for KMDW shows high near 80°F favoring 78-81°F bracket under partly sunny skies with slight afternoon storm chance. Next catalyst is 4pm local update.",
+   "contracts": [
+    {
+     "id": "203319-487026",
+     "label": "79°F to 80°F",
+     "abbreviatedName": "79° to 80°",
+     "ticker": "79TO80",
+     "instrumentSymbol": "GEMI-WXHIGH-CHI-2608210359-79TO80",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "This market will resolve based on the highest temperature recorded at Chicago-Midway, IL on August 20, 2026. The resolution source for this ",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.49",
+       "no": "0.53"
+      },
+      "sell": {
+       "yes": "0.47",
+       "no": "0.51"
+      },
+      "bestBid": "0.47",
+      "bestAsk": "0.49"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-08-19T13:59:59.000Z",
+     "expiryDate": "2026-08-21T03:59:59.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "sortOrder": 3,
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "203319-487024",
+     "label": "76°F or below",
+     "abbreviatedName": "76° or below",
+     "ticker": "LO76",
+     "instrumentSymbol": "GEMI-WXHIGH-CHI-2608210359-LO76",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "This market will resolve based on the highest temperature recorded at Chicago-Midway, IL on August 20, 2026. The resolution source for this ",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.07",
+       "no": "0.96"
+      },
+      "sell": {
+       "yes": "0.04",
+       "no": "0.93"
+      },
+      "bestBid": "0.04",
+      "bestAsk": "0.07"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-08-19T13:59:59.000Z",
+     "expiryDate": "2026-08-21T03:59:59.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "strike": {
+      "type": "below",
+      "value": "76"
+     },
+     "sortOrder": 1,
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "203319-487029",
+     "label": "85°F or above",
+     "abbreviatedName": "85° or above",
+     "ticker": "HI85",
+     "instrumentSymbol": "GEMI-WXHIGH-CHI-2608210359-HI85",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "This market will resolve based on the highest temperature recorded at Chicago-Midway, IL on August 20, 2026. The resolution source for this ",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.02",
+       "no": "0.99"
+      },
+      "sell": {
+       "yes": "0.01",
+       "no": "0.98"
+      },
+      "bestBid": "0.01",
+      "bestAsk": "0.02"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-08-19T13:59:59.000Z",
+     "expiryDate": "2026-08-21T03:59:59.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "strike": {
+      "type": "above",
+      "value": "85"
+     },
+     "sortOrder": 6,
+     "priceMinimum": "0.01"
+    }
+   ]
+  },
+  {
+   "id": "168090",
+   "ticker": "FED260917",
+   "slug": "fed-decision-in-september",
+   "title": "Fed decision in September?",
+   "type": "categorical",
+   "category": "Economics",
+   "subcategory": {
+    "id": 100,
+    "slug": "economics_fed",
+    "name": "Fed",
+    "path": [
+     "Economics",
+     "Fed"
+    ]
+   },
+   "status": "active",
+   "tags": [
+    "Fed"
+   ],
+   "volume": "45087",
+   "volume24h": "971",
+   "volumeDelta24hPct": "3136.67",
+   "effectiveDate": "2026-07-30T14:24:23.155Z",
+   "expiryDate": "2026-09-29T18:05:00.000Z",
+   "shortSummary": "July minutes highlight rising hawkish tilt among officials versus soft data keeping hold expectations intact ahead of September meeting.",
+   "contracts": [
+    {
+     "id": "168090-404860",
+     "label": "Fed maintains rate",
+     "ticker": "MAINTAIN",
+     "instrumentSymbol": "GEMI-FED260917-MAINTAIN",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the Federal Reserve maintains rates at their current level on September 29, 2026, then the market resolves to Yes. Otherwise, it resolves",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.71",
+       "no": "0.3"
+      },
+      "sell": {
+       "yes": "0.7",
+       "no": "0.29"
+      },
+      "bestBid": "0.7",
+      "bestAsk": "0.71",
+      "lastTradePrice": "0.71"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-06-22T14:00:00.000Z",
+     "expiryDate": "2026-09-29T18:05:00.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "168090-404857",
+     "label": "Hike 25bps",
+     "ticker": "HIKE25",
+     "instrumentSymbol": "GEMI-FED260917-HIKE25",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the Federal Reserve increases rates by 25bps on September 29, 2026, then the market resolves to Yes. Otherwise, it resolves to No. Outcom",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.31",
+       "no": "0.7"
+      },
+      "sell": {
+       "yes": "0.3",
+       "no": "0.69"
+      },
+      "bestBid": "0.3",
+      "bestAsk": "0.31",
+      "lastTradePrice": "0.3"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-06-22T14:00:00.000Z",
+     "expiryDate": "2026-09-29T18:05:00.000Z",
+     "priceDelta24hPct": "0",
+     "priceDelta1hPct": "0",
+     "strike": {
+      "type": "above",
+      "value": "KE25"
+     },
+     "priceMinimum": "0.01"
+    }
+   ]
+  },
+  {
+   "id": "93897",
+   "ticker": "SEN26MI",
+   "slug": "michigan-us-senate-winner",
+   "title": "Michigan US Senate Winner",
+   "type": "categorical",
+   "category": "Politics",
+   "subcategory": {
+    "id": 174,
+    "slug": "politics_midterms_senate",
+    "name": "Senate",
+    "path": [
+     "Politics",
+     "Midterms",
+     "Senate"
+    ]
+   },
+   "status": "active",
+   "tags": [
+    "Senate"
+   ],
+   "volume": "73371",
+   "volume24h": "7546",
+   "volumeDelta24hPct": "50206.67",
+   "effectiveDate": "2026-06-16T22:55:45.869Z",
+   "expiryDate": "2026-11-10T00:00:00.000Z",
+   "shortSummary": "Susquehanna poll gives El-Sayed a seven-point lead over Rogers in Michigan Senate race following primary win. Earlier polls showed tighter contest or Rogers advantage while attacks on candidate background emerge. This shifts momentum toward El-Sayed in general election polling average.",
+   "contracts": [
+    {
+     "id": "93897-282151",
+     "label": "Abdul El-Sayed",
+     "abbreviatedName": "Abdul El-Sayed",
+     "ticker": "ABDULELSAYED",
+     "instrumentSymbol": "GEMI-SEN26MI-ABDULELSAYED",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If Abdul El-Sayed wins the 2026 U.S. Senate election in Michigan, then this market resolves to Yes. Outcome should be verified from the appl",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.61",
+       "no": "0.4"
+      },
+      "sell": {
+       "yes": "0.6",
+       "no": "0.39"
+      },
+      "bestBid": "0.6",
+      "bestAsk": "0.61",
+      "lastTradePrice": "0.61"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-05-14T00:00:00.000Z",
+     "expiryDate": "2026-11-10T00:00:00.000Z",
+     "priceDelta24hPct": "12.96",
+     "priceDelta1hPct": "0",
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "93897-282150",
+     "label": "Haley Stevens",
+     "abbreviatedName": "Haley Stevens",
+     "ticker": "HALEYSTEVENS",
+     "instrumentSymbol": "GEMI-SEN26MI-HALEYSTEVENS",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If Haley Stevens wins the 2026 U.S. Senate election in Michigan, then this market resolves to Yes. Outcome should be verified from the appli",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {},
+      "sell": {}
+     },
+     "status": "settled",
+     "marketState": "closed",
+     "effectiveDate": "2026-05-14T00:00:00.000Z",
+     "expiryDate": "2026-11-10T00:00:00.000Z",
+     "resolutionSide": "no",
+     "priceMinimum": "0.01"
+    }
+   ]
+  },
+  {
+   "id": "4020",
+   "ticker": "RECESSION26",
+   "slug": "recession-this-year",
+   "title": "Recession this year?",
+   "type": "binary",
+   "category": "Economics",
+   "subcategory": {
+    "id": 101,
+    "slug": "economics_macro-indicators",
+    "name": "Macro Indicators",
+    "path": [
+     "Economics",
+     "Macro Indicators"
+    ]
+   },
+   "status": "active",
+   "tags": [
+    "Macro Indicators"
+   ],
+   "volume": "47069",
+   "volume24h": "126",
+   "volumeDelta24hPct": "-90.84",
+   "effectiveDate": "2026-03-04T11:44:22.359Z",
+   "expiryDate": "2027-02-01T04:59:00.000Z",
+   "shortSummary": "Data favors no recession this year with the Sahm rule at negative 0.03 and robust GDP nowcasts at 4.3 percent for Q3, even as fiscal risks support 40 percent probabilities in some models.",
+   "contracts": [
+    {
+     "id": "4020-32750",
+     "label": "Yes",
+     "ticker": "2026",
+     "instrumentSymbol": "GEMI-RECESSION26-2026",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If there are two consecutive quarters of negative U.S. GDP growth in 2025 or 2026, according to the Bureau of Economic Analysis, then the ma",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.05",
+       "no": "0.96"
+      },
+      "sell": {
+       "yes": "0.04",
+       "no": "0.95"
+      },
+      "bestBid": "0.04",
+      "bestAsk": "0.05",
+      "lastTradePrice": "0.04"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-03-04T10:00:00.000Z",
+     "expiryDate": "2027-02-01T04:59:00.000Z",
+     "priceDelta24hPct": "-20",
+     "priceDelta1hPct": "0",
+     "sortOrder": 1,
+     "priceMinimum": "0.01"
+    }
+   ]
+  },
+  {
+   "id": "15588",
+   "ticker": "HORMUZNORMAL",
+   "slug": "when-will-traffic-at-the-strait-of-hormuz-return-to-normal",
+   "title": "When will traffic at the Strait of Hormuz return to normal?",
+   "type": "categorical",
+   "category": "Economics",
+   "subcategory": {
+    "id": 101,
+    "slug": "economics_macro-indicators",
+    "name": "Macro Indicators",
+    "path": [
+     "Economics",
+     "Macro Indicators"
+    ]
+   },
+   "status": "active",
+   "tags": [
+    "Macro Indicators"
+   ],
+   "volume": "75646",
+   "volume24h": "1297",
+   "volumeDelta24hPct": "-56.58",
+   "effectiveDate": "2026-04-08T19:47:57.078Z",
+   "expiryDate": "2027-01-02T04:00:00.000Z",
+   "shortSummary": "US stealth corridor moves 10M barrels daily through Hormuz raising normalization odds by 2027 despite total traffic at just 8% of normal amid attacks.",
+   "contracts": [
+    {
+     "id": "15588-108565",
+     "label": "Before January 01, 2027",
+     "abbreviatedName": "Before Jan 1",
+     "ticker": "JAN01",
+     "instrumentSymbol": "GEMI-HORMUZNORMAL-JAN01",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch is above 60 before Jan 1, 2027, t",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {
+       "yes": "0.29",
+       "no": "0.72"
+      },
+      "sell": {
+       "yes": "0.28",
+       "no": "0.71"
+      },
+      "bestBid": "0.28",
+      "bestAsk": "0.29",
+      "lastTradePrice": "0.28"
+     },
+     "status": "active",
+     "marketState": "open",
+     "effectiveDate": "2026-04-08T16:30:00.000Z",
+     "expiryDate": "2027-01-01T04:59:00.000Z",
+     "priceDelta24hPct": "-3.45",
+     "priceDelta1hPct": "0",
+     "priceMinimum": "0.01"
+    },
+    {
+     "id": "15588-360510",
+     "label": "Before August 01, 2026",
+     "abbreviatedName": "Before Aug 1",
+     "ticker": "HORMUZAUGUST1",
+     "instrumentSymbol": "GEMI-HORMUZNORMAL-HORMUZAUGUST1",
+     "description": {
+      "nodeType": "document",
+      "data": {},
+      "content": [
+       {
+        "data": {},
+        "marks": [],
+        "value": "If the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch is above 60 before Aug 1, 2026, t",
+        "nodeType": "text"
+       }
+      ]
+     },
+     "prices": {
+      "buy": {},
+      "sell": {}
+     },
+     "status": "settled",
+     "marketState": "closed",
+     "effectiveDate": "2026-04-08T16:30:00.000Z",
+     "expiryDate": "2027-01-02T04:00:00.000Z",
+     "resolutionSide": "no",
+     "priceMinimum": "0.01"
+    }
+   ]
+  }
+ ],
+ "pagination": {
+  "limit": 500,
+  "offset": 0,
+  "total": 7
+ }
+}

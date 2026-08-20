@@ -48,6 +48,11 @@ pub struct Config {
     pub polymarket_clob_base: String,
     pub polymarket_data_base: String,
     pub polymarket_us_api_base: String,
+    pub gemini_catalogue_base: String,
+    pub gemini_api_base: String,
+    pub predictfun_graphql_base: String,
+    pub forecastex_api_base: String,
+    pub forecastex_archive_base: String,
     pub fred_web_base: String,
     pub fred_api_base: String,
     pub alpaca_data_base: String,
@@ -87,6 +92,11 @@ impl Default for Config {
             polymarket_clob_base: defaults::POLYMARKET_CLOB.into(),
             polymarket_data_base: defaults::POLYMARKET_DATA.into(),
             polymarket_us_api_base: defaults::POLYMARKET_US.into(),
+            gemini_catalogue_base: defaults::GEMINI_CATALOGUE.into(),
+            gemini_api_base: defaults::GEMINI_API.into(),
+            predictfun_graphql_base: defaults::PREDICTFUN_GRAPHQL.into(),
+            forecastex_api_base: defaults::FORECASTEX_API.into(),
+            forecastex_archive_base: defaults::FORECASTEX_ARCHIVE.into(),
             fred_web_base: defaults::FRED_WEB.into(),
             fred_api_base: defaults::FRED_API.into(),
             alpaca_data_base: defaults::ALPACA_DATA.into(),
@@ -151,6 +161,11 @@ impl Config {
             polymarket_clob_base: base("POLYMARKET_CLOB_BASE", defaults::POLYMARKET_CLOB),
             polymarket_data_base: base("POLYMARKET_DATA_BASE", defaults::POLYMARKET_DATA),
             polymarket_us_api_base: base("POLYMARKET_US_API_BASE", defaults::POLYMARKET_US),
+            gemini_catalogue_base: base("GEMINI_CATALOGUE_BASE", defaults::GEMINI_CATALOGUE),
+            gemini_api_base: base("GEMINI_API_BASE", defaults::GEMINI_API),
+            predictfun_graphql_base: base("PREDICTFUN_GRAPHQL_BASE", defaults::PREDICTFUN_GRAPHQL),
+            forecastex_api_base: base("FORECASTEX_API_BASE", defaults::FORECASTEX_API),
+            forecastex_archive_base: base("FORECASTEX_ARCHIVE_BASE", defaults::FORECASTEX_ARCHIVE),
             fred_web_base: base("FRED_WEB_BASE", defaults::FRED_WEB),
             fred_api_base: base("FRED_API_BASE", defaults::FRED_API),
             alpaca_data_base: base("ALPACA_DATA_BASE", defaults::ALPACA_DATA),
@@ -214,6 +229,24 @@ pub mod defaults {
     pub const POLYMARKET_CLOB: &str = "https://clob.polymarket.com";
     pub const POLYMARKET_DATA: &str = "https://data-api.polymarket.com";
     pub const POLYMARKET_US: &str = "https://gateway.polymarket.us";
+
+    /// Gemini's two hosts speak different dialects. The catalogue serves names,
+    /// rules, strikes and turnover as decimal strings; the trading host serves
+    /// book, tape and bars keyed on the instrument symbol.
+    pub const GEMINI_CATALOGUE: &str = "https://www.gemini.com";
+    pub const GEMINI_API: &str = "https://api.gemini.com";
+
+    /// predict.fun documents a REST API that gates every path, read-only ones
+    /// included, behind an account-issued key. Its own web app never calls it —
+    /// this is the endpoint the browser bundle uses, and it needs no credential.
+    pub const PREDICTFUN_GRAPHQL: &str = "https://graphql.predict.fun/graphql";
+
+    pub const FORECASTEX_API: &str = "https://forecastex.com";
+    /// The archive is read straight from the bucket rather than through
+    /// `/api/download`, which is only a proxy in front of it. S3 states
+    /// `Last-Modified` and honours `Range`; the proxy does neither, so the same
+    /// bytes cost more to keep fresh.
+    pub const FORECASTEX_ARCHIVE: &str = "https://forecastex-public-data.s3.amazonaws.com";
     pub const FRED_WEB: &str = "https://fred.stlouisfed.org";
     pub const FRED_API: &str = "https://api.stlouisfed.org/fred";
     pub const ALPACA_DATA: &str = "https://data.alpaca.markets/v1beta1";

@@ -1,12 +1,12 @@
 <!--
   The ticker tape.
 
-  Decoration with a job: it shows what is busy right now across all three
-  brokers, and clicking an item charts it. Two details are load-bearing.
+  Decoration with a job: it shows what is busy right now across every broker,
+  and clicking an item charts it. Two details are load-bearing.
 
-  The three venues are interleaved round-robin rather than concatenated,
-  because Kalshi's volumes dwarf the other two and a straight sort would make
-  the tape a Kalshi-only feed.
+  The venues are interleaved round-robin rather than concatenated, because
+  Kalshi's volumes dwarf the rest and a straight sort would make the tape a
+  Kalshi-only feed.
 
   The item list is rendered twice, the second copy hidden from screen readers.
   That is what lets the CSS marquee translate by exactly -50% and loop with no
@@ -43,7 +43,8 @@
   /**
    * Only the venues that publish a volume ranking.
    *
-   * Polymarket US's public catalogue carries no volume, so asking it for a
+   * Polymarket US's public catalogue carries no volume, and Gemini states
+   * turnover per event rather than per contract, so asking either for a volume
    * leaderboard is a request that can only be refused — the registry says so
    * without a round trip.
    */

@@ -1,7 +1,9 @@
 # Prediction Terminal
 
-A Bloomberg-style terminal for three prediction markets — [Kalshi](https://kalshi.com),
-[Polymarket](https://polymarket.com) and [Polymarket US](https://polymarket.us) —
+A Bloomberg-style terminal for six prediction markets — [Kalshi](https://kalshi.com),
+[Polymarket](https://polymarket.com), [Polymarket US](https://polymarket.us),
+[Gemini](https://www.gemini.com/prediction-markets),
+[predict.fun](https://predict.fun) and [ForecastEx](https://forecastex.com) —
 plus live stock and crypto prices, the [Alpaca](https://alpaca.markets) news
 wire, [FRED](https://fred.stlouisfed.org) economic data, the
 [Billboard](https://www.billboard.com/charts/) charts, and the entertainment
@@ -10,7 +12,7 @@ feeds these markets settle against, driven entirely from a command prompt.
 ```
 > GP KXFEDDECISION-27JAN-H26 1d 1y
 > DES pm:will-there-be-no-change-in-fed-interest-rates-after-the-september-2026-meeting-615
-> XV KXFEDDECISION-26OCT      # the same ladder, priced at all three brokers
+> XV KXFEDDECISION-26OCT      # the same ladder, priced at every broker listing it
 > XV fed                      # what else more than one broker lists
 > STK NVDA 1d 1y
 > IMP BTC                     # Kalshi's implied BTC price, over the real one
@@ -63,7 +65,7 @@ shows usage and runnable examples.
 | `DES` | `DES [venue:]<ticker>` | Quote, contract description, settlement rules |
 | `OB` | `OB [venue:]<ticker>` | Order-book ladder with depth bars |
 | `TAS` | `TAS [venue:]<ticker>` | Time and sales tape |
-| `SRCH` | `SRCH <words> [kalshi\|pm\|pmus]` | Search open events at every venue at once, grouped with their strike ladders |
+| `SRCH` | `SRCH <words> [kalshi\|pm\|pmus\|gemini\|pf\|fex]` | Search open events at every venue at once, grouped with their strike ladders |
 | `EVT` | `EVT [venue:]<event-ticker>` | Every contract in an event |
 | `TOP` | `TOP [volume\|gainers\|losers\|oi\|liquidity] [venue]` | Leaderboards |
 | `XV` | `XV [words]` · `XV [venue:]<event-ticker>` | Cross-venue: what else lists this, and at what price |
@@ -83,18 +85,33 @@ worked before means anything different now.
 | *(none)* or `kx:` | Kalshi | ticker, `KXFEDDECISION-26OCT` |
 | `pm:` | Polymarket International | slug, `fed-decision-in-october-20260617190323537` |
 | `pmus:` | Polymarket US | slug, `usfed-fomc-2026-10-28` |
+| `gem:` | Gemini | ticker, `GEMI-FED260917-MAINTAIN` |
+| `pf:` | predict.fun | slug, `big-game-champion-2027~26952` |
+| `fx:` | ForecastEx | contract id, `HORC_1126_Republican` |
 
 ```
 > DES KXFEDDECISION-26OCT-T3.75
 > OB pmus:apdc-jerpowgov-2026-12-31
 > GP pm:will-there-be-no-change-in-fed-interest-rates-after-the-september-2026-meeting-615 1h 7d
+> DES gem:GEMI-FED260917-MAINTAIN
+> TAS fx:HORC_1126_Republican
 > W ADD pm:fed-decision-in-october-20260617190323537
 ```
 
 Case is part of the identifier, not decoration: Kalshi 404s a lower-case ticker
 and both Polymarkets 404 an upper-case slug, so the prefix decides the folding
 and you can type either. `pm`, `poly` and `intl` all mean the international
-book; `pmus`, `polyus` and `us` all mean the US one.
+book; `pmus`, `polyus` and `us` all mean the US one; `gemini`, `pf` and `fex`
+name the three newer ones.
+
+Two of those need more than folding. ForecastEx publishes mixed-case ids
+(`HORC_1126_Republican`) and its price endpoint answers only the exact spelling
+— an upper-cased id comes back as a silent, empty, HTTP 200 — so the terminal
+folds ids up like everything else and restores the canonical spelling from the
+catalogue before it charts. predict.fun names a contract with two identifiers, a
+slug for the question and a number for the leg, so a reference joins them with
+`~`: `big-game-champion-2027~26952`. Typing the slug alone works when the
+question has only one leg, and otherwise tells you to open `EVT`.
 
 ### Stocks, crypto and implied prices
 
@@ -156,14 +173,14 @@ about.
 
 ### Cross-venue: lining the brokers up
 
-Three exchanges list many of the same questions and agree on no identifier for
+Six exchanges list many of the same questions and agree on no identifier for
 any of them:
 
-| | Kalshi | Polymarket | Polymarket US |
-| --- | --- | --- | --- |
-| Series | `KXFEDDECISION` | `fomc` | `usfed-fomc` |
-| Event | `KXFEDDECISION-26OCT` | `fed-decision-in-october-2026…` | `usfed-fomc-2026-10-28` |
-| Rung | `Cut 25bps` | `25 bps decrease` | `25 bps Decrease` |
+| | Kalshi | Polymarket | Polymarket US | Gemini | predict.fun | ForecastEx |
+| --- | --- | --- | --- | --- | --- | --- |
+| Series | `KXFEDDECISION` | `fomc` | `usfed-fomc` | `FED` | `fed-decision-in` | `FFDEC` |
+| Event | `KXFEDDECISION-26OCT` | `fed-decision-in-october-2026…` | `usfed-fomc-2026-10-28` | `FED260917` | `fed-decision-in-september-762` | `FFDEC_091626` |
+| Rung | `Cut 25bps` | `25 bps decrease` | `25 bps Decrease` | `Fed maintains rate` | `No change` | `Will the Fed leave the rate unchanged in September 2026?` |
 
 Nothing in any payload connects those, so `XV` does it from the language.
 
@@ -329,7 +346,7 @@ which is wrong without ever looking broken.
 ### The menu bar
 
 Memorising a command table and a key map is the cost of admission to a terminal
-like this one, and there was nothing between "type `HELP` and read 35 verbs" and
+like this one, and there was nothing between "type `HELP` and read 39 verbs" and
 knowing them already. So: five menus across the top — MARKETS, PRICES, DATA,
 WORKSPACE, LEARN — with everything the terminal does under one of them.
 
@@ -455,6 +472,11 @@ browser (SvelteKit, static, no server rendering)
                     │   ├ clob       book and price history
                     │   └ data-api   public print tape
                     ├── PolymarketUS gateway  catalogue, book, BBO
+                    ├── Gemini     gemini.com  catalogue
+                    │   └ api.gemini.com  book, tape, candles
+                    ├── predict.fun graphql  catalogue, book, tape, series
+                    ├── ForecastEx forecastex.com/api  catalogue, prices
+                    │   └ public S3  end-of-session tape and daily bars
                     ├── Yahoo      equities, ETFs and cash indices
                     │   └ Nasdaq   fallback, daily bars only
                     ├── Coinbase   crypto spot
@@ -658,6 +680,11 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `POLYMARKET_CLOB_BASE` | `https://clob.polymarket.com` | Polymarket book and price history |
 | `POLYMARKET_DATA_BASE` | `https://data-api.polymarket.com` | Polymarket print tape |
 | `POLYMARKET_US_API_BASE` | `https://gateway.polymarket.us` | Polymarket US public gateway |
+| `GEMINI_CATALOGUE_BASE` | `https://www.gemini.com` | Gemini prediction-market catalogue |
+| `GEMINI_API_BASE` | `https://api.gemini.com` | Gemini book, tape and candles |
+| `PREDICTFUN_GRAPHQL_BASE` | `https://graphql.predict.fun/graphql` | predict.fun public GraphQL host |
+| `FORECASTEX_API_BASE` | `https://forecastex.com` | ForecastEx catalogue, products and prices |
+| `FORECASTEX_ARCHIVE_BASE` | `https://forecastex-public-data.s3.amazonaws.com` | ForecastEx end-of-session archive |
 | `FRED_WEB_BASE` | `https://fred.stlouisfed.org` | Override for testing against a fixture |
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
@@ -759,8 +786,8 @@ Everything else in the terminal keeps working with no key at all.
 | `GET /api/kalshi/events/:eventTicker` | Event with nested markets |
 | `GET /api/kalshi/search?q=&limit=` | Ranked event search |
 | `GET /api/kalshi/top?sort=&limit=` | Leaderboards |
-| `GET /api/venue/:venue/markets/:id` | Normalised market at any venue (`kalshi`, `polymarket`, `polymarket-us`) |
-| `GET /api/venue/:venue/markets/:id/orderbook?depth=` | Book with the NO ladder derived |
+| `GET /api/venue/:venue/markets/:id` | Normalised market at any venue (`kalshi`, `polymarket`, `polymarket-us`, `gemini`, `predictfun`, `forecastex`) |
+| `GET /api/venue/:venue/markets/:id/orderbook?depth=` | Book with the NO ladder derived (501 at ForecastEx, which has no book) |
 | `GET /api/venue/:venue/markets/:id/trades?limit=` | Recent prints (501 at Polymarket US) |
 | `GET /api/venue/:venue/markets/:id/candles?interval=&start=&end=` | Candles (501 at Polymarket US) |
 | `GET /api/venue/:venue/events/:id` | Event with nested markets |
@@ -897,10 +924,13 @@ move when those fields do.
 ## Scope
 
 Read-only market data. Nothing here places an order or touches an account at
-any of the three exchanges — every market, price and entertainment feed is a
+any of the six exchanges — every market, price and entertainment feed is a
 public, unauthenticated endpoint. That is a deliberate limit, and it is visible:
 Polymarket US serves its price history and prints only to an authenticated
-caller, so those two panels say so rather than appearing broken.
+caller, and predict.fun's documented REST API gates even its read paths behind an
+account key, so those panels name the endpoint that would answer and what it
+costs rather than appearing broken. Where a venue's own web app reads a public
+host instead — as predict.fun's does — the terminal reads that host too.
 
 The news wire is the one exception to "holds no credential", and it is worth
 stating plainly: `NEWS` sends an Alpaca key pair to `data.alpaca.markets` to

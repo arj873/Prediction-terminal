@@ -102,7 +102,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'Quote and contract description',
     usage: 'DES [venue:]<ticker>',
-    examples: ['DES KXFEDDECISION-27JAN-H26', 'DES pmus:apdc-jerpowgov-2026-12-31'],
+    examples: ['DES KXFEDDECISION-27JAN-H26', 'DES gem:GEMI-FED260917-MAINTAIN'],
     handler(command, { panels }) {
       const ref = requireRef(command, 0, 'ticker');
       panels.open({ id: panelId.quote(ref), kind: 'quote', props: { ref } });
@@ -114,7 +114,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'Order book ladder',
     usage: 'OB [venue:]<ticker>',
-    examples: ['OB KXFEDDECISION-27JAN-H26', 'OB pmus:tec-mlb-champ-2026-09-27-lad'],
+    examples: ['OB KXFEDDECISION-27JAN-H26', 'OB pf:big-game-champion-2027~26952'],
     handler(command, { panels }) {
       const ref = requireRef(command, 0, 'ticker');
       panels.open({ id: panelId.depth(ref), kind: 'depth', props: { ref } });
@@ -126,7 +126,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'Time and sales tape',
     usage: 'TAS [venue:]<ticker>',
-    examples: ['TAS KXFEDDECISION-27JAN-H26', 'TAS pm:fed-decision-in-october'],
+    examples: ['TAS KXFEDDECISION-27JAN-H26', 'TAS fx:HORC_1126_Republican'],
     handler(command, { panels }) {
       const ref = requireRef(command, 0, 'ticker');
       panels.open({ id: panelId.trades(ref), kind: 'trades', props: { ref } });
@@ -137,8 +137,8 @@ export const COMMANDS: Command[] = [
     aliases: ['S', 'FIND'],
     group: 'markets',
     summary: 'Search open events across every venue',
-    usage: 'SRCH <words> [kalshi|pm|pmus]',
-    examples: ['SRCH fed decision', 'SRCH bitcoin pm', 'SRCH senate kalshi pmus'],
+    usage: 'SRCH <words> [kalshi|pm|pmus|gemini|pf|fex]',
+    examples: ['SRCH fed decision', 'SRCH bitcoin pm', 'SRCH senate kalshi gemini'],
     handler(command, { panels }) {
       const { venues, rest } = takeVenues(command.args);
       const query = rest.join(' ').trim();
@@ -156,7 +156,7 @@ export const COMMANDS: Command[] = [
     group: 'markets',
     summary: 'All contracts in an event',
     usage: 'EVT [venue:]<event-ticker>',
-    examples: ['EVT KXFEDDECISION-27JAN', 'EVT pm:fed-decision-in-september-762'],
+    examples: ['EVT KXFEDDECISION-27JAN', 'EVT gem:DEMNOM2028'],
     handler(command, { panels }) {
       const ref = requireRef(command, 0, 'event-ticker');
       panels.open({ id: panelId.event(ref), kind: 'event', props: { ref } });
@@ -167,8 +167,8 @@ export const COMMANDS: Command[] = [
     aliases: ['MOVERS'],
     group: 'markets',
     summary: 'Leaderboards: volume, movers, open interest',
-    usage: 'TOP [volume|gainers|losers|oi|liquidity] [kalshi|pm|pmus]',
-    examples: ['TOP', 'TOP gainers', 'TOP oi kalshi', 'TOP volume pm'],
+    usage: 'TOP [volume|gainers|losers|oi|liquidity] [kalshi|pm|pmus|gemini|pf|fex]',
+    examples: ['TOP', 'TOP gainers', 'TOP oi kalshi', 'TOP volume pf'],
     handler(command, { panels }) {
       const { venues, rest } = takeVenues(command.args);
       const sort = parseSort((rest[0] ?? 'volume').toLowerCase());

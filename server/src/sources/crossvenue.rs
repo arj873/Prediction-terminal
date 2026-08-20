@@ -1,10 +1,10 @@
 //! Lining one broker's series up against the others'.
 //!
-//! The terminal quotes three exchanges that list many of the same questions and
+//! The terminal quotes six exchanges that list many of the same questions and
 //! agree on no identifier for any of them. This module builds, per venue, an
 //! index of open series, then pairs those indexes up — by a curated table where
 //! one exists and by [`score_series`] everywhere else — so `Fed decision in
-//! Oct 2026?` can be read at all three prices at once.
+//! Oct 2026?` can be read at every price at once.
 //!
 //! Two rules keep it honest:
 //!
@@ -42,7 +42,7 @@ use crate::app::AppState;
 use crate::cache::ttl;
 use crate::error::{Result, UpstreamError};
 use crate::sources::corpus::{sum_or_null, Corpus};
-use crate::sources::{kalshi, polymarket, polymarketus};
+use crate::sources::{forecastex, gemini, kalshi, polymarket, polymarketus, predictfun};
 
 /// Where the whole board lives for a catalogue TTL.
 const INDEX_KEY: &str = "xvenue:indexes";
@@ -277,13 +277,16 @@ struct Indexes {
 
 /// One venue's cached catalogue snapshot.
 ///
-/// Dispatched against the three modules directly: the board reads exactly these
-/// three and nothing else about a venue is needed here.
+/// Dispatched against the venue modules directly: the board reads exactly these
+/// snapshots and nothing else about a venue is needed here.
 async fn corpus_of(state: &AppState, venue: Venue) -> Result<Arc<Corpus>> {
     match venue {
         Venue::Kalshi => kalshi::corpus_snapshot(state).await,
         Venue::Polymarket => polymarket::corpus_snapshot(state).await,
         Venue::PolymarketUs => polymarketus::corpus_snapshot(state).await,
+        Venue::Gemini => gemini::corpus_snapshot(state).await,
+        Venue::PredictFun => predictfun::corpus_snapshot(state).await,
+        Venue::ForecastEx => forecastex::corpus_snapshot(state).await,
     }
 }
 
@@ -293,13 +296,16 @@ async fn event_of(state: &AppState, venue: Venue, event_ticker: &str) -> Result<
         Venue::Kalshi => kalshi::get_event(state, event_ticker).await,
         Venue::Polymarket => polymarket::get_event(state, event_ticker).await,
         Venue::PolymarketUs => polymarketus::get_event(state, event_ticker).await,
+        Venue::Gemini => gemini::get_event(state, event_ticker).await,
+        Venue::PredictFun => predictfun::get_event(state, event_ticker).await,
+        Venue::ForecastEx => forecastex::get_event(state, event_ticker).await,
     }
 }
 
 /// Sort the settled crawls into the board and the apologies.
 ///
 /// A dead venue is named, never allowed to fail the whole board: a view
-/// covering two of three brokers has to say which one is missing, or "no match"
+/// covering four of six brokers has to say which two are missing, or "no match"
 /// reads as "no such market".
 fn collect_indexes(venues: &[Venue], settled: Vec<Result<VenueIndex>>) -> Indexes {
     let mut ok: Vec<VenueIndex> = Vec::new();
@@ -336,7 +342,7 @@ async fn build_indexes(state: &AppState) -> Indexes {
     collect_indexes(&venues, settled)
 }
 
-/// Crawl the three catalogues and pair them up, ready to be served.
+/// Crawl every catalogue and pair them up, ready to be served.
 ///
 /// The pairing runs on a blocking thread. It is the one piece of arithmetic in
 /// this server large enough to matter — thousands of series against thousands
@@ -385,9 +391,11 @@ async fn indexes(state: &AppState) -> Result<Arc<Indexes>> {
 
 /// Series the terminal states are the same question, rather than inferring it.
 ///
-/// Each entry was read off all three live catalogues, and each is re-checked
-/// against them on every request — a leg whose identifier no longer exists is
-/// dropped, so this table can go stale without ever producing a wrong quote.
+/// Each entry was read off the live catalogues, and each is re-checked against
+/// them on every request — a leg whose identifier no longer exists is dropped, so
+/// this table can go stale without ever producing a wrong quote. That is what
+/// makes it safe to name a leg at a venue whose book rotates: ForecastEx retires
+/// a product without warning, and a retired `FFDEC` simply stops appearing.
 ///
 /// It exists for the cases the matcher cannot reach on wording alone: nothing in
 /// "Fed decision in Oct 2026?" and Polymarket's series slug `fomc` shares a
@@ -418,6 +426,9 @@ const CURATED_LINKS: &[CuratedLink] = &[
             (Venue::Kalshi, "KXFEDDECISION"),
             (Venue::Polymarket, "fomc"),
             (Venue::PolymarketUs, "usfed-fomc"),
+            (Venue::Gemini, "FED"),
+            (Venue::PredictFun, "fed-decision-in"),
+            (Venue::ForecastEx, "FFDEC"),
         ],
     },
     CuratedLink {
@@ -426,12 +437,17 @@ const CURATED_LINKS: &[CuratedLink] = &[
         legs: &[
             (Venue::Kalshi, "KXFED"),
             (Venue::Polymarket, "fed-interest-rates"),
+            (Venue::ForecastEx, "FF"),
         ],
     },
     CuratedLink {
         key: "cpi-yoy",
         title: "US CPI, year over year",
-        legs: &[(Venue::Kalshi, "KXCPIYOY"), (Venue::PolymarketUs, "cpi")],
+        legs: &[
+            (Venue::Kalshi, "KXCPIYOY"),
+            (Venue::PolymarketUs, "cpi"),
+            (Venue::ForecastEx, "CPIY"),
+        ],
     },
     CuratedLink {
         key: "us-midterms-house",
@@ -439,6 +455,8 @@ const CURATED_LINKS: &[CuratedLink] = &[
         legs: &[
             (Venue::Kalshi, "KXHOUSE"),
             (Venue::PolymarketUs, "usho-midterms"),
+            (Venue::Gemini, "CTRLUSHOU"),
+            (Venue::ForecastEx, "HORC"),
         ],
     },
     CuratedLink {
@@ -447,6 +465,9 @@ const CURATED_LINKS: &[CuratedLink] = &[
         legs: &[
             (Venue::Kalshi, "KXSENATE"),
             (Venue::PolymarketUs, "usse-midterms"),
+            (Venue::Gemini, "CTRLUSSEN"),
+            (Venue::PredictFun, "which-party-will-win-the-senate-in"),
+            (Venue::ForecastEx, "SENM"),
         ],
     },
     CuratedLink {
@@ -455,6 +476,12 @@ const CURATED_LINKS: &[CuratedLink] = &[
         legs: &[
             (Venue::Kalshi, "KXHIGHNY"),
             (Venue::PolymarketUs, "weather-daily-high-nyc"),
+            // Gemini files every city under one `WXHIGH` product and ForecastEx
+            // names the reporting station rather than the city — `UHLGA` is
+            // LaGuardia — so neither identifier says "New York" anywhere. The
+            // matcher cannot reach either from the wording.
+            (Venue::Gemini, "WXHIGH-NYC"),
+            (Venue::ForecastEx, "UHLGA"),
         ],
     },
     CuratedLink {
@@ -463,6 +490,9 @@ const CURATED_LINKS: &[CuratedLink] = &[
         legs: &[
             (Venue::Kalshi, "KXHIGHCHI"),
             (Venue::PolymarketUs, "weather-daily-high-chicago"),
+            (Venue::Gemini, "WXHIGH-CHI"),
+            // Midway, for the same reason `UHLGA` stands in for New York.
+            (Venue::ForecastEx, "UHMDW"),
         ],
     },
     CuratedLink {
@@ -487,6 +517,11 @@ const CURATED_LINKS: &[CuratedLink] = &[
         legs: &[
             (Venue::Kalshi, "KXPROFOOTBALLCHAMP"),
             (Venue::PolymarketUs, "nfl-2026"),
+            // predict.fun cannot say "Super Bowl" — the phrase is trademarked
+            // and the exchange writes around it, listing the same field as "NFL
+            // Champion 2027" — so no wording the matcher could reach connects
+            // this listing to the other two.
+            (Venue::PredictFun, "big-game-champion"),
         ],
     },
 ];
@@ -1268,7 +1303,7 @@ pub async fn compare(
     })
 }
 
-/// Build the cross-venue board: crawl the three catalogues, then pair them up.
+/// Build the cross-venue board: crawl every catalogue, then pair them up.
 ///
 /// Fired once at startup and never awaited by a request; a failure is logged and
 /// dropped, because everything here is cached and the first `XV` simply pays for

@@ -4,10 +4,11 @@
 //! these words, what is busiest — and none of them offers an endpoint that does
 //! it well. Kalshi has no search at all; Polymarket International's ranks by its
 //! own relevance and cannot be filtered; Polymarket US's matched "Seeman Jan vs
-//! Dufek Jakub Jr" for the query `fed`. So each source crawls its catalogue into
-//! a [`Corpus`] once per TTL and the ranking lives here, identical for all
-//! three, which is also what makes cross-venue results comparable: the same
-//! query scores the same way whoever is listing the market.
+//! Dufek Jakub Jr" for the query `fed`, and Gemini's answered it with baseball.
+//! So each source crawls its catalogue into a [`Corpus`] once per TTL and the
+//! ranking lives here, identical for every venue, which is also what makes
+//! cross-venue results comparable: the same query scores the same way whoever is
+//! listing the market.
 
 use std::cmp::Ordering;
 use std::time::Instant;

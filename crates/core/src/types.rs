@@ -125,9 +125,10 @@ pub struct Market {
 
 /// One question, with every contract that resolves it.
 ///
-/// All three venues group markets this way — Kalshi calls it an event, both
-/// Polymarkets call it an event too — so it is the unit the terminal compares
-/// across brokers.
+/// Every venue groups markets this way — Kalshi, both Polymarkets and Gemini all
+/// call it an event, predict.fun calls it a category and ForecastEx leaves it
+/// implicit in the first two segments of a contract id — so it is the unit the
+/// terminal compares across brokers.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
@@ -497,7 +498,7 @@ pub struct LinkedSeries {
 
 /// A venue that did not answer, and why.
 ///
-/// A board covering two of three brokers has to say which one is missing, or a
+/// A board covering four of six brokers has to say which two are missing, or a
 /// "no match" reads as "no such market".
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

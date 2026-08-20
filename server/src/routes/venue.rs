@@ -1,6 +1,6 @@
 //! `/api/venue/{venue}/…` — the same market routes for every broker.
 //!
-//! One router serves all three, because the normalisers already made their
+//! One router serves them all, because the normalisers already made their
 //! payloads the same shape. The venue segment is validated here so a bad name
 //! fails at the door with the list of good ones, rather than as a 404 from
 //! whichever upstream happened to be asked.
@@ -205,7 +205,7 @@ async fn catalogue(
 
 #[cfg(test)]
 mod tests {
-    //! The venue router against fixture servers for all three brokers.
+    //! The venue router against fixture servers for the brokers it routes to.
     //!
     //! Every test drives [`crate::build_router`], so the path table, the
     //! extractors and the error ladder are all exercised — a handler tested
@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(body["error"], "Unknown venue \"nyse\"");
         assert_eq!(
             body["hint"],
-            "Venues are: kalshi, polymarket, polymarket-us."
+            "Venues are: kalshi, polymarket, polymarket-us, gemini, predictfun, forecastex."
         );
     }
 

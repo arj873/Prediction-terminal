@@ -54,7 +54,8 @@ fn announce(state: &AppState, addr: SocketAddr) {
     println!("PREDICTION TERMINAL api  http://{addr}");
     println!("  kalshi     /api/kalshi/{{markets,events,search,top,series}}");
     println!(
-        "  venues     /api/venue/{{kalshi,polymarket,polymarket-us}}/{{markets,events,search,top}}"
+        "  venues     /api/venue/{{kalshi,polymarket,polymarket-us,gemini,predictfun,forecastex}}\
+         /{{markets,events,search,top}}"
     );
     println!("  xvenue     /api/xv/{{series,compare}}");
     println!("  spot       /api/spot/{{stock,crypto}}/:symbol[/candles]");

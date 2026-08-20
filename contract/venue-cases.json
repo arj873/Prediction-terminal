@@ -1,6 +1,6 @@
 {
   "about": {
-    "purpose": "Parity cases for the venue reference grammar, which is implemented twice on purpose: the server routes requests with it, and the client needs parseRef synchronously at the prompt, before any request exists. Codegen can pin the venue identifiers but not the logic, so this file pins the logic. Both implementations read it from their own test suite; a rule changed on one side fails on the other.",
+    "purpose": "Parity cases for the venue reference grammar, which is implemented twice on purpose: the server routes requests with it, and the client needs parseRef synchronously at the prompt, before any request exists. Codegen can pin the venue identifiers but not the logic, so this file pins the logic. Both implementations read it from their own test suite \u2014 client/src/lib/terminal/venue.test.ts and crates/core/tests/venue_contract.rs \u2014 so a rule changed on one side fails on the other.",
     "implementations": [
       "client/src/lib/terminal/venue.ts (TypeScript)",
       "crates/core/src/venue.rs (Rust)"
@@ -9,7 +9,7 @@
       "parseRef": "parseRef(input, fallback) succeeds and returns exactly { venue, id }. `fallback` is the venue an unprefixed reference belongs to; it is always stated so no case depends on the default.",
       "parseRefErrors": "parseRef(input, fallback) fails. `error` is the kind — `unknown-prefix` when the text before the first colon names no venue, `empty-identifier` when a known prefix is followed by nothing. Every string in `messageContains` must appear in the rendered message; the surrounding wording is not pinned.",
       "formatRef": "formatRef({ venue, id }) === text. The default venue prints bare; the others print their prefix.",
-      "normaliseId": "normaliseId(venue, input) === id. Kalshi upper-cases, both Polymarkets lower-case.",
+      "normaliseId": "normaliseId(venue, input) === id. Kalshi, Gemini and ForecastEx upper-case; both Polymarkets and predict.fun lower-case.",
       "parseVenue": "parseVenue(token, context) === venue, where `context` is \"prefix\" (a token before a colon, which accepts every alias) or \"word\" (one token among the words of free text, which declines the aliases that are also ordinary English). A null `venue` means the token names no venue in that context."
     },
     "notes": [
@@ -95,7 +95,39 @@
     },
     { "input": "polyus:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" },
     { "input": "pm-us:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" },
-    { "input": "us:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" }
+    { "input": "us:Foo-Bar", "fallback": "kalshi", "venue": "polymarket-us", "id": "foo-bar" },
+
+    { "input": "gem:fed260917", "fallback": "kalshi", "venue": "gemini", "id": "FED260917" },
+    {
+      "input": "gemini:GEMI-DEMNOM2028-DEMNOM28AOC",
+      "fallback": "kalshi",
+      "venue": "gemini",
+      "id": "GEMI-DEMNOM2028-DEMNOM28AOC"
+    },
+    { "input": "gemi:nfl-2608212330-car-jax-m", "fallback": "kalshi", "venue": "gemini", "id": "NFL-2608212330-CAR-JAX-M" },
+    { "input": "GEM:  fed260917 ", "fallback": "polymarket", "venue": "gemini", "id": "FED260917" },
+
+    {
+      "input": "pf:Big-Game-Champion-2027~26952",
+      "fallback": "kalshi",
+      "venue": "predictfun",
+      "id": "big-game-champion-2027~26952"
+    },
+    { "input": "predictfun:Foo-Bar", "fallback": "kalshi", "venue": "predictfun", "id": "foo-bar" },
+    { "input": "predict-fun:Foo-Bar", "fallback": "kalshi", "venue": "predictfun", "id": "foo-bar" },
+    { "input": "predict.fun:Foo-Bar", "fallback": "kalshi", "venue": "predictfun", "id": "foo-bar" },
+    { "input": "predict:Foo-Bar", "fallback": "kalshi", "venue": "predictfun", "id": "foo-bar" },
+
+    { "input": "fx:ff_091726_3.625", "fallback": "kalshi", "venue": "forecastex", "id": "FF_091726_3.625" },
+    {
+      "input": "forecastex:horc_1126_republican",
+      "fallback": "kalshi",
+      "venue": "forecastex",
+      "id": "HORC_1126_REPUBLICAN"
+    },
+    { "input": "fex:horc_1126_republican", "fallback": "kalshi", "venue": "forecastex", "id": "HORC_1126_REPUBLICAN" },
+    { "input": "forecast:horc_1126", "fallback": "kalshi", "venue": "forecastex", "id": "HORC_1126" },
+    { "input": "forecast-ex:horc_1126", "fallback": "kalshi", "venue": "forecastex", "id": "HORC_1126" }
   ],
 
   "parseRefErrors": [
@@ -128,6 +160,30 @@
       "fallback": "kalshi",
       "error": "empty-identifier",
       "messageContains": ["names a venue but no slug"]
+    },
+    {
+      "input": "gem:",
+      "fallback": "kalshi",
+      "error": "empty-identifier",
+      "messageContains": ["\"gem:\" names a venue but no ticker"]
+    },
+    {
+      "input": "pf:",
+      "fallback": "kalshi",
+      "error": "empty-identifier",
+      "messageContains": ["\"pf:\" names a venue but no slug"]
+    },
+    {
+      "input": "fx:",
+      "fallback": "kalshi",
+      "error": "empty-identifier",
+      "messageContains": ["\"fx:\" names a venue but no contract id"]
+    },
+    {
+      "input": "forecastx:foo",
+      "fallback": "kalshi",
+      "error": "unknown-prefix",
+      "messageContains": ["Unknown venue prefix \"forecastx\"", "gem:", "pf:", "fx:"]
     }
   ],
 
@@ -146,6 +202,21 @@
       "venue": "polymarket-us",
       "id": "fed-decision-2026-09-16",
       "text": "pmus:fed-decision-2026-09-16"
+    },
+    {
+      "venue": "gemini",
+      "id": "GEMI-FED260917-MAINTAIN",
+      "text": "gem:GEMI-FED260917-MAINTAIN"
+    },
+    {
+      "venue": "predictfun",
+      "id": "big-game-champion-2027~26952",
+      "text": "pf:big-game-champion-2027~26952"
+    },
+    {
+      "venue": "forecastex",
+      "id": "FF_091726_3.625",
+      "text": "fx:FF_091726_3.625"
     }
   ],
 
@@ -155,7 +226,11 @@
     { "venue": "kalshi", "input": "KxFeD-1", "id": "KXFED-1" },
     { "venue": "polymarket", "input": "Fed-Decision", "id": "fed-decision" },
     { "venue": "polymarket", "input": "fed-decision", "id": "fed-decision" },
-    { "venue": "polymarket-us", "input": "USFED-FOMC", "id": "usfed-fomc" }
+    { "venue": "polymarket-us", "input": "USFED-FOMC", "id": "usfed-fomc" },
+    { "venue": "gemini", "input": "fed260917", "id": "FED260917" },
+    { "venue": "gemini", "input": "GEMI-FED260917-MAINTAIN", "id": "GEMI-FED260917-MAINTAIN" },
+    { "venue": "predictfun", "input": "Big-Game-Champion-2027~26952", "id": "big-game-champion-2027~26952" },
+    { "venue": "forecastex", "input": "ff_091726_3.625", "id": "FF_091726_3.625" }
   ],
 
   "parseVenue": [
@@ -175,6 +250,19 @@
     { "token": "pmus", "context": "prefix", "venue": "polymarket-us" },
     { "token": "pm-us", "context": "prefix", "venue": "polymarket-us" },
     { "token": "us", "context": "prefix", "venue": "polymarket-us" },
+    { "token": "gemini", "context": "prefix", "venue": "gemini" },
+    { "token": "gemi", "context": "prefix", "venue": "gemini" },
+    { "token": "gem", "context": "prefix", "venue": "gemini" },
+    { "token": "predictfun", "context": "prefix", "venue": "predictfun" },
+    { "token": "predict-fun", "context": "prefix", "venue": "predictfun" },
+    { "token": "predict.fun", "context": "prefix", "venue": "predictfun" },
+    { "token": "pf", "context": "prefix", "venue": "predictfun" },
+    { "token": "predict", "context": "prefix", "venue": "predictfun" },
+    { "token": "forecastex", "context": "prefix", "venue": "forecastex" },
+    { "token": "forecast-ex", "context": "prefix", "venue": "forecastex" },
+    { "token": "fex", "context": "prefix", "venue": "forecastex" },
+    { "token": "fx", "context": "prefix", "venue": "forecastex" },
+    { "token": "forecast", "context": "prefix", "venue": "forecastex" },
 
     { "token": "KX", "context": "prefix", "venue": "kalshi" },
     { "token": "  PM  ", "context": "prefix", "venue": "polymarket" },
@@ -192,12 +280,24 @@
     { "token": "polyus", "context": "word", "venue": "polymarket-us" },
     { "token": "pmus", "context": "word", "venue": "polymarket-us" },
     { "token": "pm-us", "context": "word", "venue": "polymarket-us" },
+    { "token": "gemini", "context": "word", "venue": "gemini" },
+    { "token": "gemi", "context": "word", "venue": "gemini" },
+    { "token": "predictfun", "context": "word", "venue": "predictfun" },
+    { "token": "predict-fun", "context": "word", "venue": "predictfun" },
+    { "token": "pf", "context": "word", "venue": "predictfun" },
+    { "token": "forecastex", "context": "word", "venue": "forecastex" },
+    { "token": "fex", "context": "word", "venue": "forecastex" },
 
     { "token": "us", "context": "word", "venue": null },
     { "token": "US", "context": "word", "venue": null },
     { "token": "k", "context": "word", "venue": null },
     { "token": "intl", "context": "word", "venue": null },
     { "token": "international", "context": "word", "venue": null },
+    { "token": "gem", "context": "word", "venue": null },
+    { "token": "GEM", "context": "word", "venue": null },
+    { "token": "fx", "context": "word", "venue": null },
+    { "token": "predict", "context": "word", "venue": null },
+    { "token": "forecast", "context": "word", "venue": null },
 
     { "token": "nasdaq", "context": "prefix", "venue": null },
     { "token": "nasdaq", "context": "word", "venue": null },

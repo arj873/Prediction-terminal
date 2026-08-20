@@ -29,9 +29,17 @@
    * A YES taker lifted the offer — an aggressive buy of YES, which prints green
    * by the usual convention. A NO taker hit the bid: that is a sale of YES, and
    * prints red.
+   *
+   * Not every exchange says which side was the aggressor. ForecastEx matches by
+   * pairing a YES buyer with a NO buyer, so structurally neither lifted the
+   * other. Both it and predict.fun send an empty `takerSide`, and an
+   * unattributed print is drawn in neither colour rather than being guessed into
+   * red — which is what a two-way test does to every print that states nothing.
    */
-  function aggression(trade: Trade): 'buy' | 'sell' {
-    return trade.takerSide === 'yes' ? 'buy' : 'sell';
+  function aggression(trade: Trade): 'buy' | 'sell' | 'unattributed' {
+    if (trade.takerSide === 'yes') return 'buy';
+    if (trade.takerSide === 'no') return 'sell';
+    return 'unattributed';
   }
 
   const columns: Column<Trade>[] = [
@@ -44,7 +52,7 @@
     { header: 'SIZE', cell: (trade) => compact(trade.count), class: 'num' },
     {
       header: 'TAKER',
-      cell: (trade) => trade.takerSide.toUpperCase(),
+      cell: (trade) => trade.takerSide.toUpperCase() || '--',
       class: (trade) => `tag-cell trade-${aggression(trade)}`,
     },
     { header: '', cell: (trade) => (trade.isBlockTrade ? 'BLOCK' : ''), class: 'dim' },
