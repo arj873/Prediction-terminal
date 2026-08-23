@@ -1272,19 +1272,28 @@ pub async fn get_candles(
 
 const CORPUS_KEY: &str = "gemini:corpus";
 
-/// The whole open universe in one request.
+/// The whole open universe, in one request where one is enough.
 ///
-/// `limit` has no cap — 500, 1,000 and 2,000 all returned every row with the
-/// limit echoed back — so there is nothing to paginate and no truncation to
-/// apportion between categories, which is the problem every other venue's crawl
-/// spends its complexity on.
+/// `limit` is honoured at any size — 500, 1,000 and 2,000 each echoed the limit
+/// back — so there is nothing to paginate and no truncation to apportion between
+/// categories, which is the problem every other venue's crawl spends its
+/// complexity on.
+///
+/// It is a real ceiling on the answer, though, and the universe outgrows a fixed
+/// one. This module first shipped asking for 500 against a catalogue of 480; an
+/// hour later the same catalogue held 539, because a day's weather books open in
+/// a batch. The crawl was still *correct* — it set `truncated` — but a board
+/// quietly missing 39 events is not what `truncated` is for. So the pagination
+/// footer is read, and a crawl that came back short asks once more for exactly
+/// the number the venue says exists. Growth costs one extra request on the
+/// refresh that notices it, and nothing afterwards.
 ///
 /// Two corners of the catalogue are deliberately outside it. `status=settled` is
 /// hard-capped at 1,000 rows however it is paged, and `status=under_review`
 /// holds a handful of events that no other status returns. Neither is open
 /// interest to a trader reading a live board, and both would cost a second
 /// double-digit-megabyte request.
-const CORPUS_LIMIT: usize = 500;
+const CORPUS_LIMIT: usize = 1_000;
 
 /// The decoded body is ~12 MB today, past the fetch default. The ceiling is set
 /// well above that so the open universe has room to grow without the crawl
@@ -1308,17 +1317,15 @@ struct GeminiSnapshot {
     facts: HashMap<String, EventFacts>,
 }
 
-async fn build_snapshot(state: &AppState) -> Result<GeminiSnapshot> {
+/// One catalogue request, at the limit asked for.
+async fn fetch_catalogue(state: &AppState, limit: usize) -> Result<RawGeminiCatalogue> {
     let url = format!(
         "{}/prediction-markets{}",
         state.config().gemini_catalogue_base,
-        qs(&[
-            ("limit", CORPUS_LIMIT.to_string()),
-            ("status", "active".into()),
-        ])
+        qs(&[("limit", limit.to_string()), ("status", "active".into())])
     );
 
-    let raw: RawGeminiCatalogue = state
+    state
         .http()
         .fetch_json(
             &url,
@@ -1327,9 +1334,35 @@ async fn build_snapshot(state: &AppState) -> Result<GeminiSnapshot> {
                 .retries(2)
                 .max_bytes(CORPUS_MAX_BYTES),
         )
-        .await?;
+        .await
+}
 
-    let rows = raw.data.unwrap_or_default();
+/// How many rows the venue says exist, however many it sent.
+fn stated_total(raw: &RawGeminiCatalogue, sent: usize) -> usize {
+    raw.pagination
+        .as_ref()
+        .and_then(|page| page.total)
+        .unwrap_or(sent)
+}
+
+async fn build_snapshot(state: &AppState) -> Result<GeminiSnapshot> {
+    let mut raw = fetch_catalogue(state, CORPUS_LIMIT).await?;
+    let mut rows = raw.data.take().unwrap_or_default();
+    let mut total = stated_total(&raw, rows.len());
+
+    if rows.len() < total {
+        // The universe outgrew the standing limit. Ask again for exactly what
+        // the venue says it holds, and keep the wider answer only if it really
+        // is wider — a replica that lags and answers with fewer rows must not
+        // shrink a board that was already complete.
+        let mut wider = fetch_catalogue(state, total).await?;
+        let widened = wider.data.take().unwrap_or_default();
+        if widened.len() > rows.len() {
+            total = stated_total(&wider, widened.len());
+            rows = widened;
+        }
+    }
+
     let mut events: Vec<VenueEvent> = Vec::with_capacity(rows.len());
     let mut markets: Vec<Market> = Vec::new();
     let mut facts: HashMap<String, EventFacts> = HashMap::with_capacity(rows.len());
@@ -1360,11 +1393,6 @@ async fn build_snapshot(state: &AppState) -> Result<GeminiSnapshot> {
 
         events.push(event);
     }
-
-    let total = raw
-        .pagination
-        .and_then(|page| page.total)
-        .unwrap_or(rows.len());
 
     Ok(GeminiSnapshot {
         corpus: Arc::new(Corpus::new(VENUE, events, markets, rows.len() < total)),
@@ -2480,8 +2508,8 @@ mod tests {
         trades_of(json!([
             {
                 "timestamp": 1787183859,
-                "timestampms": 1787183859270,
-                "tid": 1893456011072804,
+                "timestampms": 1787183859270i64,
+                "tid": 1893456011072804i64,
                 "price": "0.18",
                 "amount": "13",
                 "exchange": "gemini",
@@ -2489,8 +2517,8 @@ mod tests {
             },
             {
                 "timestamp": 1787114019,
-                "timestampms": 1787114019968,
-                "tid": 1893456011046845,
+                "timestampms": 1787114019968i64,
+                "tid": 1893456011046845i64,
                 "price": "0.19",
                 "amount": "234",
                 "exchange": "gemini",
@@ -2525,7 +2553,7 @@ mod tests {
     #[test]
     fn falls_back_to_the_millisecond_stamp_when_only_that_is_present() {
         let rows = trades_of(json!([
-            { "timestampms": 1787003922607, "price": "0.2", "amount": "5" }
+            { "timestampms": 1787003922607i64, "price": "0.2", "amount": "5" }
         ]));
         let response = normalise_trades(&rows, "x", 50);
         assert_eq!(response.trades[0].ts, 1_787_003_922);
@@ -2684,7 +2712,7 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path_matcher("/prediction-markets"))
-            .and(query_param("limit", "500"))
+            .and(query_param("limit", "1000"))
             .and(query_param("status", "active"))
             .respond_with(ResponseTemplate::new(200).set_body_json(catalogue_fixture()))
             // One request, not a paginated walk: `limit` has no cap upstream.
@@ -2701,6 +2729,83 @@ mod tests {
         assert_eq!(corpus.markets.len(), 16);
         // `pagination.total` matched the row count, so nothing was left behind.
         assert!(!corpus.truncated);
+    }
+
+    #[tokio::test]
+    async fn the_crawl_asks_again_when_the_universe_outgrew_its_limit() {
+        // The live catalogue held 480 events one afternoon and 539 an hour
+        // later, because a day's weather books open in a batch. A standing limit
+        // is therefore a ceiling that the universe walks through, and a board
+        // silently missing 39 events is worse than a second request.
+        let server = MockServer::start().await;
+        let mut short = catalogue_fixture();
+        let all = short["data"].as_array().expect("the fixture is an array").clone();
+        short["data"] = json!(all[..4]);
+        short["pagination"] = json!({ "limit": 1000, "offset": 0, "total": all.len() });
+
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets"))
+            .and(query_param("limit", "1000"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(short))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let mut whole = catalogue_fixture();
+        whole["pagination"] = json!({ "limit": all.len(), "offset": 0, "total": all.len() });
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets"))
+            .and(query_param("limit", all.len().to_string()))
+            .respond_with(ResponseTemplate::new(200).set_body_json(whole))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let corpus = corpus_snapshot(&state_for(&server))
+            .await
+            .expect("the crawl completes");
+
+        assert_eq!(corpus.events.len(), 7);
+        assert!(!corpus.truncated);
+    }
+
+    #[tokio::test]
+    async fn a_second_crawl_that_answers_with_fewer_rows_does_not_shrink_the_board() {
+        // The re-ask goes to whichever replica answers, and one that lags would
+        // otherwise replace a complete board with a shorter one.
+        let server = MockServer::start().await;
+        let all = catalogue_fixture()["data"]
+            .as_array()
+            .expect("the fixture is an array")
+            .clone();
+
+        let mut most = catalogue_fixture();
+        most["data"] = json!(all[..6]);
+        most["pagination"] = json!({ "limit": 1000, "offset": 0, "total": all.len() });
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets"))
+            .and(query_param("limit", "1000"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(most))
+            .mount(&server)
+            .await;
+
+        let mut lagging = catalogue_fixture();
+        lagging["data"] = json!(all[..2]);
+        lagging["pagination"] = json!({ "limit": all.len(), "offset": 0, "total": all.len() });
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets"))
+            .and(query_param("limit", all.len().to_string()))
+            .respond_with(ResponseTemplate::new(200).set_body_json(lagging))
+            .mount(&server)
+            .await;
+
+        let corpus = corpus_snapshot(&state_for(&server))
+            .await
+            .expect("the crawl completes");
+
+        assert_eq!(corpus.events.len(), 6);
+        // Still short of what the venue says it holds, and the board says so.
+        assert!(corpus.truncated);
     }
 
     #[tokio::test]
@@ -2860,7 +2965,15 @@ mod tests {
     #[tokio::test]
     async fn get_market_walks_the_symbol_prefixes_when_the_snapshot_cannot_answer() {
         // A leg of a settled event is not in a `status=active` crawl, and `EVT`
-        // on that event hands the reader exactly those symbols.
+        // on that event hands the reader exactly those symbols, so refusing them
+        // would make the terminal reject identifiers it had just printed.
+        //
+        // The walk starts one segment short of the whole symbol and never asks
+        // for the whole of it. An `instrumentSymbol` is the event ticker plus a
+        // contract ticker, so the full string cannot name an event — asking for
+        // it would be a request guaranteed to 404. Where the *contract* half is
+        // itself hyphenated the walk pays one wasted request, which is the case
+        // this covers: `FED260917-HIKE` names no event, `FED260917` does.
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path_matcher("/prediction-markets"))
@@ -2868,36 +2981,42 @@ mod tests {
             .mount(&server)
             .await;
 
-        // The longest prefix first, and it names no event.
         Mock::given(method("GET"))
-            .and(path_matcher("/prediction-markets/BTC2608171800-HI63700"))
+            .and(path_matcher("/prediction-markets/FED260917-HIKE-25"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(json!({ "error": "NOT_FOUND" })))
+            .expect(0)
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets/FED260917-HIKE"))
             .respond_with(ResponseTemplate::new(404).set_body_json(json!({ "error": "NOT_FOUND" })))
             .expect(1)
             .mount(&server)
             .await;
 
         Mock::given(method("GET"))
-            .and(path_matcher("/prediction-markets/BTC2608171800"))
+            .and(path_matcher("/prediction-markets/FED260917"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "ticker": "BTC2608171800",
-                "title": "BTC price at 6pm",
+                "ticker": "FED260917",
+                "title": "Fed decision in September?",
                 "type": "categorical",
                 "contracts": [{
-                    "label": "$63,700 or above",
-                    "instrumentSymbol": "GEMI-BTC2608171800-HI63700",
+                    "label": "Hike 25bps",
+                    "instrumentSymbol": "GEMI-FED260917-HIKE-25",
                     "prices": { "bestBid": "0.4", "bestAsk": "0.42" }
                 }]
             })))
+            .expect(1)
             .mount(&server)
             .await;
 
-        let market = get_market(&state_for(&server), "GEMI-BTC2608171800-HI63700")
+        let market = get_market(&state_for(&server), "GEMI-FED260917-HIKE-25")
             .await
             .expect("the prefix walk finds the owning event");
-        assert_eq!(market.event_ticker, "BTC2608171800");
+        assert_eq!(market.event_ticker, "FED260917");
         assert_eq!(market.yes_bid, Some(0.4));
     }
-
     #[tokio::test]
     async fn get_order_book_reads_the_whole_ladder_and_caps_it_here() {
         let server = MockServer::start().await;
@@ -2995,8 +3114,8 @@ mod tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(json!([
                 {
                     "timestamp": 1787183859,
-                    "timestampms": 1787183859270,
-                    "tid": 1893456011072804,
+                    "timestampms": 1787183859270i64,
+                    "tid": 1893456011072804i64,
                     "price": "0.18",
                     "amount": "13",
                     "type": "buy"
@@ -3075,7 +3194,6 @@ mod tests {
                 "BTC1H",
                 "DEMNOM2028",
                 "FED",
-                "GOLF-BMW-WIN",
                 "HORMUZNORMAL",
                 "RECESSION26",
                 "SEN26MI",
@@ -3085,10 +3203,16 @@ mod tests {
         // The exchange states no cadence, and `BTC1H` is not a licence to write
         // "hourly" into a field the reader takes as the venue's own word.
         assert!(series.iter().all(|s| s.frequency.is_empty()));
-        // The event's tags and its subcategory slug both reach the family.
+        // The event's tags and its subcategory slug both reach the family, which
+        // are two different spellings of the same thing upstream — the tag is
+        // written for a reader and the slug for a machine.
         let weather = series.iter().find(|s| s.ticker == "WXHIGH-CHI").unwrap();
         assert_eq!(weather.category, "Weather");
-        assert!(weather.tags.iter().any(|tag| tag == "weather_temperature"));
+        assert!(weather.tags.iter().any(|tag| tag == "Daily Temperature"));
+        assert!(weather
+            .tags
+            .iter()
+            .any(|tag| tag == "weather_daily-temperature"));
         assert_eq!(weather.venue, Venue::Gemini);
     }
 
@@ -3116,7 +3240,7 @@ mod tests {
             .expect("a search");
         assert_eq!(response.query, "democratic nominee");
         assert!(response
-            .events
+            .hits
             .iter()
             .any(|hit| hit.event.event_ticker == "DEMNOM2028"));
     }
