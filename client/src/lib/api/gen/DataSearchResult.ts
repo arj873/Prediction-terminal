@@ -5,4 +5,15 @@ export type DataSearchResult = {
 /**
  * Which publisher. `ECOS` fans out, so a row without this is unusable.
  */
-provider: DataSource, id: string, title: string, units?: string, frequency?: string, seasonalAdjustment?: string, observationRange?: string, };
+provider: DataSource, 
+/**
+ * Which arm of that publisher answered, where it has more than one.
+ *
+ * Per row rather than per response, because `ECOS` fans across publishers
+ * and one figure for the whole answer would describe none of them. `None`
+ * where the publisher has a single surface, which is most of them; FRED
+ * fills it with `scrape` or `api`, and a reader weighs a row differently
+ * depending on whether it came from the source of record or the fallback
+ * behind it.
+ */
+source?: string, id: string, title: string, units?: string, frequency?: string, seasonalAdjustment?: string, observationRange?: string, };

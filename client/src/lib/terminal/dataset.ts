@@ -215,8 +215,7 @@ const SOURCE_TABLE = [
     idExample: 'legacy/GOLD/noncomm_net',
     case: 'keep',
     site: 'https://publicreporting.cftc.gov',
-    covers:
-      'Commitments of Traders — who is long and short each futures market, weekly since 1986',
+    covers: 'Commitments of Traders — who is long and short each futures market, weekly since 1986',
     aliases: ['cftc', 'cot', 'commitments'],
   },
   {
@@ -260,8 +259,7 @@ const SOURCE_TABLE = [
     idExample: 'consumer-price-index',
     case: 'lower',
     site: 'https://data.gov/developers/apis/',
-    covers:
-      "the US government's dataset catalogue — 300,000+ datasets across every federal agency",
+    covers: "the US government's dataset catalogue — 300,000+ datasets across every federal agency",
     aliases: ['datagov', 'data-gov', 'usgov', 'usa'],
     key: {
       env: 'DATAGOV_API_KEY',

@@ -11,7 +11,6 @@
 //! configured a blocked scrape is annotated with the way out — which is the
 //! failure a hosted deployment actually hits.
 
-use terminal_core::types::FredSource;
 use terminal_server::codes;
 use terminal_server::config::Config;
 use terminal_server::sources::fred::{get_series, search_series, DEFAULT_SEARCH_LIMIT};
@@ -206,7 +205,7 @@ async fn merges_metadata_scraped_from_the_series_page() {
     assert_eq!(series.title, "Unemployment Rate");
     assert_eq!(series.units, "Percent");
     assert_eq!(series.frequency, "Monthly");
-    assert_eq!(series.source, FredSource::Scrape);
+    assert_eq!(series.source, "scrape");
     assert!(series.notes.contains("Fixture notes"), "{}", series.notes);
 }
 
@@ -385,7 +384,7 @@ async fn still_returns_observations_when_the_metadata_page_fails() {
     // Falling back to the observations themselves for the range.
     assert_eq!(result.series.observation_start, "2024-01-01");
     assert_eq!(result.series.observation_end, "2024-04-01");
-    assert_eq!(result.series.source, FredSource::Scrape);
+    assert_eq!(result.series.source, "scrape");
 }
 
 /* -------------------------------------------------------- the provider chain */
@@ -405,7 +404,7 @@ async fn falls_back_to_the_official_api_when_the_scrape_is_blocked() {
         .await
         .expect("the API arm answers what the scrape could not");
 
-    assert_eq!(result.series.source, FredSource::Api);
+    assert_eq!(result.series.source, "api");
     assert_eq!(result.series.units_short, "%");
     assert_eq!(result.series.notes, "From the API.");
     assert_eq!(
@@ -520,7 +519,12 @@ async fn parses_results_out_of_the_search_page() {
         .await
         .expect("the fixture host answers");
 
-    assert_eq!(result.source, FredSource::Scrape);
+    // Which arm answered is stated per row now that the same shape carries a
+    // fanned-out search across publishers.
+    assert!(result
+        .results
+        .iter()
+        .all(|r| r.source.as_deref() == Some("scrape")));
     assert_eq!(
         result
             .results
@@ -599,7 +603,10 @@ async fn searches_through_the_api_arm_and_reports_it_as_the_source() {
 
     // Which arm answered is reported by the chain, not by a variable the
     // fallback reassigned on its way past.
-    assert_eq!(result.source, FredSource::Api);
+    assert!(result
+        .results
+        .iter()
+        .all(|r| r.source.as_deref() == Some("api")));
     assert_eq!(result.results.len(), 1);
     assert_eq!(result.results[0].id, "UNRATE");
     // `units_short` wins over `units` on this surface.

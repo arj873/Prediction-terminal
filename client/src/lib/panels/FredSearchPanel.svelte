@@ -34,8 +34,7 @@
   {data}
   rows={(d: DataSearchResponse) => d.results}
   {columns}
-  note={(d: DataSearchResponse) =>
-    d.results.length === 0 ? null : `${d.results.length} series`}
+  note={(d: DataSearchResponse) => (d.results.length === 0 ? null : `${d.results.length} series`)}
   empty={(d: DataSearchResponse) => ({ message: `No FRED series match "${d.query}".` })}
   rowCommand={(r: DataSearchResult) => `FRED ${r.id}`}
   rowTitle={(r: DataSearchResult) => `Open ${r.id}`}

@@ -865,6 +865,17 @@ pub struct DataSeriesResponse {
 pub struct DataSearchResult {
     /// Which publisher. `ECOS` fans out, so a row without this is unusable.
     pub provider: DataSource,
+    /// Which arm of that publisher answered, where it has more than one.
+    ///
+    /// Per row rather than per response, because `ECOS` fans across publishers
+    /// and one figure for the whole answer would describe none of them. `None`
+    /// where the publisher has a single surface, which is most of them; FRED
+    /// fills it with `scrape` or `api`, and a reader weighs a row differently
+    /// depending on whether it came from the source of record or the fallback
+    /// behind it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub source: Option<String>,
     pub id: String,
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]

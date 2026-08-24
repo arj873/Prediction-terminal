@@ -718,6 +718,7 @@ pub fn parse_search_page(html: &str) -> Vec<DataSearchResult> {
         // silently. `DataSearchResult` deliberately has no `Default`.
         let mut entry = DataSearchResult {
             provider: DataSource::Fred,
+            source: Some("scrape".to_owned()),
             id,
             title,
             units: None,
@@ -779,6 +780,7 @@ async fn api_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<Dat
         .into_iter()
         .map(|series| DataSearchResult {
             provider: DataSource::Fred,
+            source: Some("api".to_owned()),
             id: series.id,
             title: series.title,
             units: Some(if series.units_short.is_empty() {
