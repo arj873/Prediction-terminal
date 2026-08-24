@@ -1,0 +1,20 @@
+[
+    {
+        "market_and_exchange_names": "WHEAT-HRW - CHICAGO BOARD OF TRADE",
+        "cftc_contract_market_code": "001612",
+        "latest": "2026-08-18T00:00:00.000",
+        "oi": "345241"
+    },
+    {
+        "market_and_exchange_names": "WHEAT-SRW - CHICAGO BOARD OF TRADE",
+        "cftc_contract_market_code": "001602",
+        "latest": "2026-08-18T00:00:00.000",
+        "oi": "572693"
+    },
+    {
+        "market_and_exchange_names": "BLACK SEA WHEAT FINANCIAL - CHICAGO BOARD OF TRADE",
+        "cftc_contract_market_code": "00160F",
+        "latest": "2022-02-22T00:00:00.000",
+        "oi": "29924"
+    }
+]

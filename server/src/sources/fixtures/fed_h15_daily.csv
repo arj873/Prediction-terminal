@@ -1,0 +1,11 @@
+"Series Description","Market yield on U.S. Treasury securities at 1-month   constant maturity, quoted on investment basis","Market yield on U.S. Treasury securities at 10-year   constant maturity, quoted on investment basis","Market yield on U.S. Treasury securities at 30-year   constant maturity, quoted on investment basis"
+"Unit:","Percent:_Per_Year","Percent:_Per_Year","Percent:_Per_Year"
+"Multiplier:","1","1","1"
+"Currency:","NA","NA","NA"
+"Unique Identifier: ","H15/H15/RIFLGFCM01_N.B","H15/H15/RIFLGFCY10_N.B","H15/H15/RIFLGFCY30_N.B"
+"Time Period","RIFLGFCM01_N.B","RIFLGFCY10_N.B","RIFLGFCY30_N.B"
+2025-12-30,3.65,4.14,4.81
+2025-12-31,3.74,4.18,4.84
+2026-01-01,ND,ND,ND
+2026-01-02,3.72,4.19,4.86
+2026-01-05,3.71,4.17,4.85

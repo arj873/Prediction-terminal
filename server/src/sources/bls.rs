@@ -24,17 +24,23 @@
 //! ```
 //!
 //! So the envelope is read before the data is, and nothing here treats a
-//! successful transport as a successful request. [`fixtures/bls_throttled.json`]
+//! successful transport as a successful request. `fixtures/bls_throttled.json`
 //! is that exact body, kept so the test asserts what the bureau really sends.
 //!
 //! **The year window.** The API takes a start and an end *year* and caps the
-//! span — ten years unregistered, twenty with a free key. Ask for more and you
-//! are not told: the answer is the most recent decade, well-formed, plausible
-//! and silently short. A chart of "unemployment since 1948" is therefore eight
-//! requests rather than one, so [`windows`] splits the range and the pieces are
-//! merged back. The point is not that the module knows which way the API fails
-//! — truncating or refusing — but that it never has to find out, because it
-//! never sends a span wider than the arm it is talking to accepts.
+//! span — ten years unregistered, twenty with a free key. What it does with a
+//! wider one is the part worth being careful about: the TypeScript this
+//! replaces says in one place that the answer comes back silently capped to the
+//! most recent decade, and in another that the request is refused outright, and
+//! the container this was ported in could not settle it, its address's
+//! twenty-five anonymous queries for the day already being spent. Either way
+//! the loss is invisible — a truncated answer is well-formed, plausible and
+//! silently short, and a refusal is an HTTP 200 — so the module never sends a
+//! span wider than the arm it is talking to accepts. A chart of "unemployment
+//! since 1948" is eight requests rather than one: [`windows`] splits the range
+//! and the pieces are merged back, and nothing downstream ever has to work out
+//! whether 1948 is missing because the bureau has no such reading or because
+//! nobody ever asked for it.
 //!
 //! **Periods are not dates.** The bureau dates a monthly reading `M07`, a
 //! quarter `Q02`, a half-year `S01`, and an annual *average* `M13` — a summary
@@ -963,8 +969,21 @@ mod tests {
         assert!(err.hint.expect("a hint").contains("LNS14000000"));
 
         assert!(assert_bls_series_id("LNS-14000000").is_err());
-        assert!(assert_bls_series_id("UNRATE").is_err(), "too short");
+        assert!(assert_bls_series_id("LNS1").is_err(), "shorter than any id");
         assert!(assert_bls_series_id("").is_err());
+    }
+
+    #[test]
+    fn the_id_check_is_a_shape_check_and_says_so_by_accepting_a_freds() {
+        // `UNRATE` is FRED's name for the same statistic and is six
+        // alphanumerics, so it passes a grammar that only knows the shape. What
+        // catches a wrong-publisher id is the bureau itself, which answers a
+        // well-formed id it does not publish with an empty `data` array — the
+        // `not_found` that
+        // `an_id_the_bureau_does_not_publish_is_not_found_rather_than_empty`
+        // covers. Refusing it here would need a membership list the bureau does
+        // not publish, and would reject the real ids missing from it.
+        assert_eq!(assert_bls_series_id("UNRATE").as_deref(), Ok("UNRATE"));
     }
 
     /* --------------------------------------------------------------- windows */

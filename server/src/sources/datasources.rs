@@ -261,6 +261,21 @@ pub async fn search_series(
 
 /* --------------------------------------------------------------- statuses */
 
+/// Publishers the registry lists that no verb reads yet.
+///
+/// `SRC` exists to say what this deployment can *actually* serve, so a row that
+/// reports READY for a publisher nothing can open is the exact failure the board
+/// was built to prevent — worse than omitting it, because a reader would type
+/// the reference and be told to use a command that does not exist. They stay on
+/// the board with their coverage, because knowing the terminal knows about
+/// EDGAR is worth something, and they say plainly that nothing reads them yet.
+const NOT_YET_SERVED: &[DataSource] = &[
+    DataSource::Congress,
+    DataSource::Sec,
+    DataSource::Datagov,
+    DataSource::Polygon,
+];
+
 /// What each publisher's credential does for this deployment.
 ///
 /// The note is what a reader can act on: which arm will answer, what a key
@@ -269,6 +284,18 @@ pub async fn search_series(
 fn credential_state(state: &AppState, source: DataSource) -> (bool, String) {
     if let Some(blocked) = unavailable(state, source) {
         return (false, blocked);
+    }
+
+    if NOT_YET_SERVED.contains(&source) {
+        let info = data_source_info(source);
+        return (
+            false,
+            format!(
+                "No command reads {} yet — it is registered so the reference grammar and the \
+                 credential are in place, but nothing opens it.",
+                info.label
+            ),
+        );
     }
 
     let held = state.config().data_source_key(source).is_some();
@@ -304,16 +331,6 @@ fn credential_state(state: &AppState, source: DataSource) -> (bool, String) {
                 },
             )
         }
-        DataSource::Polygon => (
-            held,
-            if held {
-                "Leads the STK / CRY / IMP price chain.".to_owned()
-            } else {
-                "Set POLYGON_API_KEY to put a licensed tape in front of Yahoo and Nasdaq. \
-                 Without it, prices still work — this source simply is not used."
-                    .to_owned()
-            },
-        ),
         _ => (
             true,
             if data_source_info(source).key.is_some() {
@@ -373,4 +390,208 @@ pub fn parse_source_list(raw: &str) -> Result<Vec<DataSource>> {
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Dispatch and board tests.
+    //!
+    //! What matters here is not any publisher's dialect — each module tests its
+    //! own — but that the interface tells the truth about which of them this
+    //! deployment can reach, and refuses in terms a reader can act on.
+
+    use super::*;
+
+    use crate::config::Config;
+
+    fn state() -> AppState {
+        AppState::new(Config::default())
+    }
+
+    #[test]
+    fn the_board_lists_every_registered_publisher() {
+        let board = source_statuses(&state());
+        assert_eq!(board.len(), DATA_SOURCES.len());
+        for (row, info) in board.iter().zip(DATA_SOURCES) {
+            assert_eq!(row.id, info.id);
+            assert_eq!(row.label, info.label);
+        }
+    }
+
+    #[test]
+    fn a_publisher_nothing_reads_is_not_reported_ready() {
+        // `SRC` exists to say what can actually be served. A READY row for a
+        // publisher with no command behind it would send a reader to type a
+        // reference and be told to use a command that does not exist.
+        let board = source_statuses(&state());
+        for source in NOT_YET_SERVED {
+            let row = board
+                .iter()
+                .find(|row| row.id == *source)
+                .expect("every registered publisher has a row");
+            assert!(!row.available, "{source}");
+            assert!(row.note.contains("No command reads"), "{source}");
+        }
+    }
+
+    #[test]
+    fn the_eia_is_unavailable_without_its_key_and_says_what_to_set() {
+        // The one publisher with no anonymous tier at all: this is a hard gate
+        // rather than a degraded mode, because asking without a key can only
+        // ever produce a 403.
+        let board = source_statuses(&state());
+        let eia = board
+            .iter()
+            .find(|row| row.id == DataSource::Eia)
+            .expect("the EIA has a row");
+        assert!(!eia.available);
+        assert!(eia.note.contains("EIA_API_KEY"), "{}", eia.note);
+    }
+
+    #[test]
+    fn a_keyless_publisher_says_so_rather_than_leaving_the_column_blank() {
+        let board = source_statuses(&state());
+        for source in [DataSource::Ecb, DataSource::Imf, DataSource::Oecd] {
+            let row = board.iter().find(|row| row.id == source).expect("a row");
+            assert!(row.available, "{source}");
+            assert_eq!(row.note, "No credential needed.", "{source}");
+        }
+    }
+
+    #[test]
+    fn a_degraded_publisher_is_ready_and_says_what_a_key_would_add() {
+        // Different from both of the above: FRED and the BLS answer without a
+        // key, less well. A reader can act on that, so the row says how.
+        let board = source_statuses(&state());
+        for (source, wanted) in [
+            (DataSource::Fred, "FRED_API_KEY"),
+            (DataSource::Bls, "BLS_API_KEY"),
+        ] {
+            let row = board.iter().find(|row| row.id == source).expect("a row");
+            assert!(row.available, "{source}");
+            assert!(row.note.contains(wanted), "{source}: {}", row.note);
+        }
+    }
+
+    #[test]
+    fn the_reference_on_the_board_is_the_one_a_reader_types() {
+        // With the prefix on for everything but the default, because that is
+        // what has to be typed for the reference to reach the right publisher.
+        let board = source_statuses(&state());
+        let fred = board
+            .iter()
+            .find(|r| r.id == DataSource::Fred)
+            .expect("fred");
+        assert_eq!(fred.id_example, "UNRATE");
+        let ecb = board.iter().find(|r| r.id == DataSource::Ecb).expect("ecb");
+        assert_eq!(ecb.id_example, "ecb:EXR/D.USD.EUR.SP00.A");
+    }
+
+    #[tokio::test]
+    async fn eco_refuses_a_publisher_that_does_not_publish_observations() {
+        // In terms of what it *does* publish, rather than as a 404 that sends
+        // the reader hunting for a series that was never there.
+        let err = get_series(&state(), "sec:AAPL", None, None)
+            .await
+            .expect_err("EDGAR publishes filings, not observations");
+        assert_eq!(err.code, crate::error::codes::UNSUPPORTED);
+        assert!(err.message.contains("SEC EDGAR"), "{}", err.message);
+        assert!(
+            err.hint
+                .as_deref()
+                .unwrap_or_default()
+                .contains("documents"),
+            "{:?}",
+            err.hint
+        );
+    }
+
+    #[tokio::test]
+    async fn eco_refuses_a_price_feed_by_naming_the_commands_that_use_it() {
+        let err = get_series(&state(), "polygon:AAPL", None, None)
+            .await
+            .expect_err("Polygon feeds the price chain, not ECO");
+        assert!(
+            err.hint.as_deref().unwrap_or_default().contains("STK"),
+            "{:?}",
+            err.hint
+        );
+    }
+
+    #[tokio::test]
+    async fn a_bad_reference_is_reported_with_the_shape_it_should_have_had() {
+        let err = get_series(&state(), "worldbank:GDP", None, None)
+            .await
+            .expect_err("no such publisher");
+        assert_eq!(err.code, crate::error::codes::BAD_REQUEST);
+        assert!(
+            err.hint
+                .as_deref()
+                .unwrap_or_default()
+                .contains("[source:]id"),
+            "{:?}",
+            err.hint
+        );
+    }
+
+    #[tokio::test]
+    async fn ecos_refuses_an_empty_query_before_it_dials_anyone() {
+        let err = search_series(&state(), "   ", &[], 40)
+            .await
+            .expect_err("a search needs a word");
+        assert_eq!(err.code, crate::error::codes::BAD_REQUEST);
+    }
+
+    #[test]
+    fn a_source_filter_reports_the_name_it_could_not_read() {
+        let err = parse_source_list("fred,worldbank").expect_err("no such publisher");
+        assert!(err.message.contains("worldbank"), "{}", err.message);
+        // And offers only the ones `ECOS` could actually have asked.
+        let hint = err.hint.unwrap_or_default();
+        assert!(hint.contains("fred"), "{hint}");
+        assert!(!hint.contains("sec"), "{hint}");
+    }
+
+    #[test]
+    fn a_source_filter_keeps_its_order_and_drops_repeats() {
+        assert_eq!(
+            parse_source_list(" ecb , fred ,ecb").expect("a filter"),
+            [DataSource::Ecb, DataSource::Fred]
+        );
+        assert_eq!(parse_source_list("").expect("no filter"), []);
+    }
+}
+
+#[cfg(test)]
+mod advertised_examples {
+    use terminal_core::dataset::{data_source_info, DataSource};
+
+    /// The three SDMX publishers state a key that has to be complete.
+    ///
+    /// [`super::tests`] and the core registry both check that an advertised
+    /// example *parses*. That is not enough here, and both defects this test
+    /// was written for prove it: `imf:CPI/US.CPI._Z._Z.M` parses perfectly and
+    /// fetches nothing, because the dataflow spells the country `USA`; and
+    /// `oecd:DSD_KEI@DF_KEI/USA.M.PRVM.IX...` parses perfectly and matches
+    /// three series, which is refused rather than charted. A key is only real
+    /// if some catalogue entry names it — and being in the catalogue is also
+    /// what gives it a readable title, since the OECD states a measure *code*
+    /// where the ECB states a sentence.
+    #[test]
+    fn each_sdmx_publisher_advertises_a_key_from_its_own_catalogue() {
+        for (source, catalogue) in [
+            (DataSource::Ecb, super::super::ecb::catalogue()),
+            (DataSource::Imf, super::super::imf::catalogue()),
+            (DataSource::Oecd, super::super::oecd::catalogue()),
+        ] {
+            let info = data_source_info(source);
+            assert!(
+                catalogue.iter().any(|entry| entry.id == info.id_example),
+                "{} advertises {:?}, which is not in its catalogue — a reader who \
+                 types it gets an empty panel or a refusal, not a chart",
+                info.code,
+                info.id_example
+            );
+        }
+    }
 }

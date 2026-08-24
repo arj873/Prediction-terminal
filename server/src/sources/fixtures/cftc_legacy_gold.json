@@ -1,0 +1,30 @@
+[
+    {
+        "market_and_exchange_names": "GOLD - COMMODITY EXCHANGE INC.",
+        "cftc_contract_market_code": "088691",
+        "report_date_as_yyyy_mm_dd": "2026-08-18T00:00:00.000",
+        "open_interest_all": "406260",
+        "change_in_open_interest_all": "5951",
+        "noncomm_positions_long_all": "256902",
+        "noncomm_positions_short_all": "34713",
+        "noncomm_postions_spread_all": "28961",
+        "change_in_noncomm_long_all": "5966",
+        "change_in_noncomm_short_all": "1717",
+        "pct_of_oi_noncomm_long_all": "63.2",
+        "pct_of_oi_noncomm_short_all": "8.5",
+        "traders_noncomm_long_all": "172",
+        "comm_positions_long_all": "69050",
+        "comm_positions_short_all": "327468",
+        "change_in_comm_long_all": "-335",
+        "change_in_comm_short_all": "5443",
+        "pct_of_oi_comm_long_all": "17.0",
+        "pct_of_oi_comm_short_all": "80.6",
+        "traders_comm_long_all": "51",
+        "nonrept_positions_long_all": "51347",
+        "nonrept_positions_short_all": "15118",
+        "change_in_nonrept_long_all": "296",
+        "change_in_nonrept_short_all": "-1233",
+        "pct_of_oi_nonrept_long_all": "12.6",
+        "pct_of_oi_nonrept_short_all": "3.7"
+    }
+]

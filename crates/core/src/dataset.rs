@@ -262,7 +262,7 @@ pub static DATA_SOURCES: &[DataSourceInfo] = &[
         prefix: "imf:",
         kind: DataSourceKind::Series,
         id_label: "SDMX key",
-        id_example: "CPI/US.CPI._Z._Z.M",
+        id_example: "CPI/USA.CPI._T.IX.M",
         case: IdCase::Keep,
         site: "https://data.imf.org",
         covers: "cross-country CPI, balance of payments, reserves, government finance",
@@ -278,7 +278,7 @@ pub static DATA_SOURCES: &[DataSourceInfo] = &[
         prefix: "oecd:",
         kind: DataSourceKind::Series,
         id_label: "SDMX key",
-        id_example: "DSD_KEI@DF_KEI/USA.M.PRVM.IX...",
+        id_example: "DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY",
         case: IdCase::Keep,
         site: "https://data-explorer.oecd.org",
         covers: "member-country growth, inflation, unemployment and leading indicators",
@@ -739,6 +739,36 @@ mod tests {
             .expect("the BLS is keyed");
         assert!(!bls.without_key.is_empty());
         assert!(data_source_info(DataSource::Ecb).key.is_none());
+    }
+
+    #[test]
+    fn every_advertised_example_is_a_reference_that_parses_back_to_its_own_publisher() {
+        // `SRC` prints `id_example` as the thing to type next, so a stale one is
+        // not a cosmetic slip: the reader types it, the panel refuses it, and
+        // the board has told them a lie about what this deployment serves.
+        // Two of them were stale when this test was written — the IMF row named
+        // a country `US` where the dataflow spells it `USA`, and the OECD row
+        // left three dimensions empty, which selects three series and charts as
+        // none. Both were caught by typing them, which is what this automates.
+        for info in DATA_SOURCES.iter() {
+            let typed = format!("{}{}", info.prefix, info.id_example);
+            let parsed = parse_data_ref_default(&typed).unwrap_or_else(|error| {
+                panic!(
+                    "{} advertises {typed:?}, which does not parse: {error:?}",
+                    info.code
+                )
+            });
+            assert_eq!(
+                parsed.source, info.id,
+                "{} advertises {typed:?}, which routes to {:?}",
+                info.code, parsed.source
+            );
+            assert!(
+                !parsed.id.is_empty(),
+                "{} advertises {typed:?}, which carries no id",
+                info.code
+            );
+        }
     }
 
     #[test]

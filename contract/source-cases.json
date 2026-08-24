@@ -45,16 +45,16 @@
       "id": "ICP/M.U2.N.000000.4.ANR"
     },
     {
-      "input": "imf:CPI/US.CPI._Z._Z.M",
+      "input": "imf:CPI/USA.CPI._T.IX.M",
       "fallback": "fred",
       "source": "imf",
-      "id": "CPI/US.CPI._Z._Z.M"
+      "id": "CPI/USA.CPI._T.IX.M"
     },
     {
-      "input": "oecd:DSD_KEI@DF_KEI/USA.M.PRVM.IX...",
+      "input": "oecd:DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY",
       "fallback": "fred",
       "source": "oecd",
-      "id": "DSD_KEI@DF_KEI/USA.M.PRVM.IX..."
+      "id": "DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY"
     },
     {
       "input": "fed:H15/RIFLGFCY10_N.B",
@@ -163,8 +163,8 @@
     { "source": "congress", "input": "119/HR/1", "id": "119/hr/1" },
     { "source": "datagov", "input": "Consumer-Price-Index", "id": "consumer-price-index" },
     { "source": "ecb", "input": "EXR/D.USD.EUR.SP00.A", "id": "EXR/D.USD.EUR.SP00.A" },
-    { "source": "imf", "input": "CPI/US.CPI._Z._Z.M", "id": "CPI/US.CPI._Z._Z.M" },
-    { "source": "oecd", "input": "DSD_KEI@DF_KEI/USA.M.PRVM.IX...", "id": "DSD_KEI@DF_KEI/USA.M.PRVM.IX..." },
+    { "source": "imf", "input": "CPI/USA.CPI._T.IX.M", "id": "CPI/USA.CPI._T.IX.M" },
+    { "source": "oecd", "input": "DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY", "id": "DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY" },
     { "source": "fed", "input": "H15/RIFLGFCY10_N.B", "id": "H15/RIFLGFCY10_N.B" },
     { "source": "eia", "input": "petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG", "id": "petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG" }
   ],
