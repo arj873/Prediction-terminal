@@ -84,7 +84,19 @@
 
   const label = $derived(SORT_LABEL[sort]);
 
-  const names = (list: readonly Venue[]): string => list.map((v) => venueInfo(v).label).join(', ');
+  /**
+   * "Kalshi", "Kalshi and Gemini", "Kalshi, Gemini and ForecastEx".
+   *
+   * A plain comma join read as one name with a subject-verb disagreement behind
+   * it the day a second venue joined the list — "Polymarket US, Gemini publishes
+   * no 24h volume" — and a third would only have made it worse. The server
+   * words its own refusals the same way, in `sources/venues.rs`.
+   */
+  const names = (list: readonly Venue[]): string => {
+    const labels = list.map((v) => venueInfo(v).label);
+    if (labels.length <= 1) return labels[0] ?? '';
+    return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+  };
 
   /**
    * Each excluded venue's own account of what it withholds, deduplicated.
@@ -107,7 +119,10 @@
 
     if (loaded.cannotRank.length > 0) {
       segments.push({
-        text: `${names(loaded.cannotRank)} publishes no ${label} and is not ranked here.`,
+        text:
+          loaded.cannotRank.length === 1
+            ? `${names(loaded.cannotRank)} publishes no ${label} and is not ranked here.`
+            : `${names(loaded.cannotRank)} publish no ${label} and are not ranked here.`,
         tone: 'dim',
       });
       for (const reason of reasons(loaded.cannotRank)) {

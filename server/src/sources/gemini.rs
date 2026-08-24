@@ -1355,11 +1355,19 @@ async fn build_snapshot(state: &AppState) -> Result<GeminiSnapshot> {
         // the venue says it holds, and keep the wider answer only if it really
         // is wider — a replica that lags and answers with fewer rows must not
         // shrink a board that was already complete.
-        let mut wider = fetch_catalogue(state, total).await?;
-        let widened = wider.data.take().unwrap_or_default();
-        if widened.len() > rows.len() {
-            total = stated_total(&wider, widened.len());
-            rows = widened;
+        //
+        // Best-effort, never `?`. This is the larger of the two requests, so it
+        // is the one that will trip the byte ceiling or the timeout first — and
+        // the growth that makes it fail is the very growth it exists to cover.
+        // Failing it hard would turn `SRCH`, `TOP` and `XV` at this venue into
+        // errors, where what the reader should get is the first answer with
+        // `truncated` set, which is exactly what that flag is for.
+        if let Ok(mut wider) = fetch_catalogue(state, total).await {
+            let widened = wider.data.take().unwrap_or_default();
+            if widened.len() > rows.len() {
+                total = stated_total(&wider, widened.len());
+                rows = widened;
+            }
         }
     }
 
@@ -1443,7 +1451,11 @@ pub fn warm_corpus(state: &AppState) {
 /// venue's own word.
 pub async fn list_series(state: &AppState, category: Option<&str>) -> Result<Vec<SeriesInfo>> {
     let snapshot = snapshot(state).await?;
-    let want = category.map(|c| c.trim().to_lowercase());
+    // A bare `?category=` reaches here as `Some("")`, and treating that as a
+    // filter answers with nothing at all rather than with the whole catalogue.
+    let want = category
+        .map(|c| c.trim().to_lowercase())
+        .filter(|want| !want.is_empty());
 
     struct Family {
         title: String,
@@ -2739,7 +2751,10 @@ mod tests {
         // silently missing 39 events is worse than a second request.
         let server = MockServer::start().await;
         let mut short = catalogue_fixture();
-        let all = short["data"].as_array().expect("the fixture is an array").clone();
+        let all = short["data"]
+            .as_array()
+            .expect("the fixture is an array")
+            .clone();
         short["data"] = json!(all[..4]);
         short["pagination"] = json!({ "limit": 1000, "offset": 0, "total": all.len() });
 
@@ -2767,6 +2782,44 @@ mod tests {
 
         assert_eq!(corpus.events.len(), 7);
         assert!(!corpus.truncated);
+    }
+
+    #[tokio::test]
+    async fn a_failed_re_ask_keeps_the_board_it_already_had() {
+        // The re-ask is the larger of the two requests, so it is the one that
+        // trips a ceiling or a timeout first — and the growth that makes it fail
+        // is the growth it exists to cover. Failing hard would turn `SRCH`,
+        // `TOP` and `XV` at this venue into errors, where the honest answer is
+        // the first crawl with `truncated` set.
+        let server = MockServer::start().await;
+        let all = catalogue_fixture()["data"]
+            .as_array()
+            .expect("the fixture is an array")
+            .clone();
+
+        let mut short = catalogue_fixture();
+        short["data"] = json!(all[..5]);
+        short["pagination"] = json!({ "limit": 1000, "offset": 0, "total": all.len() });
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets"))
+            .and(query_param("limit", "1000"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(short))
+            .mount(&server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path_matcher("/prediction-markets"))
+            .and(query_param("limit", all.len().to_string()))
+            .respond_with(ResponseTemplate::new(503).set_body_string("upstream is having a day"))
+            .mount(&server)
+            .await;
+
+        let corpus = corpus_snapshot(&state_for(&server))
+            .await
+            .expect("the first crawl still stands");
+
+        assert_eq!(corpus.events.len(), 5);
+        assert!(corpus.truncated, "and the board says what it is missing");
     }
 
     #[tokio::test]
@@ -3217,6 +3270,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn an_empty_category_is_no_filter_rather_than_one_nothing_matches() {
+        // `GET /api/venue/gemini/series?category=` reaches here as `Some("")`.
+        // Read as a filter it answers with an empty catalogue, which is a
+        // statement about the venue rather than about the query.
+        let server = MockServer::start().await;
+        mount_catalogue(&server).await;
+        let state = state_for(&server);
+
+        let all = list_series(&state, None).await.expect("a series list");
+        for blank in ["", "   "] {
+            let asked = list_series(&state, Some(blank))
+                .await
+                .expect("a series list");
+            assert_eq!(asked.len(), all.len(), "{blank:?}");
+        }
+    }
+
+    #[tokio::test]
     async fn list_series_narrows_to_a_category_over_the_same_snapshot_search_reads() {
         let server = MockServer::start().await;
         mount_catalogue(&server).await;
@@ -3284,21 +3355,42 @@ mod tests {
 
     #[tokio::test]
     async fn top_markets_gates_the_movers_on_the_parent_events_turnover() {
-        // Turnover is stated per event, so a leg never carries one: gating on the
-        // leg would empty the board, and gating on nothing would rank a stale
-        // print as a move. WXHIGH-CHI traded nothing in 24h and is left out.
+        // The gate only bites on a leg that *could* be a mover: one with a
+        // computable change, on an event that traded nothing. The fixture's
+        // `WXHIGH-CHI` states `volume24h` of `"0"`, and its first leg carries a
+        // last print and a real 24h percentage, so it has a change of its own
+        // and is still not news. Without such a leg the first half of the filter
+        // rejects it anyway and the gate is never exercised.
         let server = MockServer::start().await;
         mount_catalogue(&server).await;
+        let state = state_for(&server);
 
-        let gainers = top_markets(&state_for(&server), MoverSort::Gainers, 25)
+        let quiet = "GEMI-WXHIGH-CHI-2608210359-79TO80";
+        let leg = corpus_snapshot(&state)
             .await
-            .expect("a board");
-        assert!(gainers
+            .expect("a snapshot")
+            .markets
             .iter()
-            .all(|m| m.event_ticker != "WXHIGH-CHI-2608210359"));
-        assert!(gainers.iter().any(|m| m.event_ticker == "DEMNOM2028"));
-    }
+            .find(|m| m.ticker == quiet)
+            .cloned()
+            .expect("the fixture lists the quiet leg");
+        assert!(
+            leg.change.is_some(),
+            "the leg has to be a candidate before the gate can reject it"
+        );
 
+        for sort in [MoverSort::Gainers, MoverSort::Losers] {
+            let board = top_markets(&state, sort, 25).await.expect("a board");
+            assert!(
+                !board.iter().any(|m| m.ticker == quiet),
+                "{sort}: a move with nothing traded behind it is a stale print"
+            );
+            assert!(
+                board.iter().any(|m| m.event_ticker == "DEMNOM2028"),
+                "{sort}: an event that did trade still ranks"
+            );
+        }
+    }
     #[tokio::test]
     async fn top_markets_leaves_the_three_boards_the_registry_does_not_declare_empty() {
         // There is no open interest anywhere in this API, no resting-depth

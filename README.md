@@ -520,18 +520,25 @@ screen is therefore a change of arguments, not a teardown, which is what makes
 is both the price and a 52% implied probability. Each upstream has its own
 dialect — Kalshi speaks fixed-point decimal *strings* (`"0.5200"`,
 `"12645.98"`), Polymarket wraps prices in `{value, currency}` objects and ships
-JSON arrays as JSON *strings* — and none of that leaks past the server boundary.
-A normalised market from any of the three is the same shape.
+JSON arrays as JSON *strings*, Gemini quotes dollar strings and states its 24h
+move as a *percentage of the older price*, predict.fun ships trade sizes as
+1e18-scaled integer strings, and ForecastEx wraps every response in a JSON
+*string* inside a JSON object — and none of that leaks past the server boundary.
+A normalised market from any of the six is the same shape.
 
-**Only one venue quotes an ask.** Kalshi publishes two *bid* ladders; Polymarket
-runs one book per token pair and quotes only the first token. Both are converted
-into a conventional YES bid/ask with a derived NO ladder, once, on the server —
-so a Kalshi book and a Polymarket book can be read side by side without
-remembering which inversion applies to which.
+**Almost no venue quotes an ask.** Kalshi publishes two *bid* ladders;
+Polymarket, Gemini and predict.fun each run one book per contract and quote only
+its YES side. All of them are converted into a conventional YES bid/ask with a
+derived NO ladder, once, on the server — so any two books can be read side by
+side without remembering which inversion applies to which. predict.fun's
+complement is its own: it rounds to the *market's* decimal precision, which
+differs from its category's on 326 of 963 live legs, and using the wrong one
+moves the NO side by a tick.
 
 **A blank is not a zero.** Polymarket US's public catalogue carries no volume,
-no open interest and no resting depth at all, so those fields are `null` rather
-than `0` and render as `--`. The same rule decides who appears on a leaderboard:
+no open interest and no resting depth at all, and Gemini states turnover per
+event rather than per contract, so those fields are `null` rather than `0` and
+render as `--`. The same rule decides who appears on a leaderboard:
 a market whose venue does not publish the sorted figure is left off that board
 entirely, and the panel says which venue and why, because ranking it as zero
 would be a statement about its API dressed up as one about its book.
@@ -542,16 +549,47 @@ and an API key; the public gateway serves catalogue, book and BBO. The terminal
 holds no credentials, so `GP` and `TAS` on a `pmus:` market name the endpoint
 that would answer and what it costs, instead of drawing an empty panel.
 
-**Polymarket publishes prices, not candles.** Its history is a sample series —
-a price at a moment, with no size attached. The server buckets those onto the
-same 1/60/1440-minute grid Kalshi uses, so both venues' bars land on one x-axis,
-leaves volume `null` rather than inventing a zero, and says so in the panel
-header. Two quirks of that upstream are worked around rather than papered over:
-a `startTs`/`endTs` window wider than exactly 15 days returns an empty history
-with a `200`, so wide windows are stitched from chunks or fall back to a named
+**predict.fun's documented API is not the one it uses.** `api.predict.fun` needs
+an account key on every path, including its own "get the message to sign" step.
+Its web app never calls it: the data is on a public GraphQL host that needs no
+credential at all, which is what the terminal reads. That host answers a wrong
+`Origin` header with a hard `403`, so the server sends none. GraphQL also reports
+failure as an HTTP `200` with an `errors` array, so the client inspects the body
+rather than the status, and treats a `null` entity with no error as the
+`not_found` it is.
+
+**ForecastEx has no order book, and that is how the exchange works.** It matches
+by pairing a YES buyer with a NO buyer, so a print is the whole of what exists —
+there is no bid, no ask and no ladder anywhere in its public API, and live quotes
+sit behind IBKR ForecastTrader's login. `OB` on an `fx:` contract says that
+rather than synthesising a one-level ladder out of the last two prints. Its
+turnover, its daily move and its bars come from the exchange's end-of-session CSV
+archive, published after the 16:15 CT roll, so those figures are a session behind
+the tape and the panel says so.
+
+**A wrong sort key can hide a tenth of a catalogue.** Crawling ForecastEx by open
+interest returned 11,750 rows and only 10,270 distinct contracts: ties are not
+broken, so the offset window shifts under the crawl and 1,480 contracts are
+served twice while as many are never served at all. Ordering by `contract_id`
+returns each one exactly once. Gemini has the same shape of problem twice over —
+identical tape requests answer 278 or 349 prints depending on which replica
+replies, so its turnover is read off its candles instead; and its catalogue is a
+single request with a `limit`, which the universe outgrows, so the crawl reads
+the pagination footer and asks again rather than quietly serving a board with
+holes in it.
+
+**Three venues publish prices, not candles.** Polymarket's history is a sample
+series — a price at a moment, with no size attached — and so are predict.fun's
+and ForecastEx's. The server buckets those onto the same 1/60/1440-minute grid
+Kalshi uses, so every venue's bars land on one x-axis, leaves volume `null`
+rather than inventing a zero, and says so in the panel header. Two quirks of
+Polymarket's upstream are worked around rather than papered over: a
+`startTs`/`endTs` window wider than exactly 15 days returns an empty history with
+a `200`, so wide windows are stitched from chunks or fall back to a named
 lookback; and its offset pagination refuses to go past ~2,300 events, which is
-why that crawl is ordered by 24h volume — the truncation then drops the dead
-tail rather than a random slice.
+why that crawl is ordered by 24h volume — the truncation then drops the dead tail
+rather than a random slice. Gemini is the exception among the six: `/v2/klines`
+serves true OHLC off the matching engine, so its chart carries no disclaimer.
 
 **Search runs against events, not markets.** Kalshi's open-market list is
 ~99.98% auto-generated multivariate parlay legs — paging `/markets` returned
@@ -888,7 +926,7 @@ make it faster — `crates/core/examples/matchbench.rs` dumps every score, band,
 shared-term list and reason for a corpus and the two runs are diffed. The corpus
 is real: `crates/core/tests/fixtures/series.json` is six hundred titles taken
 from the live catalogues by the server's `dump_descriptors` example, sampled
-towards the families that are hard — House districts all three venues word
+towards the families that are hard — House districts several venues word
 almost identically, Emmy categories that differ by one qualifier, rate ladders
 that differ by one number. `crates/core/tests/matching_corpus.rs` asserts over
 all of them that the prefilter never declines a pair that could have cleared the
@@ -904,8 +942,31 @@ two brokers' listings incorrectly still produces a tidy table of two prices, and
 a reader will take the gap between them for an edge. So the cases are the near
 misses — `2nd place` against `3rd place`, October's Fed meeting against
 January's, `NFL Champion` against `NFL Rookie of the Year` — alongside the real
-five-rung FOMC ladder, which must line up across all three venues without ever
-mapping two rungs onto one.
+five-rung FOMC ladder, which must line up across every venue listing it without
+ever mapping two rungs onto one. That last case is what caught the wording gap
+the newest venues opened: ForecastEx states each rung as a whole question, and
+once the clause its siblings share is stripped the middle one reads "leave the
+rate unchanged" against Kalshi's "Fed maintains rate". Both fold to `nochange` —
+but only after the four-word clause is folded whole, because the bare
+`unchanged` rule left `leave` and `rate` behind and dropped the pair to 0.22
+against a floor of 0.34. The rung that failed was the one carrying most of the
+ladder's volume.
+
+The three newest venues are tested for the traps their APIs set rather than for
+their happy paths, because each answers `200 OK` while being wrong. The Gemini
+tests cover the strikes whose structured value is mangled label text
+(`{"type":"above","value":"KE25"}` on a rung labelled "Hike 25bps"), the
+contracts that carry no `bestBid`/`bestAsk` key at all, the turnover stated per
+event that must not be copied onto its twelve legs, and the catalogue limit the
+universe outgrows. The predict.fun tests cover the 1e18-scaled trade amounts, the
+prints priced in the *named* outcome's terms rather than in YES, and the slug
+rule that has to fold September's and October's Fed books into one series without
+fusing all 38 Texas districts. The ForecastEx tests cover the archive rows where
+an untraded day reports `0.00` as its high, low and VWAP, the blank cells that
+must stay `null` rather than settle a contract at zero, and the case folding that
+decides whether a price call answers at all — that exchange's price endpoint is
+case-sensitive and reports a wrong case as an empty `200`, so what a test can
+check is that the canonical spelling is restored before the call.
 
 The Polymarket US tests pin down the field the normaliser deliberately does
 not read. `outcomePrices` exists on every Polymarket US market and means

@@ -225,8 +225,9 @@ fn is_month(token: &str) -> bool {
 /// Multi-word phrases the venues use for one idea, folded before tokenising.
 ///
 /// These cannot go in [`SYNONYMS`], which maps single words: Kalshi's `Fed
-/// maintains rate`, Polymarket's `No change` and Polymarket US's `Unchanged` are
-/// the same rung of the same ladder, and no word-for-word mapping connects them.
+/// maintains rate`, Polymarket's `No change`, Polymarket US's `Unchanged` and
+/// ForecastEx's `leave the rate unchanged` are the same rung of the same
+/// ladder, and no word-for-word mapping connects them.
 ///
 /// Every `\b` here is safe as the Unicode-aware boundary the `regex` crate
 /// compiles it to, unlike the ASCII-only one JavaScript uses: these run *after*
@@ -283,6 +284,16 @@ static PHRASES: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
         (r"\bnew hampshire\b", " newhampshire "),
         (r"\bnew mexico\b", " newmexico "),
         (r"\bno change\b", "nochange"),
+        // Before the bare `unchanged` rule below, which would otherwise consume
+        // the last word of this phrase and leave `leave the rate` behind. The
+        // whole clause is one idea and has to fold to one token: ForecastEx
+        // words the middle FOMC rung "Will the Fed leave the rate unchanged in
+        // September 2026?", and with only `unchanged` folded it kept `leave` and
+        // `rate` where Kalshi's "Fed maintains rate" keeps neither — one shared
+        // term out of two against three, which scored 0.22 against a floor of
+        // 0.34. The highest-volume rung of the ladder was the one that did not
+        // pair.
+        (r"\bleaves? (?:the )?rates? unchanged\b", "nochange"),
         (r"\bunchanged\b", "nochange"),
         (r"\bmaintains? (?:the )?(?:rate|rates)\b", "nochange"),
         (r"\bbasis points?\b", "bp"),
@@ -1589,6 +1600,66 @@ mod tests {
         assert_eq!(map.get("Fed maintains rate"), Some(&"No change"));
         assert_eq!(map.get("Cut >25bps"), Some(&"50+ bps decrease"));
         assert_eq!(map.get("Hike >25bps"), Some(&"50+ bps increase"));
+    }
+
+    /// ForecastEx words every rung as a whole question, so the shared clause is
+    /// stripped before pairing and what is left is a verb phrase rather than a
+    /// noun one. These are the five it leaves, verbatim, on `FFDEC_091626`.
+    const FORECASTEX_LADDER: &[&str] = &[
+        "lower the rate 50bps or more",
+        "lower the rate 25bps",
+        "leave the rate unchanged",
+        "raise the rate 25bps",
+        "raise the rate 50bps or more",
+    ];
+
+    #[test]
+    fn pair_labels_lines_the_same_ladder_up_against_a_venue_that_words_it_as_a_question() {
+        let paired = pair_labels(KALSHI_LADDER, FORECASTEX_LADDER);
+        let map: HashMap<&str, &str> = paired
+            .iter()
+            .map(|p| (KALSHI_LADDER[p.left], FORECASTEX_LADDER[p.right]))
+            .collect();
+
+        // The middle rung is the one that carries most of the ladder's volume,
+        // and the one that used to fail: `maintains rate` folds its own `rate`
+        // away where `leave the rate unchanged` kept both `leave` and `rate`,
+        // leaving one shared term out of two against three.
+        assert_eq!(
+            map.get("Fed maintains rate"),
+            Some(&"leave the rate unchanged")
+        );
+        assert_eq!(map.get("Cut 25bps"), Some(&"lower the rate 25bps"));
+        assert_eq!(map.get("Hike 25bps"), Some(&"raise the rate 25bps"));
+        assert_eq!(map.get("Cut >25bps"), Some(&"lower the rate 50bps or more"));
+        assert_eq!(
+            map.get("Hike >25bps"),
+            Some(&"raise the rate 50bps or more")
+        );
+        assert_eq!(paired.len(), 5, "every rung pairs, or the board has a hole");
+    }
+
+    #[test]
+    fn the_unchanged_clause_folds_the_same_way_however_the_venue_words_it() {
+        // Four spellings of one rung across five venues. `normalise` is what
+        // every score is computed over, so agreeing here is what makes them
+        // pair; a phrase that folded to different tokens would pair by accident
+        // or not at all.
+        for wording in [
+            "No change",
+            "Unchanged",
+            "Fed maintains rate",
+            "leave the rate unchanged",
+            "leaves rates unchanged",
+        ] {
+            assert!(
+                content_tokens(wording).contains(&"nochange".to_string()),
+                "{wording}"
+            );
+        }
+        // And the clause is folded whole rather than word by word, or `leave`
+        // and `rate` survive to be counted against a venue that states neither.
+        assert_eq!(content_tokens("leave the rate unchanged"), ["nochange"]);
     }
 
     #[test]
