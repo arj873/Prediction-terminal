@@ -411,7 +411,8 @@ export const COMMANDS: Command[] = [
       // past Congress.
       const args = [...command.args];
       const last = args.at(-1);
-      const congress = last !== undefined && /^\d{2,3}$/.test(last) ? Number(args.pop()) : undefined;
+      const congress =
+        last !== undefined && /^\d{2,3}$/.test(last) ? Number(args.pop()) : undefined;
       const query = args.join(' ').trim();
       panels.open({
         id: panelId.bills(query, congress),

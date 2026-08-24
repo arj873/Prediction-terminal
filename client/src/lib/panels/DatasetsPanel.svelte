@@ -24,7 +24,12 @@
   });
 
   const columns: Column<DataGovDataset>[] = [
-    { header: 'DATASET', cell: (r) => truncate(r.title, 52), class: 'strong', title: (r) => r.description },
+    {
+      header: 'DATASET',
+      cell: (r) => truncate(r.title, 52),
+      class: 'strong',
+      title: (r) => r.description,
+    },
     { header: 'PUBLISHER', cell: (r) => truncate(r.publisher, 34), class: 'dim' },
     { header: 'FREQ', cell: (r) => r.frequency || '—', class: 'dim' },
     { header: 'UPDATED', cell: (r) => (r.modified ? day(r.modified) : '—'), class: 'num dim' },

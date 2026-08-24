@@ -1,0 +1,83 @@
+{
+ "cik": 320193,
+ "taxonomy": "us-gaap",
+ "tag": "EarningsPerShareDiluted",
+ "label": "Earnings Per Share, Diluted",
+ "description": "The amount of net income (loss) for the period available to each share of common stock or common unit outstanding during the reporting period and to each share or unit that would have been outstanding assuming the issuance of common shares or units for all dilutive potential common shares or units outstanding during the reporting period.",
+ "entityName": "Apple Inc.",
+ "units": {
+  "USD/shares": [
+   {
+    "start": "2011-09-25",
+    "end": "2012-09-29",
+    "val": 44.15,
+    "accn": "0001193125-12-444068",
+    "fy": 2012,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2012-10-31"
+   },
+   {
+    "start": "2011-09-25",
+    "end": "2012-09-29",
+    "val": 44.15,
+    "accn": "0001193125-13-170623",
+    "fy": 2012,
+    "fp": "FY",
+    "form": "8-K",
+    "filed": "2013-04-24"
+   },
+   {
+    "start": "2011-09-25",
+    "end": "2012-09-29",
+    "val": 44.15,
+    "accn": "0001193125-13-416534",
+    "fy": 2013,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2013-10-30"
+   },
+   {
+    "start": "2011-09-25",
+    "end": "2012-09-29",
+    "val": 6.31,
+    "accn": "0001193125-14-383437",
+    "fy": 2014,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2014-10-27"
+   },
+   {
+    "start": "2011-09-25",
+    "end": "2012-09-29",
+    "val": 6.31,
+    "accn": "0001193125-15-023732",
+    "fy": null,
+    "fp": null,
+    "form": "8-K",
+    "filed": "2015-01-28",
+    "frame": "CY2012"
+   },
+   {
+    "start": "2012-07-01",
+    "end": "2012-09-29",
+    "val": 8.67,
+    "accn": "0001193125-12-444068",
+    "fy": 2012,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2012-10-31"
+   },
+   {
+    "start": "2012-07-01",
+    "end": "2012-09-29",
+    "val": 8.67,
+    "accn": "0001193125-13-170623",
+    "fy": 2012,
+    "fp": "FY",
+    "form": "8-K",
+    "filed": "2013-04-24"
+   }
+  ]
+ }
+}

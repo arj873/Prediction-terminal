@@ -1,0 +1,41 @@
+{
+  "count": 3,
+  "next_url": "https://api.polygon.io/v3/reference/tickers?cursor=YWN0aXZlPXRydWUmbGltaXQ9MyZvcmRlcj1hc2Mmc29ydD10aWNrZXI",
+  "request_id": "e70013d92930de90e089dc8fa098888e",
+  "results": [
+    {
+      "active": true,
+      "cik": "0001090872",
+      "composite_figi": "BBG000BWQYZ5",
+      "currency_name": "usd",
+      "last_updated_utc": "2021-04-25T00:00:00Z",
+      "locale": "us",
+      "market": "stocks",
+      "name": "Agilent Technologies Inc.",
+      "primary_exchange": "XNYS",
+      "share_class_figi": "BBG001SCTQY4",
+      "ticker": "A",
+      "type": "CS"
+    },
+    {
+      "active": true,
+      "base_currency_name": "Bitcoin",
+      "base_currency_symbol": "BTC",
+      "currency_name": "United States Dollar",
+      "currency_symbol": "USD",
+      "last_updated_utc": "2021-04-25T00:00:00Z",
+      "locale": "global",
+      "market": "crypto",
+      "name": "Bitcoin - United States Dollar",
+      "ticker": "X:BTCUSD"
+    },
+    {
+      "active": true,
+      "last_updated_utc": "2021-04-25T00:00:00Z",
+      "locale": "us",
+      "market": "indices",
+      "ticker": "I:SPX"
+    }
+  ],
+  "status": "OK"
+}

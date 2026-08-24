@@ -1,0 +1,36 @@
+{
+  "committees": [
+    {
+      "activities": [
+        {
+          "date": "2025-05-22T10:48:46Z",
+          "name": "Unknown"
+        },
+        {
+          "date": "2025-05-22T10:22:11Z",
+          "name": "Unknown"
+        },
+        {
+          "date": "2025-05-21T03:55:00Z",
+          "name": "Reported Original Measure"
+        }
+      ],
+      "chamber": "House",
+      "name": "Budget Committee",
+      "systemCode": "hsbu00",
+      "type": "Standing",
+      "url": "https://api.congress.gov/v3/committee/house/hsbu00?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 1
+  },
+  "request": {
+    "billNumber": "1",
+    "billType": "hr",
+    "billUrl": "https://api.congress.gov/v3/bill/119/hr/1?format=json",
+    "congress": "119",
+    "contentType": "application/json",
+    "format": "json"
+  }
+}

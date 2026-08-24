@@ -1,0 +1,98 @@
+{
+ "cik": 1094517,
+ "taxonomy": "us-gaap",
+ "tag": "Revenues",
+ "label": "Revenues",
+ "description": "Amount of revenue recognized from goods sold, services rendered, insurance premiums, or other activities that constitute an earning process. Includes, but is not limited to, investment and interest income before deduction of interest expense when recognized as a component of revenue, and sales and trading gain (loss).",
+ "entityName": "TOYOTA MOTOR CORP/",
+ "units": {
+  "JPY": [
+   {
+    "start": "2009-03-31",
+    "end": "2010-03-31",
+    "val": 18950973000000,
+    "accn": "0001193125-11-191732",
+    "fy": 2010,
+    "fp": "FY",
+    "form": "20-F/A",
+    "filed": "2011-07-20"
+   },
+   {
+    "start": "2009-03-31",
+    "end": "2010-03-31",
+    "val": 18950973000000,
+    "accn": "0001193125-12-281223",
+    "fy": 2011,
+    "fp": "FY",
+    "form": "20-F",
+    "filed": "2012-06-25",
+    "frame": "CY2009"
+   },
+   {
+    "start": "2009-04-01",
+    "end": "2010-03-31",
+    "val": 18950973000000,
+    "accn": "0001193125-10-163251",
+    "fy": 2009,
+    "fp": "FY",
+    "form": "20-F/A",
+    "filed": "2010-07-22"
+   },
+   {
+    "start": "2010-03-31",
+    "end": "2011-03-31",
+    "val": 18993688000000,
+    "accn": "0001193125-11-191732",
+    "fy": 2010,
+    "fp": "FY",
+    "form": "20-F/A",
+    "filed": "2011-07-20"
+   },
+   {
+    "start": "2010-03-31",
+    "end": "2011-03-31",
+    "val": 18993688000000,
+    "accn": "0001193125-12-281223",
+    "fy": 2011,
+    "fp": "FY",
+    "form": "20-F",
+    "filed": "2012-06-25"
+   }
+  ],
+  "USD": [
+   {
+    "start": "2009-04-01",
+    "end": "2010-03-31",
+    "val": 203687000000,
+    "accn": "0001193125-10-163251",
+    "fy": 2009,
+    "fp": "FY",
+    "form": "20-F/A",
+    "filed": "2010-07-22",
+    "frame": "CY2009"
+   },
+   {
+    "start": "2010-03-31",
+    "end": "2011-03-31",
+    "val": 228427000000,
+    "accn": "0001193125-11-191732",
+    "fy": 2010,
+    "fp": "FY",
+    "form": "20-F/A",
+    "filed": "2011-07-20",
+    "frame": "CY2010"
+   },
+   {
+    "start": "2011-04-01",
+    "end": "2012-03-31",
+    "val": 226106000000,
+    "accn": "0001193125-12-281223",
+    "fy": 2011,
+    "fp": "FY",
+    "form": "20-F",
+    "filed": "2012-06-25",
+    "frame": "CY2011"
+   }
+  ]
+ }
+}

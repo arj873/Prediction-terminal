@@ -1,0 +1,122 @@
+{
+  "actions": [
+    {
+      "actionCode": "E40000",
+      "actionDate": "2025-07-04",
+      "sourceSystem": {
+        "code": 9,
+        "name": "Library of Congress"
+      },
+      "text": "Became Public Law No: 119-21.",
+      "type": "President"
+    },
+    {
+      "actionCode": "36000",
+      "actionDate": "2025-07-04",
+      "sourceSystem": {
+        "code": 9,
+        "name": "Library of Congress"
+      },
+      "text": "Became Public Law No: 119-21.",
+      "type": "BecameLaw"
+    },
+    {
+      "actionCode": "E30000",
+      "actionDate": "2025-07-04",
+      "sourceSystem": {
+        "code": 9,
+        "name": "Library of Congress"
+      },
+      "text": "Signed by President.",
+      "type": "President"
+    },
+    {
+      "actionCode": "36000",
+      "actionDate": "2025-07-04",
+      "sourceSystem": {
+        "code": 9,
+        "name": "Library of Congress"
+      },
+      "text": "Signed by President.",
+      "type": "BecameLaw"
+    },
+    {
+      "actionCode": "E20000",
+      "actionDate": "2025-07-03",
+      "sourceSystem": {
+        "code": 2,
+        "name": "House floor actions"
+      },
+      "text": "Presented to President.",
+      "type": "Floor"
+    },
+    {
+      "actionCode": "28000",
+      "actionDate": "2025-07-03",
+      "sourceSystem": {
+        "code": 9,
+        "name": "Library of Congress"
+      },
+      "text": "Presented to President.",
+      "type": "President"
+    },
+    {
+      "actionCode": "H12410",
+      "actionDate": "2025-05-20",
+      "calendarNumber": {
+        "calendar": "U00078"
+      },
+      "sourceSystem": {
+        "code": 2,
+        "name": "House floor actions"
+      },
+      "text": "Placed on the Union Calendar, Calendar No. 78.",
+      "type": "Calendars"
+    },
+    {
+      "actionCode": "H12100",
+      "actionDate": "2025-05-20",
+      "committees": [
+        {
+          "name": "Budget Committee",
+          "systemCode": "hsbu00",
+          "url": "https://api.congress.gov/v3/committee/house/hsbu00?format=json"
+        }
+      ],
+      "sourceSystem": {
+        "code": 2,
+        "name": "House floor actions"
+      },
+      "text": "The House Committee on the Budget reported an original measure, H. Rept. 119-106, by Mr. Arrington.",
+      "type": "Committee"
+    },
+    {
+      "actionCode": "1010",
+      "actionDate": "2025-05-20",
+      "committees": [
+        {
+          "name": "Budget Committee",
+          "systemCode": "hsbu00",
+          "url": "https://api.congress.gov/v3/committee/house/hsbu00?format=json"
+        }
+      ],
+      "sourceSystem": {
+        "code": 9,
+        "name": "Library of Congress"
+      },
+      "text": "The House Committee on the Budget reported an original measure, H. Rept. 119-106, by Mr. Arrington.",
+      "type": "Committee"
+    }
+  ],
+  "pagination": {
+    "count": 59
+  },
+  "request": {
+    "billNumber": "1",
+    "billType": "hr",
+    "billUrl": "https://api.congress.gov/v3/bill/119/hr/1?format=json",
+    "congress": "119",
+    "contentType": "application/json",
+    "format": "json"
+  }
+}

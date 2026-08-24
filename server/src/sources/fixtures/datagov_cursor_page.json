@@ -1,0 +1,184 @@
+{
+ "after": "WzUxLjgzMDk2LDAsIjAxMDQ4MzhiLTI1ZDktNDFjOS1iMTY1LWZhYzlmYzM4MmM1ZiJd",
+ "sort": "relevance",
+ "results": [
+  {
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "bureauCode": [
+     "005:18"
+    ],
+    "contactPoint": {
+     "fn": "Huggins, David",
+     "hasEmail": "mailto:david.huggins@ars.usda.gov"
+    },
+    "description": "<p>Average estimated yields and associated CV values for current (2018) model runs. Based on work done by Harsimran Kaur et al in 2017.  The following is from her thesis:\n\nAgro-ecological classes (AECs) of dryland cropping systems in the inland Pacific Northwest have been predicted to become more dynamic with greater use of annual fallow under projected climate change. At the same time, initiatives are being taken by growers either to intensify or diversify their cropping systems using oilseed and grain legume crops. The main objective of this study was to use a mechanistic model (CropSyst) to provide yield and soil water forecasts at regional scales which could compare fallow versus spring crop choices (flex/opportunity crop). Model simulations were based on historic weather data (1981-2010) as well as combined with actual year weather data for simulations at pre-planting dates starting in Dec. for representative years. Yield forecasts of spring pea, canola and wheat were compared to yield simulations using only weather of the representative year via linear regression analysis to assess pre-plant forecasts. Crop yield projections on pre-plant forecast date of Feb 1st had higher R2 with yield simulated using actual years weather data and lower CVs across the region as compared to forecasts based on historic weather data and other pre-season forecast dates (Dec. 1st and Jan. 1st).  Therefore, Feb. 1st was considered the most reliable time to predict yield and other relevant outputs such as available water forecasts on a regional scale. Regional forecast maps of predicted spring crop yields and CVs showed ranges of 1 to 4367 kg/ha and 11 to 293% for spring canola, 72 to 2646 kg/ha and 11 to 143% for spring pea and 39 to 5330 kg/ha and 11 to 158% for spring wheat across study region for a representative year. These data combined with predicted available water after fallow and following spring crop yield as well as estimates of winter wheat yield reduction would collectively serve as information contributing to decisions related to crop intensification and diversification.</p> <div><br>Resources in this dataset:</div><br><ul><li><p>Resource Title: GeoData catalog record.</p> <p>File Name: Web Page, url: <a href=\"https://geodata.nal.usda.gov/geonetwork/srv/eng/catalog.search#/metadata/459d2dba-a346-4e54-9750-ef3178c18f38\" target=\"_blank\">https://geodata.nal.usda.gov/geonetwork/srv/eng/catalog.search#/metadata/459d2dba-a346-4e54-9750-ef3178c18f38</a> </p></li></ul>",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://geodata.nal.usda.gov/geonetwork/srv/eng/catalog.search#/metadata/459d2dba-a346-4e54-9750-ef3178c18f38",
+      "mediaType": "text/html",
+      "title": "https://geodata.nal.usda.gov/geonetwork/srv/eng/catalog.search#/metadata/459d2dba-a346-4e54-9750-ef3178c18f38"
+     }
+    ],
+    "identifier": "10113/AA24429",
+    "keyword": [
+     "ARS",
+     "Environment",
+     "biota",
+     "data.gov",
+     "farming"
+    ],
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "modified": "2025-11-22",
+    "programCode": [
+     "005:040"
+    ],
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "Agricultural Research Service"
+    },
+    "spatial": "{\"type\": \"Polygon\", \"coordinates\": [[[-121.2504, 48.1658], [-116.0424, 48.1658], [-116.0424, 44.8326], [-121.2504, 44.8326], [-121.2504, 48.1658]]]}",
+    "temporal": "2014-11-01/2014-11-01",
+    "title": "Estimated spring crop yields using Flex Cropping Tool"
+   },
+   "identifier": "10113/AA24429",
+   "title": "Estimated spring crop yields using Flex Cropping Tool"
+  },
+  {
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "accrualPeriodicity": "R/P1M",
+    "bureauCode": [
+     "005:18"
+    ],
+    "contactPoint": {
+     "fn": "Rogovska, Natalia (natalia.rogovska@usda.gov) and Ruis, Sabrina (sabrina.ruis@usda.gov)",
+     "hasEmail": "mailto:natalia.rogovska@usda.gov"
+    },
+    "description": "<p dir=\"ltr\">Organic production aims to diversify crop rotation and use organic fertilizer sources to build soil fertility and improve soil health indicators. This data evaluates the impact of organic farming on water quality in artificially drained midwestern Mollisols of central Iowa. This 7-year study compares tile nitrate loss and yields under three cropping systems: (1) conventional corn (<i>Zea mays</i> L)-soybean (<i>Glycine max</i> L.), (2) organic corn\u2013soybean\u2013oat (<i>Avena sativa</i> L.)/alfalfa (<i>Medicago sativa</i> L)\u2013alfalfa, and (3) organic perennial pasture. Nitrogen (N) fertilization consisted of sidedress urea ammonium nitrate for conventional corn (168 kg N ha<sup>\u22121</sup>) and spring-applied composted manure for organic corn (168 kg N ha<sup>\u22121</sup>) and oats (56 kg N ha<sup>\u22121</sup>). The dataset comprises of monthly values of subsurface drainage discharge, flow weighted nitrate concentrations, and the mass of nitrate-nitrogen (NO3-N) in drainage discharge for each of 30 corresponding experimental plots from 2014 to 2020. Dataset also includes annual harvested grain yields corrected to standard moisture content and above-ground biomass yields (excluding grain).</p><p dir=\"ltr\">Resources in this dataset:</p><ul><li>Resource Title: Field Operations.xlsx. Metadata information describing management practices and operations for each crop each year.</li><li>Resource Title: NitrateLoad_SubsurfaceDrainage_FWNC.csv. This dataset provides monthly values of Nitrate-N load, subsurface drainage discharge, and flow weighted nitrate concentrations from 2014 to 2020.</li><li>Resource Title Set: Yield_Alfalfa.csv, Yield_ConvCorn.csv, Yield_ConvSoybean.csv, Yield_Oat.csv, Yield_OrgCorn.csv, and Yield_OrgSoybean.csv. These datasets provide biomass and grain yields of conventional soybean and corn, organic soybean, corn, oats and alfalfa from 2014-2020.</li><li>Resource Title: Precipitation.csv. Cumulative monthly precipitation for the study location, 2014-2020. Monthly values were calculated from daily values from the Iowa Environmental Mesonet (<a href=\"https://gcc02.safelinks.protection.outlook.com/?url=https://mesonet.agron.iastate.edu/request/coop/fe.phtml&data=05|02|Andrew.McLaughlin@usda.gov|337be1ea0e1a4ce5b3e208de7941047e|ed5b36e701ee4ebc867ee03cfa0d4697|1|0|639081517313761125|Unknown|TWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ==|0|||&sdata=sYlh8F3XAnxvphOMd7eBeR6NyC4+YYvWtxBVqab9CYM=&reserved=0\" target=\"_blank\">https://mesonet.agron.iastate.edu/request/coop/fe.phtml</a>).</li></ul><p><br></p>",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://geodata.nal.usda.gov/geonetwork/srv/api/records/ff5c171d-8064-461b-a93b-54d09b6c3ccd/formatters/xml",
+      "conformsTo": "https://www.isotc211.org/2005/gmd",
+      "format": "xml",
+      "mediaType": "text/xml",
+      "title": "Geodata ISO 19139 metadata"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015176",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Metadata_NitrateLoad_SubsurfaceDrainage_FWNC.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015179",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "NitrateLoad_SubsurfaceDrainage_FWNC.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015182",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Precipitation.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015185",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Yield_Alfalfa.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015188",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Yield_ConvCorn.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015191",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Yield_ConvSoybean.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015194",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Yield_Oat.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015197",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Yield_OrgCorn.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62015200",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Yield_OrgSoybean.csv"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62313466",
+      "format": "xlsx",
+      "mediaType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "title": "Field Operations.xlsx"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://ndownloader.figshare.com/files/62313808",
+      "format": "csv",
+      "mediaType": "text/csv",
+      "title": "Metadata_Yield.csv"
+     }
+    ],
+    "identifier": "10.15482/USDA.ADC/31370134.v1",
+    "keyword": [
+     "Iowa",
+     "alfalfa",
+     "corn",
+     "drainage water",
+     "grain yields",
+     "nitrate",
+     "nitrogen",
+     "oats",
+     "organic farming",
+     "pasture",
+     "soybean",
+     "subsurface drainage"
+    ],
+    "license": "https://www.usa.gov/publicdomain/label/1.0/",
+    "modified": "2026-03-18",
+    "programCode": [
+     "005:040"
+    ],
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "Agricultural Research Service"
+    },
+    "spatial": "{\"type\": \"Point\", \"coordinates\": [-93.76698, 42.01944]}",
+    "temporal": "2014-01-01/2020-12-31",
+    "theme": [
+     "geospatial"
+    ],
+    "title": "Data from: Organic production reduces subsurface nitrate leaching and maintains crop yields in US Mollisol"
+   },
+   "identifier": "10.15482/USDA.ADC/31370134.v1",
+   "title": "Data from: Organic production reduces subsurface nitrate leaching and maintains crop yields in US Mollisol"
+  }
+ ]
+}

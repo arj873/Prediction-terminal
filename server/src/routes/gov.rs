@@ -36,7 +36,9 @@ async fn bills(
     let limit = query.int_param("limit", 40, 1, 250) as usize;
     // An absent Congress means the one sitting now, which is arithmetic rather
     // than a table — so it stays right without anyone updating it.
-    let congress = query.get("congress").and_then(|raw| raw.parse::<i64>().ok());
+    let congress = query
+        .get("congress")
+        .and_then(|raw| raw.parse::<i64>().ok());
 
     Ok(Json(
         congress::search_bills(&state, &q, congress, limit).await?,
