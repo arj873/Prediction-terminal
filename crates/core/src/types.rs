@@ -2056,3 +2056,200 @@ pub struct OptionExpiriesResponse {
     pub venue: String,
     pub source: String,
 }
+
+/* ------------------------------------------------------------------- EDGAR */
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct SecCompany {
+    /// Zero-padded 10-digit CIK, as EDGAR writes it.
+    pub cik: String,
+    pub name: String,
+    pub tickers: Vec<String>,
+    pub exchanges: Vec<String>,
+    /// Standard Industrial Classification code and its description.
+    pub sic: String,
+    pub sic_description: String,
+    pub fiscal_year_end: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct SecFiling {
+    /// EDGAR accession number, e.g. `0000320193-24-000123`.
+    pub accession: String,
+    /// `10-K`, `8-K`, `4`, `13F-HR`…
+    pub form: String,
+    /// `YYYY-MM-DD`.
+    pub filed: String,
+    /// Period the filing reports on. Empty for forms with no period.
+    pub report_date: String,
+    /// Items cited on an 8-K, e.g. `2.02,9.01`. Empty for other forms.
+    pub items: String,
+    pub primary_document: String,
+    pub description: String,
+    pub size: Option<f64>,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct SecFilingsResponse {
+    pub company: SecCompany,
+    pub filings: Vec<SecFiling>,
+    /// Forms present in the response, so a panel can offer a filter.
+    pub forms: Vec<String>,
+}
+
+/// One reported value of an XBRL fact — the unit of SEC financial history.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct SecFact {
+    /// Period end, `YYYY-MM-DD`.
+    pub end: String,
+    /// Period start for a duration fact; empty for an instant.
+    pub start: String,
+    pub value: f64,
+    /// Fiscal year and period the issuer filed it under, e.g. `2024` / `Q3`.
+    #[ts(type = "number")]
+    pub fiscal_year: Option<i64>,
+    pub fiscal_period: String,
+    pub form: String,
+    pub filed: String,
+    pub accession: String,
+    /// Unit of measure, e.g. `USD`, `shares`.
+    pub unit: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct SecConceptResponse {
+    pub company: SecCompany,
+    /// `us-gaap`, `ifrs-full`, `dei`.
+    pub taxonomy: String,
+    /// The XBRL tag, e.g. `Revenues`.
+    pub tag: String,
+    pub label: String,
+    pub description: String,
+    pub unit: String,
+    /// Every reported value, oldest first. Restatements included and dated.
+    pub facts: Vec<SecFact>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct SecSearchResult {
+    pub cik: String,
+    pub ticker: String,
+    pub name: String,
+}
+
+/* ---------------------------------------------------------------- Congress */
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct BillAction {
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    pub text: String,
+    /// `House`, `Senate` or empty when Congress.gov states none.
+    pub chamber: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct Bill {
+    /// Congress number, e.g. `119`.
+    #[ts(type = "number")]
+    pub congress: i64,
+    /// `hr`, `s`, `hjres`, `sjres`, `hconres`, `sconres`, `hres`, `sres`.
+    #[serde(rename = "type")]
+    pub bill_type: String,
+    pub number: String,
+    pub title: String,
+    /// `HR 1 (119th)` — what a reader would say out loud.
+    pub label: String,
+    pub origin_chamber: String,
+    pub introduced_date: String,
+    /// The most recent action, which is what "where is this bill" means.
+    pub latest_action: Option<BillAction>,
+    pub sponsor: String,
+    pub sponsor_party: String,
+    pub sponsor_state: String,
+    #[ts(type = "number")]
+    pub cosponsors: Option<i64>,
+    pub policy_area: String,
+    /// Whether the bill has become law, as Congress.gov's own record states it.
+    pub became_law: bool,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct BillDetail {
+    #[serde(flatten)]
+    pub bill: Bill,
+    /// Congress.gov's plain-language summary, newest version. Empty when none
+    /// is filed.
+    pub summary: String,
+    /// Full action history.
+    pub actions: Vec<BillAction>,
+    pub committees: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct BillSearchResponse {
+    pub query: String,
+    #[ts(type = "number")]
+    pub congress: Option<i64>,
+    pub bills: Vec<Bill>,
+    pub source: String,
+    /// What the search actually looked at, because it is not what a reader
+    /// assumes. Congress.gov's bill collection has no text parameter.
+    pub note: String,
+}
+
+/* ---------------------------------------------------------------- data.gov */
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct DataGovDataset {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    /// Publishing organisation, e.g. `Bureau of Labor Statistics`.
+    pub publisher: String,
+    /// Subject tags and keywords, deduplicated.
+    pub themes: Vec<String>,
+    /// `YYYY-MM-DD`.
+    pub modified: String,
+    /// How often it is refreshed, in words rather than an ISO 8601 duration.
+    pub frequency: String,
+    /// The formats the data is distributed in, e.g. `CSV`, `JSON`.
+    pub formats: Vec<String>,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct DataGovSearchResponse {
+    pub query: String,
+    pub datasets: Vec<DataGovDataset>,
+    /// The opaque cursor for the next page, when the catalogue offers one.
+    pub cursor: Option<String>,
+    pub source: String,
+}

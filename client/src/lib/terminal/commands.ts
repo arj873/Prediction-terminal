@@ -380,6 +380,61 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    verb: 'SEC',
+    aliases: ['EDGAR', 'FILINGS'],
+    group: 'data',
+    summary: 'What a company has filed with the SEC, newest first',
+    // An 8-K lands here within seconds of acceptance, which is often before the
+    // press release — so a form filter is the argument that matters.
+    usage: 'SEC <ticker|CIK|name> [form]',
+    examples: ['SEC AAPL', 'SEC TSLA 8-K', 'SEC 320193 10-K', 'SEC berkshire'],
+    handler(command, { panels }) {
+      const company = requireArg(command, 0, 'ticker|CIK|name');
+      const form = command.args[1];
+      panels.open({
+        id: panelId.filings(company, form),
+        kind: 'filings',
+        props: { company, ...(form ? { form } : {}) },
+      });
+    },
+  },
+  {
+    verb: 'CONG',
+    aliases: ['BILL', 'BILLS'],
+    group: 'data',
+    summary: 'Bills before Congress, most recently acted on first',
+    usage: 'CONG [words] [congress]',
+    examples: ['CONG', 'CONG shutdown', 'CONG appropriations 119'],
+    handler(command, { panels }) {
+      // A trailing three-digit number is a Congress, not a search word: no bill
+      // title is the bare string `119`, and typing it is how someone asks for a
+      // past Congress.
+      const args = [...command.args];
+      const last = args.at(-1);
+      const congress =
+        last !== undefined && /^\d{2,3}$/.test(last) ? Number(args.pop()) : undefined;
+      const query = args.join(' ').trim();
+      panels.open({
+        id: panelId.bills(query, congress),
+        kind: 'bills',
+        props: { query, ...(congress ? { congress } : {}) },
+      });
+    },
+  },
+  {
+    verb: 'DGOV',
+    aliases: ['DATASETS'],
+    group: 'data',
+    summary: "Search data.gov's dataset catalogue",
+    usage: 'DGOV <words>',
+    examples: ['DGOV unemployment insurance', 'DGOV crop yields', 'DGOV housing starts'],
+    handler(command, { panels }) {
+      const query = command.args.join(' ').trim();
+      if (!query) throw new UsageError('Missing <words>');
+      panels.open({ id: panelId.datasets(query), kind: 'datasets', props: { query } });
+    },
+  },
+  {
     verb: 'ECOS',
     aliases: ['FSRCH'],
     group: 'data',

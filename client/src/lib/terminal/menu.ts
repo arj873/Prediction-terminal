@@ -306,6 +306,15 @@ export const MENUS: readonly Menu[] = [
       item('Search every publisher at once…', '>ECOS'),
       group('ECO examples', examplesOf('ECO')),
       SEP,
+      group('Filings, bills and datasets', [
+        item('SEC filings for a company…', '>SEC'),
+        item('Bills before Congress', 'CONG'),
+        item('Search bills…', '>CONG'),
+        item('Search the data.gov catalogue…', '>DGOV'),
+        SEP,
+        ...examplesOf('SEC'),
+      ]),
+      SEP,
       group('Charts and box office', [
         item('Billboard Hot 100', 'BB'),
         item('Every Billboard chart', 'BB CHARTS'),

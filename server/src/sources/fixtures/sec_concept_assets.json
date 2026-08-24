@@ -1,0 +1,86 @@
+{
+ "cik": 320193,
+ "taxonomy": "us-gaap",
+ "tag": "Assets",
+ "label": "Assets",
+ "description": "Sum of the carrying amounts as of the balance sheet date of all assets that are recognized. Assets are probable future economic benefits obtained or controlled by an entity as a result of past transactions or events.",
+ "entityName": "Apple Inc.",
+ "units": {
+  "USD": [
+   {
+    "end": "2008-09-27",
+    "val": 39572000000,
+    "accn": "0001193125-09-153165",
+    "fy": 2009,
+    "fp": "Q3",
+    "form": "10-Q",
+    "filed": "2009-07-22"
+   },
+   {
+    "end": "2008-09-27",
+    "val": 39572000000,
+    "accn": "0001193125-09-214859",
+    "fy": 2009,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2009-10-27"
+   },
+   {
+    "end": "2008-09-27",
+    "val": 36171000000,
+    "accn": "0001193125-10-012091",
+    "fy": 2009,
+    "fp": "FY",
+    "form": "10-K/A",
+    "filed": "2010-01-25"
+   },
+   {
+    "end": "2008-09-27",
+    "val": 36171000000,
+    "accn": "0001193125-10-238044",
+    "fy": 2010,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2010-10-27",
+    "frame": "CY2008Q3I"
+   },
+   {
+    "end": "2009-06-27",
+    "val": 48140000000,
+    "accn": "0001193125-09-153165",
+    "fy": 2009,
+    "fp": "Q3",
+    "form": "10-Q",
+    "filed": "2009-07-22",
+    "frame": "CY2009Q2I"
+   },
+   {
+    "end": "2009-09-26",
+    "val": 53851000000,
+    "accn": "0001193125-09-214859",
+    "fy": 2009,
+    "fp": "FY",
+    "form": "10-K",
+    "filed": "2009-10-27"
+   },
+   {
+    "end": "2009-09-26",
+    "val": 47501000000,
+    "accn": "0001193125-10-012085",
+    "fy": 2010,
+    "fp": "Q1",
+    "form": "10-Q",
+    "filed": "2010-01-25"
+   },
+   {
+    "end": "2009-09-26",
+    "val": 47501000000,
+    "accn": "0001193125-10-012091",
+    "fy": 2009,
+    "fp": "FY",
+    "form": "10-K/A",
+    "filed": "2010-01-25"
+   }
+  ]
+ }
+}

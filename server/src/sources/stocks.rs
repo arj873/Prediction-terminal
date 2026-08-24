@@ -31,6 +31,7 @@ use crate::cache::ttl;
 use crate::error::{codes, Result, UpstreamError};
 use crate::http::{FetchOptions, DESKTOP_UA};
 use crate::providers::{Chain, Provider};
+use crate::sources::polygon;
 
 /* --------------------------------------------------------------- intervals */
 
@@ -681,12 +682,24 @@ struct CandleSet {
 /// symbol, and it is worth naming: it is the difference between "your symbol is
 /// wrong" and "this host is blocking your network".
 fn price_chain<'a, T>(
+    state: &AppState,
     symbol: &'a str,
+    via_polygon: impl Future<Output = Result<T>> + Send + 'a,
     via_yahoo: impl Future<Output = Result<T>> + Send + 'a,
     via_nasdaq: impl Future<Output = Result<T>> + Send + 'a,
 ) -> Chain<'a, T> {
+    let keyless = !polygon::has_credentials(state);
     Chain::new(format!("a price for {symbol}"))
         .log_prefix("stocks")
+        // Polygon goes first *when a key is set*, because it is the only one of
+        // the three that is authenticated rather than IP-reputation based, and
+        // the only one that carries the cash indices Kalshi's ladders settle on.
+        // Without a key it is skipped rather than failed, so a deployment with
+        // no key has exactly the chain it had before.
+        .provider(
+            Provider::new("polygon", "Polygon.io", via_polygon)
+                .available(polygon::has_credentials(state)),
+        )
         .provider(Provider::new("yahoo", "Yahoo Finance", via_yahoo))
         .provider(Provider::new("nasdaq", "Nasdaq", via_nasdaq))
         .on_exhausted(move |failures| {
@@ -694,11 +707,10 @@ fn price_chain<'a, T>(
                 .iter()
                 .find(|failure| failure.id == "yahoo")
                 .and_then(|failure| failure.error.status);
-            let hint = if status == Some(429) {
+            let mut hint = if status == Some(429) {
                 format!(
                     "Yahoo Finance is rate-limiting this IP — it does that to shared \
-                     datacentre addresses — and the Nasdaq fallback does not cover {symbol}. \
-                     The same request usually succeeds from a residential connection."
+                     datacentre addresses — and the Nasdaq fallback does not cover {symbol}."
                 )
             } else {
                 format!(
@@ -706,6 +718,25 @@ fn price_chain<'a, T>(
                      cash indices need a caret, e.g. `^GSPC`."
                 )
             };
+            // A rate limit is a fact about this address's reputation, and the
+            // only remedy the two keyless providers offer — ask from somewhere
+            // else — is not one the operator of a hosted deployment can take.
+            // Polygon is authenticated rather than IP-judged, which is the
+            // whole reason it heads this chain, so when it was the arm we
+            // skipped that is the remedy worth naming.
+            if status == Some(429) {
+                if keyless {
+                    hint.push_str(
+                        " Set POLYGON_API_KEY (free tier at \
+                         https://polygon.io/dashboard/signup) to read the tape directly \
+                         instead of depending on this address's reputation.",
+                    );
+                } else {
+                    hint.push_str(
+                        " The same request usually succeeds from a residential connection.",
+                    );
+                }
+            }
             UpstreamError::new(
                 format!("No price source could quote {symbol}"),
                 codes::UPSTREAM_ERROR,
@@ -736,10 +767,14 @@ pub async fn get_quote(state: &AppState, symbol: &str) -> Result<SpotQuote> {
         Ok(nasdaq_quote(&body, &plain))
     };
 
-    Ok(price_chain(&upper, via_yahoo, via_nasdaq)
-        .first_answer()
-        .await?
-        .value)
+    let via_polygon = polygon::get_quote(state, &upper, AssetClass::Stock);
+
+    Ok(
+        price_chain(state, &upper, via_polygon, via_yahoo, via_nasdaq)
+            .first_answer()
+            .await?
+            .value,
+    )
 }
 
 pub async fn get_candles(
@@ -767,9 +802,20 @@ pub async fn get_candles(
         })
     };
 
+    let via_polygon = async {
+        let loaded =
+            polygon::get_candles(state, &upper, interval, start_ts, end_ts, AssetClass::Stock)
+                .await?;
+        Ok(CandleSet {
+            candles: loaded.candles,
+            name: loaded.name,
+            currency: loaded.currency,
+        })
+    };
+
     // `source` comes from whichever provider answered rather than from a literal
     // written beside each branch, so it cannot disagree with what actually ran.
-    let answer = price_chain(&upper, via_yahoo, via_nasdaq)
+    let answer = price_chain(state, &upper, via_polygon, via_yahoo, via_nasdaq)
         .first_answer()
         .await?;
     let source = answer.source;
@@ -1429,6 +1475,85 @@ mod tests {
             "{hint}"
         );
         assert!(hint.contains("does not cover ^GSPC"), "{hint}");
+    }
+
+    #[tokio::test]
+    async fn a_keyless_deployment_blocked_by_yahoo_is_told_a_polygon_key_is_the_fix() {
+        // Yahoo refuses shared datacentre addresses with a 429, which is where
+        // a hosted deployment of this terminal runs, and the advice the chain
+        // otherwise gives — the same request usually succeeds from a
+        // residential connection — is not something its operator can act on.
+        // Setting a key is. This is the reason the Polygon arm exists, said to
+        // the person who can do something about it.
+        //
+        // It is also what makes `.available(polygon::has_credentials(state))`
+        // load-bearing rather than merely tidy: the arm has to be *skipped* for
+        // a skipped-hint to fire at all, so dropping that call turns Polygon
+        // into a failed arm and takes this hint away with it.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_matcher("/v8/finance/chart/%5EGSPC"))
+            .respond_with(ResponseTemplate::new(429))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_matcher("/api/quote/GSPC/info"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&server)
+            .await;
+
+        let state = state_with_known_class(&server, "GSPC", "index").await;
+        let error = get_quote(&state, "^GSPC").await.unwrap_err();
+        let hint = error.hint.unwrap();
+        assert!(hint.contains("POLYGON_API_KEY"), "{hint}");
+        assert!(
+            hint.contains("https://polygon.io/dashboard/signup"),
+            "{hint}"
+        );
+        // The chain's own synthesised message survives: the advice is added to
+        // the hint rather than replacing what happened with a raw upstream
+        // status the reader cannot act on either.
+        assert_eq!(error.code, codes::UPSTREAM_ERROR);
+        assert_eq!(error.message, "No price source could quote ^GSPC");
+        assert!(
+            hint.starts_with("Yahoo Finance is rate-limiting this IP"),
+            "{hint}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_deployment_that_already_holds_a_polygon_key_is_not_told_to_get_one() {
+        // The remediation only makes sense to somebody who has not set the key.
+        // An operator who has, and whose chain is down anyway, would be reading
+        // advice they already took.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path_matcher("/v8/finance/chart/%5EGSPC"))
+            .respond_with(ResponseTemplate::new(429))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path_matcher("/api/quote/GSPC/info"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&server)
+            .await;
+
+        let mut state = state_with_known_class(&server, "GSPC", "index").await;
+        state = AppState::new(Config {
+            polygon_api_key: Some("a-real-key".to_owned()),
+            polygon_api_base: server.uri(),
+            ..state.config().clone()
+        });
+        state
+            .cache()
+            .set("nasdaq:class:GSPC", "index".to_owned(), ttl::CATALOGUE)
+            .await;
+
+        let error = get_quote(&state, "^GSPC").await.unwrap_err();
+        assert!(
+            !error.hint.unwrap_or_default().contains("POLYGON_API_KEY"),
+            "a keyed deployment was told to set the key it already set"
+        );
     }
 
     #[tokio::test]

@@ -1,0 +1,41 @@
+{
+  "bill": {
+    "congress": 119,
+    "introducedDate": "2025-05-20",
+    "latestAction": {
+      "actionDate": "2025-07-04",
+      "text": "Became Public Law No: 119-21."
+    },
+    "laws": [
+      {
+        "number": "119-21",
+        "type": "Public Law"
+      }
+    ],
+    "legislationUrl": "https://www.congress.gov/bill/119th-congress/house-bill/1",
+    "number": "1",
+    "originChamber": "House",
+    "originChamberCode": "H",
+    "policyArea": {
+      "name": "Economics and Public Finance"
+    },
+    "sponsors": [
+      {
+        "bioguideId": "A000375",
+        "district": 19,
+        "firstName": "Jodey",
+        "fullName": "Rep. Arrington, Jodey C. [R-TX-19]",
+        "isByRequest": "N",
+        "lastName": "Arrington",
+        "middleName": "C.",
+        "party": "R",
+        "state": "TX",
+        "url": "https://api.congress.gov/v3/member/A000375?format=json"
+      }
+    ],
+    "title": "An act to provide for reconciliation pursuant to title II of H. Con. Res. 14.",
+    "type": "HR",
+    "updateDate": "2026-08-03T22:08:25Z",
+    "updateDateIncludingText": "2026-08-03T22:08:25Z"
+  }
+}

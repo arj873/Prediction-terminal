@@ -1,0 +1,93 @@
+{
+  "bills": [
+    {
+      "congress": 119,
+      "introducedDate": "2026-04-27",
+      "latestAction": {
+        "actionDate": "2026-05-11",
+        "text": "Resolution agreed to in Senate without amendment by Yea-Nay Vote. 46 - 45. Record Vote Number: 114. (text: CR 4/27/2026 S2056-2057)"
+      },
+      "number": "690",
+      "originChamber": "Senate",
+      "originChamberCode": "S",
+      "title": "An executive resolution authorizing the en bloc consideration in Executive Session of certain nominations on the Executive Calendar.",
+      "type": "SRES",
+      "updateDate": "2026-08-24",
+      "updateDateIncludingText": "2026-08-24",
+      "url": "https://api.congress.gov/v3/bill/119/sres/690?format=json"
+    },
+    {
+      "congress": 119,
+      "introducedDate": "2026-06-04",
+      "latestAction": {
+        "actionDate": "2026-08-06",
+        "text": "Placed on Senate Legislative Calendar under General Orders. Calendar No. 549."
+      },
+      "number": "4689",
+      "originChamber": "Senate",
+      "originChamberCode": "S",
+      "title": "READ Act",
+      "type": "S",
+      "updateDate": "2026-08-24",
+      "updateDateIncludingText": "2026-08-24",
+      "url": "https://api.congress.gov/v3/bill/119/s/4689?format=json"
+    },
+    {
+      "congress": 119,
+      "introducedDate": "2026-08-20",
+      "latestAction": {
+        "actionDate": "2026-08-20",
+        "text": "Referred to the House Committee on Energy and Commerce."
+      },
+      "number": "10134",
+      "originChamber": "House",
+      "originChamberCode": "H",
+      "title": "Local Health Care Protection Act of 2026",
+      "type": "HR",
+      "updateDate": "2026-08-24",
+      "updateDateIncludingText": "2026-08-24",
+      "url": "https://api.congress.gov/v3/bill/119/hr/10134?format=json"
+    },
+    {
+      "congress": 119,
+      "introducedDate": "2026-08-20",
+      "latestAction": {
+        "actionDate": "2026-08-20",
+        "text": "Referred to the House Committee on House Administration."
+      },
+      "number": "10118",
+      "originChamber": "House",
+      "originChamberCode": "H",
+      "title": "No Data Center NDAs Act",
+      "type": "HR",
+      "updateDate": "2026-08-24",
+      "updateDateIncludingText": "2026-08-24",
+      "url": "https://api.congress.gov/v3/bill/119/hr/10118?format=json"
+    },
+    {
+      "congress": 119,
+      "introducedDate": "2026-08-10",
+      "latestAction": {
+        "actionDate": "2026-08-10",
+        "text": "Referred to the Committee on Ways and Means, and in addition to the Committees on Rules, and the Budget, for a period to be subsequently determined by the Speaker, in each case for consideration of such provisions as fall within the jurisdiction of the committee concerned."
+      },
+      "number": "10078",
+      "originChamber": "House",
+      "originChamberCode": "H",
+      "title": "Dollar-for-Dollar Deficit Reduction Act",
+      "type": "HR",
+      "updateDate": "2026-08-24",
+      "updateDateIncludingText": "2026-08-24",
+      "url": "https://api.congress.gov/v3/bill/119/hr/10078?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 18417,
+    "next": "https://api.congress.gov/v3/bill/119?sort=updateDate desc&offset=5&limit=5&format=json"
+  },
+  "request": {
+    "congress": "119",
+    "contentType": "application/json",
+    "format": "json"
+  }
+}

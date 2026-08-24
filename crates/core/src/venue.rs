@@ -720,6 +720,60 @@ mod tests {
     }
 
     #[test]
+    fn every_venue_explains_each_capability_it_lacks() {
+        // The note is what the terminal shows in place of a dead button, so the
+        // rule is a biconditional and both halves bite. A venue missing
+        // something with no note leaves a reader staring at a greyed `OB` with
+        // no reason given — which is how three venues arrived at once without
+        // their capabilities filled in. A venue that serves everything but
+        // carries a note is the stale half: the explanation outlived the gap it
+        // explained, and it would still be displayed.
+        for venue in venue_ids() {
+            let info = venue_info(venue);
+            let capabilities = &info.capabilities;
+            let complete = capabilities.book
+                && capabilities.candles
+                && capabilities.trades
+                && capabilities.series_category_filter
+                && capabilities.sorts.len() == MoverSort::ALL.len();
+
+            assert_eq!(
+                complete,
+                capabilities.note.is_empty(),
+                "{} declares {} but its note is {}",
+                info.code,
+                if complete {
+                    "every capability"
+                } else {
+                    "a gap"
+                },
+                if capabilities.note.is_empty() {
+                    "empty"
+                } else {
+                    "set"
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn a_venue_never_claims_a_sort_twice_or_one_that_is_not_a_ranking() {
+        // `TOP` iterates this list to decide what to ask each venue for, so a
+        // duplicate would ask twice and a stray would ask for a board the venue
+        // cannot rank.
+        for venue in venue_ids() {
+            let sorts = venue_info(venue).capabilities.sorts;
+            for (index, sort) in sorts.iter().enumerate() {
+                assert!(
+                    MoverSort::ALL.contains(sort),
+                    "{venue} lists {sort}, which is not a ranking"
+                );
+                assert!(!sorts[..index].contains(sort), "{venue} lists {sort} twice");
+            }
+        }
+    }
+
+    #[test]
     fn top_only_ranks_a_venue_on_a_figure_it_publishes() {
         assert!(supports_sort(Venue::Kalshi, MoverSort::OpenInterest));
         // Polymarket's catalogue carries no open interest.

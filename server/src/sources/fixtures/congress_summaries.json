@@ -1,0 +1,29 @@
+{
+  "pagination": {
+    "count": 5
+  },
+  "request": {
+    "billNumber": "1",
+    "billType": "hr",
+    "billUrl": "https://api.congress.gov/v3/bill/119/hr/1?format=json",
+    "congress": "119",
+    "contentType": "application/json",
+    "format": "json"
+  },
+  "summaries": [
+    {
+      "actionDate": "2025-05-20",
+      "actionDesc": "Introduced in House",
+      "text": "<p><strong>One Big Beautiful Bill Act</strong></p><p>This bill reduces taxes, reduces or increases spending for various federal programs, increases the statutory debt limit, and otherwise addresses agencies and programs throughout the federal government. &nbsp;</p>",
+      "updateDate": "2025-05-22T17:15:29Z",
+      "versionCode": "00"
+    },
+    {
+      "actionDate": "2025-07-04",
+      "actionDesc": "Public Law",
+      "text": "<p>A state with a payment error rate that is</p><ul><li>at least 6% but less than 8% must contribute 5%,</li><li>at least 8% but less than 10% must contribute 10%, and</li><li>10% or greater must contribute 15%.</li></ul><p>In general,&nbsp;the&nbsp;effective date for the state-matching fund requirements&nbsp;is the beginning of FY2028. However, any state that has an error rate above a certain level will have implementation delayed until FY2029 or&nbsp;FY2030. Specifically, the implementation date is delayed for states where the state's error rate multiplied by 1.5 equals or exceeds 20% in FY2025 or FY2026. For such states, the implementation date is delayed until FY2029 if the specified error rate occurs in FY2025 and until FY2030 if the error rate occurs in FY2026.&nbsp;</p>",
+      "updateDate": "2025-10-06T21:40:39Z",
+      "versionCode": "49"
+    }
+  ]
+}

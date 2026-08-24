@@ -1,0 +1,76 @@
+{
+  "bills": [
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2026-05-11",
+        "text": "Became Public Law No: 119-89."
+      },
+      "laws": [
+        {
+          "number": "119-89",
+          "type": "Public Law"
+        }
+      ],
+      "number": "98",
+      "originChamber": "Senate",
+      "originChamberCode": "S",
+      "title": "Rural Broadband Protection Act of 2025",
+      "type": "S",
+      "updateDate": "2026-08-07",
+      "updateDateIncludingText": "2026-08-07",
+      "url": "https://api.congress.gov/v3/bill/119/s/98?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2026-07-11",
+        "text": "Became Public Law No: 119-101."
+      },
+      "laws": [
+        {
+          "number": "119-101",
+          "type": "Public Law"
+        }
+      ],
+      "number": "6644",
+      "originChamber": "House",
+      "originChamberCode": "H",
+      "title": "21st Century ROAD to Housing Act",
+      "type": "HR",
+      "updateDate": "2026-08-13",
+      "updateDateIncludingText": "2026-08-13",
+      "url": "https://api.congress.gov/v3/bill/119/hr/6644?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2025-01-29",
+        "text": "Became Public Law No: 119-1."
+      },
+      "laws": [
+        {
+          "number": "119-1",
+          "type": "Public Law"
+        }
+      ],
+      "number": "5",
+      "originChamber": "Senate",
+      "originChamberCode": "S",
+      "title": "Laken Riley Act",
+      "type": "S",
+      "updateDate": "2026-07-30",
+      "updateDateIncludingText": "2026-07-30",
+      "url": "https://api.congress.gov/v3/bill/119/s/5?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 104,
+    "next": "https://api.congress.gov/v3/law/119?offset=3&limit=3&format=json"
+  },
+  "request": {
+    "congress": "119",
+    "contentType": "application/json",
+    "format": "json"
+  }
+}

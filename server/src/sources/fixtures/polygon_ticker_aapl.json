@@ -1,0 +1,14 @@
+{
+  "request_id": "31d59dda-80e5-4721-8496-d0d32a654afe",
+  "results": {
+    "active": true,
+    "currency_name": "usd",
+    "locale": "us",
+    "market": "stocks",
+    "name": "Apple Inc.",
+    "primary_exchange": "XNAS",
+    "ticker": "AAPL",
+    "type": "CS"
+  },
+  "status": "OK"
+}
