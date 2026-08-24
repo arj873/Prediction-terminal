@@ -81,7 +81,10 @@
       text: 'ForecastEx — the exchange behind IBKR ForecastTrader. It matches by pairing a YES buyer with a NO buyer, so there is no book to show: DES gives the last prints and the open interest. Turnover and the daily move come from its end-of-session archive. Prefix a contract id with fx:.',
     },
     {
-      text: 'FRED — scraped from fred.stlouisfed.org. Set FRED_API_KEY for an API fallback if the scrape is blocked.',
+      text: 'FRED — scraped from fred.stlouisfed.org, with an official-API fallback behind it when FRED_API_KEY is set. `ECO UNRATE` and `FRED UNRATE` are the same series.',
+    },
+    {
+      text: 'The BLS, the ECB, the IMF, the OECD, the Federal Reserve Board, the EIA and the CFTC — seven more publishers behind ECO and ECOS. `SRC` lists which of them this deployment can serve and what each missing key would add.',
     },
     { text: 'Billboard — scraped from billboard.com/charts.' },
     { text: 'Rotten Tomatoes — scraped from rottentomatoes.com. Settles Kalshi KXRT.' },

@@ -34,6 +34,7 @@ import {
   type Command,
   type CommandContext,
 } from './command';
+import { parseDataRef } from './dataset';
 import { formatChord } from './keys';
 import { isIsoDate, looksLikeTicker, parse } from './parser';
 import {
@@ -48,6 +49,7 @@ import {
   requireArg,
   requireRef,
   scopeFlag,
+  takeSources,
   takeVenues,
   type SpotProps,
 } from './registry';
@@ -274,14 +276,22 @@ export const COMMANDS: Command[] = [
     },
   },
   {
-    verb: 'FRED',
-    aliases: ['ECO'],
+    verb: 'ECO',
+    // `FRED <id>` predates the other eleven publishers, and every habit,
+    // example and README line in this terminal says it. It stays, and reaches
+    // the same panel — an unprefixed reference is a FRED series.
+    aliases: ['FRED'],
     group: 'data',
-    summary: 'FRED economic series (scraped from stlouisfed.org)',
-    usage: 'FRED <series-id> [start] [end]',
-    examples: ['FRED UNRATE', 'FRED CPIAUCSL 2015-01-01', 'FRED DGS10 2020-01-01 2024-12-31'],
+    summary: 'A published series at any of eight publishers',
+    usage: 'ECO [source:]<id> [start] [end]',
+    examples: [
+      'ECO UNRATE',
+      'ECO bls:LNS14000000',
+      'ECO ecb:EXR/D.USD.EUR.SP00.A',
+      'ECO fed:H15/RIFLGFCY10_N.B 2020-01-01',
+    ],
     handler(command, { panels }) {
-      const seriesId = requireArg(command, 0, 'series-id').toUpperCase();
+      const reference = parseDataRef(requireArg(command, 0, 'id'));
       const start = command.args[1];
       const end = command.args[2];
 
@@ -293,23 +303,39 @@ export const COMMANDS: Command[] = [
       }
 
       panels.open({
-        id: panelId.fred(seriesId),
-        kind: 'fred',
-        props: { seriesId, ...(start ? { start } : {}), ...(end ? { end } : {}) },
+        id: panelId.dataSeries(reference),
+        kind: 'data-series',
+        props: { reference, ...(start ? { start } : {}), ...(end ? { end } : {}) },
       });
     },
   },
   {
-    verb: 'FSRCH',
-    aliases: ['ECOS'],
+    verb: 'ECOS',
+    aliases: ['FSRCH'],
     group: 'data',
-    summary: 'Search FRED for a series id',
-    usage: 'FSRCH <words>',
-    examples: ['FSRCH unemployment rate', 'FSRCH "real gdp"'],
+    summary: 'Search every data publisher at once for a series id',
+    usage: 'ECOS <words> [publisher…]',
+    examples: ['ECOS unemployment rate', 'ECOS oil eia', 'ECOS inflation ecb oecd'],
     handler(command, { panels }) {
-      const query = command.args.join(' ').trim();
+      const { sources, rest } = takeSources(command.args);
+      const query = rest.join(' ').trim();
       if (!query) throw new UsageError('Missing <words>');
-      panels.open({ id: panelId.fredSearch(query), kind: 'fred-search', props: { query } });
+      panels.open({
+        id: panelId.dataSearch(query, sources),
+        kind: 'data-search',
+        props: { query, sources },
+      });
+    },
+  },
+  {
+    verb: 'SRC',
+    aliases: ['SOURCES'],
+    group: 'data',
+    summary: 'Which data publishers this deployment can serve',
+    usage: 'SRC',
+    examples: ['SRC'],
+    handler(_command, { panels }) {
+      panels.open({ id: panelId.sources(), kind: 'sources', props: {} });
     },
   },
   {

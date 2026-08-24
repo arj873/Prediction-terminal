@@ -1,0 +1,7 @@
+"Series Description","Interest rate on excess reserves (IOER rate)","Interest rate on required reserves (IORR rate)","Interest rate on reserve balances (IORB rate)"
+"Unit:","Percent","Percent","Percent"
+"Multiplier:","1","1","1"
+"Currency:","NA","NA","NA"
+"Unique Identifier: ","PRATES/PRATES_POLICY_RATES/RESBME_N.D","PRATES/PRATES_POLICY_RATES/RESBMS_N.D","PRATES/PRATES_POLICY_RATES/RESBM_N.D"
+"Time Period","RESBME_N.D","RESBMS_N.D","RESBM_N.D"
+2026-08-24,,,3.65

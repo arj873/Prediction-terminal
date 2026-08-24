@@ -138,8 +138,9 @@ does exactly what naming its event ticker does.
 | Command | Usage | What it does |
 | --- | --- | --- |
 | `NEWS` | `NEWS [symbol…] [count] [window]` | The news wire, for a symbol or the whole tape |
-| `FRED` | `FRED <series-id> [start] [end]` | Economic series chart plus units, frequency and vintage |
-| `FSRCH` | `FSRCH <words>` | Find a FRED series id |
+| `SRC` | `SRC` | Which of the twelve data publishers this deployment can serve, and what each missing key would add |
+| `ECO` | `ECO [source:]<id> [start] [end]` | A published series, charted, plus units, frequency, vintage and which publisher answered |
+| `ECOS` | `ECOS <words> [publisher…]` | Search every publisher at once for a series id |
 | `BB` | `BB [chart-slug] [YYYY-MM-DD]` | A Billboard chart as a ranked table |
 | `BB` | `BB CHARTS` | List the chart slugs |
 | `RT` | `RT <title>` · `RT SEARCH <words>` | Tomatometer and Popcornmeter, with review counts |
@@ -156,6 +157,39 @@ does exactly what naming its event ticker does.
 
 `NFLX`, `SPOT` and `TV` take their arguments in any order, so `NFLX films gb`
 and `NFLX gb films` are the same chart.
+
+Twelve publishers sit behind `ECO`, and they agree on nothing: the BLS names a
+series `LNS14000000`, the ECB names one `EXR/D.USD.EUR.SP00.A`, the Federal
+Reserve names one `H15/RIFLGFCY10_N.B`. Rather than twelve command sets, every
+data command takes one reference — an optional source prefix and an identifier —
+the same grammar the venue prefixes use.
+
+| Prefix | Publisher | Identifier |
+| --- | --- | --- |
+| *(none)* or `fred:` | FRED (St. Louis Fed) | series id, `UNRATE` |
+| `bls:` | Bureau of Labor Statistics | series id, `LNS14000000` |
+| `ecb:` | European Central Bank | SDMX key, `EXR/D.USD.EUR.SP00.A` |
+| `imf:` | International Monetary Fund | SDMX key, `CPI/USA.CPI._T.IX.M` |
+| `oecd:` | OECD | SDMX key, `DSD_KEI@DF_KEI/USA.M.CP.GR._Z._Z.GY` |
+| `fed:` | Federal Reserve Board | release/series, `H15/RIFLGFCY10_N.B` |
+| `eia:` | US Energy Information Administration | route path, `petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG` |
+| `cftc:` | CFTC | report/market/field, `legacy/GOLD/noncomm_net` |
+
+`FRED UNRATE` still works and means exactly what it always did — an unprefixed
+reference is a FRED series.
+
+```
+> SRC                                  # what this deployment can actually serve
+> ECO UNRATE                           # …the same series as FRED UNRATE
+> ECO ecb:EXR/D.USD.EUR.SP00.A         # USD/EUR daily, back to 1999
+> ECO cftc:legacy/GOLD/noncomm_net     # who is long gold, weekly since 1986
+> ECOS inflation ecb oecd              # search two publishers at once
+```
+
+Case is part of the identifier here too, and one publisher family needs more
+than folding: an SDMX key carries meaningful case *inside* it, so `ecb:`, `imf:`,
+`oecd:` and `fed:` references are passed through exactly as typed. Folding either
+way 404s them.
 
 ```
 > NEWS                        # the whole wire
@@ -482,6 +516,11 @@ browser (SvelteKit, static, no server rendering)
                     ├── Coinbase   crypto spot
                     ├── Alpaca     news wire (Benzinga), the one keyed feed
                     ├── FRED       scraped from fred.stlouisfed.org
+                    ├── BLS        api.bls.gov, v1 anonymous or v2 with a key
+                    ├── SDMX       ECB, IMF and OECD, one reader over three hosts
+                    ├── Fed DDP    federalreserve.gov CSV packages
+                    ├── EIA        api.eia.gov, keyed — nothing anonymous
+                    ├── CFTC       Commitments of Traders, weekly since 1986
                     ├── Billboard  scraped from billboard.com/charts
                     ├── Netflix    published TSV at netflix.com/tudum/top10
                     ├── TVmaze     public JSON API
@@ -723,7 +762,24 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `PREDICTFUN_GRAPHQL_BASE` | `https://graphql.predict.fun/graphql` | predict.fun public GraphQL host |
 | `FORECASTEX_API_BASE` | `https://forecastex.com` | ForecastEx catalogue, products and prices |
 | `FORECASTEX_ARCHIVE_BASE` | `https://forecastex-public-data.s3.amazonaws.com` | ForecastEx end-of-session archive |
+| `BLS_API_KEY` | — | Lifts the BLS from 25 queries a day to 500, and 10 years a call to 20 |
+| `EIA_API_KEY` | — | Required. The EIA publishes nothing anonymously |
+| `CONGRESS_API_KEY` | — | Replaces the shared `DEMO_KEY`, which is throttled per IP |
+| `DATAGOV_API_KEY` | — | The same, for data.gov |
+| `POLYGON_API_KEY` | — | Puts a licensed tape in front of Yahoo and Nasdaq |
+| `SEC_USER_AGENT` | names the software | The SEC's fair-access policy asks every caller to identify itself, and its hosts 403 one that does not |
 | `FRED_WEB_BASE` | `https://fred.stlouisfed.org` | Override for testing against a fixture |
+| `BLS_API_BASE` | `https://api.bls.gov/publicAPI` | Override the labour-statistics upstream |
+| `ECB_API_BASE` | `https://data-api.ecb.europa.eu/service` | The SDMX host, not the web explorer |
+| `IMF_API_BASE` | `https://api.imf.org/external/sdmx/2.1` | Override the IMF upstream |
+| `OECD_API_BASE` | `https://sdmx.oecd.org/public/rest` | Override the OECD upstream |
+| `FED_DDP_BASE` | `https://www.federalreserve.gov/datadownload` | Override the Fed's data-download upstream |
+| `EIA_API_BASE` | `https://api.eia.gov/v2` | Override the energy upstream |
+| `CFTC_API_BASE` | `https://publicreporting.cftc.gov/resource` | Override the Commitments-of-Traders upstream |
+| `CONGRESS_API_BASE` | `https://api.congress.gov/v3` | Override the legislative upstream |
+| `SEC_DATA_BASE` | `https://data.sec.gov` | Override the EDGAR data upstream |
+| `DATAGOV_API_BASE` | `https://api.gsa.gov/technology/datagov/v4` | Override the dataset catalogue |
+| `POLYGON_API_BASE` | `https://api.polygon.io` | Override the licensed price upstream |
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
@@ -750,17 +806,28 @@ FRED data is scraped, as intended: observations come from
 `/graph/fredgraph.csv?id=<ID>` (the endpoint behind every FRED graph's
 "Download → CSV" button) and metadata is parsed out of the `/series/<ID>` page.
 
-There is a real-world catch. **`fred.stlouisfed.org` resets connections from
-datacentre and cloud IP ranges.** From a laptop the scrape works; from a VPS,
-container, or CI runner it usually will not, and the terminal will show:
+There is a real-world catch, and it is narrower than "the host blocks
+datacentres". Measured from this project's own container: `fred.stlouisfed.org`
+answers both scrape URLs in under half a second with **no `User-Agent` set**, and
+hangs up mid-handshake on the same request carrying one — the terminal's desktop
+Chrome string and a plain honest `prediction-terminal/1.0` alike, three times out
+of three each. The same header set reaches Gemini, ForecastEx and every other
+host here from the same address, so this is FRED's gate rather than the network's.
 
-> fred.stlouisfed.org refused the connection — hosts behind bot protection
-> commonly do this to datacentre and cloud IPs.
+What a reader sees when it bites is a `504` after the retry budget runs out:
+
+> fred.stlouisfed.org did not respond in time — it accepted the connection but
+> never replied. It may be throttling this IP.
+
+The terminal does not work around that by dressing its requests up as something
+else. Impersonating a client a host has chosen to allow is exactly the kind of
+thing this codebase does not do, and FRED publishes the supported way through.
 
 Setting `FRED_API_KEY` (free, from
 [fred.stlouisfed.org/docs/api/api_key.html](https://fred.stlouisfed.org/docs/api/api_key.html))
-makes the server fall back to `api.stlouisfed.org`, which does answer from those
-networks. The scrape is always tried first; the key is only a safety net.
+makes the server fall back to `api.stlouisfed.org`, which answers this container
+without complaint. The scrape is always tried first; the key is only a safety
+net — and `SRC` says which of the two arms this deployment is running on.
 
 ### About equity prices from a datacentre
 
@@ -834,6 +901,9 @@ Everything else in the terminal keeps working with no key at all.
 | `GET /api/venue/:venue/catalogue` | Snapshot size, age, and whether the crawl was truncated |
 | `GET /api/xv/series?q=&limit=` | Series more than one broker lists, with confidence and reason |
 | `GET /api/xv/compare?event=&venue=` | One question, quoted at every venue, with divergence and edge |
+| `GET /api/data/sources` | Every publisher, and whether this deployment can serve it |
+| `GET /api/data/series/{reference}?start&end` | A published series and its observations, at any publisher (`reference` is `[source:]id`, and may contain slashes) |
+| `GET /api/data/search?q&sources&limit` | One search fanned across every publisher, with those that failed and those skipped for want of a key named separately |
 | `GET /api/spot/:class/:symbol` | Live quote (`:class` is `stock` or `crypto`) |
 | `GET /api/spot/:class/:symbol/candles?interval=&start=&end=` | Candles on Kalshi's 1/60/1440-minute grid |
 | `GET /api/spot/search?q=&class=` | Symbol search, flagged with whether a ladder prices it |

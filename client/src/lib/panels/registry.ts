@@ -20,8 +20,9 @@ import ComparePanel from './ComparePanel.svelte';
 import DepthPanel from './DepthPanel.svelte';
 import EntPanel from './EntPanel.svelte';
 import EventPanel from './EventPanel.svelte';
-import FredPanel from './FredPanel.svelte';
-import FredSearchPanel from './FredSearchPanel.svelte';
+import DataSeriesPanel from './DataSeriesPanel.svelte';
+import DataSearchPanel from './DataSearchPanel.svelte';
+import SourcesPanel from './SourcesPanel.svelte';
 import HelpPanel from './HelpPanel.svelte';
 import KeysPanel from './KeysPanel.svelte';
 import LinkedSeriesPanel from './LinkedSeriesPanel.svelte';
@@ -60,8 +61,9 @@ export const PANEL_COMPONENTS: Record<PanelKind, AnyPanel> = {
   'linked-series': LinkedSeriesPanel,
   compare: ComparePanel,
   news: NewsPanel,
-  fred: FredPanel,
-  'fred-search': FredSearchPanel,
+  'data-series': DataSeriesPanel,
+  'data-search': DataSearchPanel,
+  sources: SourcesPanel,
   billboard: BillboardPanel,
   'billboard-charts': BillboardChartsPanel,
   ent: EntPanel,

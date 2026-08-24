@@ -18,6 +18,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+pub use crate::dataset::{DataSource, DataSourceKind};
 pub use crate::venue::{MoverSort, Venue};
 
 /* ------------------------------------------------------------------ errors */
@@ -807,31 +808,31 @@ pub struct ImpliedSeriesResponse {
     pub points: Vec<ImpliedPoint>,
 }
 
-/* -------------------------------------------------------------------- fred */
+/* ------------------------------------------------------------ data sources */
 
-/// Which arm of the FRED provider chain answered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
-pub enum FredSource {
-    Scrape,
-    Api,
-}
-
+/// One observation in a published series.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
-pub struct FredObservation {
-    /// `YYYY-MM-DD`.
+pub struct DataObservation {
+    /// `YYYY-MM-DD`. A quarter, a month or a year is dated to the day it begins,
+    /// which is FRED's own convention — mixing conventions would put an OECD
+    /// quarterly line three months away from the FRED series it is read against.
     pub date: String,
-    /// `None` for FRED's `.` missing-value marker.
+    /// `None` for a missing value, which every publisher spells differently:
+    /// FRED writes `.`, the BLS writes `-`, SDMX omits the observation.
     pub value: Option<f64>,
 }
 
+/// A published series' metadata, from whichever publisher states it.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
-pub struct FredSeries {
+pub struct DataSeries {
+    /// Which publisher.
+    pub provider: DataSource,
+    /// The identifier at that publisher — `UNRATE`, `LNS14000000`,
+    /// `EXR/D.USD.EUR.SP00.A`.
     pub id: String,
     pub title: String,
     pub units: String,
@@ -842,22 +843,39 @@ pub struct FredSeries {
     pub observation_start: String,
     pub observation_end: String,
     pub notes: String,
-    /// Where the payload came from — the terminal shows this in the panel header.
-    pub source: FredSource,
+    /// Which arm of the publisher answered — `scrape`, `api`, `v1`, `v2`. Shown
+    /// in the panel header, because how much to trust a number depends on
+    /// whether it came from the source of record or a fallback behind it.
+    pub source: String,
+    /// The publisher's own page for this series, so a reader can check it.
+    pub source_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
-pub struct FredSeriesResponse {
-    pub series: FredSeries,
-    pub observations: Vec<FredObservation>,
+pub struct DataSeriesResponse {
+    pub series: DataSeries,
+    pub observations: Vec<DataObservation>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
-pub struct FredSearchResult {
+pub struct DataSearchResult {
+    /// Which publisher. `ECOS` fans out, so a row without this is unusable.
+    pub provider: DataSource,
+    /// Which arm of that publisher answered, where it has more than one.
+    ///
+    /// Per row rather than per response, because `ECOS` fans across publishers
+    /// and one figure for the whole answer would describe none of them. `None`
+    /// where the publisher has a single surface, which is most of them; FRED
+    /// fills it with `scrape` or `api`, and a reader weighs a row differently
+    /// depending on whether it came from the source of record or the fallback
+    /// behind it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub source: Option<String>,
     pub id: String,
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -874,13 +892,70 @@ pub struct FredSearchResult {
     pub observation_range: Option<String>,
 }
 
+/// A publisher that was asked and did not answer.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../../client/src/lib/api/gen/")]
-pub struct FredSearchResponse {
+pub struct ProviderUnavailable {
+    pub provider: DataSource,
+    pub error: String,
+}
+
+/// A publisher that was not asked, and what would let it be.
+///
+/// A different absence from [`ProviderUnavailable`], and a reader needs to tell
+/// them apart: one is an outage and the other is a key this deployment does not
+/// hold, which is fixable and worth saying how.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct ProviderSkipped {
+    pub provider: DataSource,
+    pub hint: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct DataSearchResponse {
     pub query: String,
-    pub results: Vec<FredSearchResult>,
-    pub source: FredSource,
+    pub results: Vec<DataSearchResult>,
+    /// Publishers that were asked and did not answer. A board covering six of
+    /// eight has to say which two are missing, or "no match" reads as "no such
+    /// series anywhere".
+    pub unavailable: Vec<ProviderUnavailable>,
+    /// Publishers skipped for want of a credential, and what to set.
+    pub skipped: Vec<ProviderSkipped>,
+}
+
+/// One publisher's row on the `SRC` board.
+///
+/// What this deployment can actually serve, rather than what the registry lists:
+/// a reader picking a prefix needs to know which of them will answer before
+/// typing one.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct DataSourceStatus {
+    pub id: DataSource,
+    pub label: String,
+    pub code: String,
+    pub prefix: String,
+    pub kind: DataSourceKind,
+    pub covers: String,
+    pub site: String,
+    pub id_example: String,
+    /// False when a required credential is unset.
+    pub available: bool,
+    /// Why it is unavailable, or what a key would add when one is optional.
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct DataSourcesResponse {
+    pub sources: Vec<DataSourceStatus>,
 }
 
 /* --------------------------------------------------------------- billboard */

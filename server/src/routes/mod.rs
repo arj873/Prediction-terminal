@@ -10,6 +10,7 @@
 
 pub mod billboard;
 pub mod crossvenue;
+pub mod data;
 pub mod entertainment;
 pub mod fred;
 pub mod helpers;
@@ -78,6 +79,7 @@ fn api_routes(state: AppState) -> Router {
         .merge(spot::router())
         .merge(implied::router())
         .merge(fred::router())
+        .merge(data::router())
         .merge(billboard::router())
         .merge(entertainment::router())
         .merge(news::router())
