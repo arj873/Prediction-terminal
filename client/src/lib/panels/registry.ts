@@ -28,6 +28,10 @@ import KeysPanel from './KeysPanel.svelte';
 import LinkedSeriesPanel from './LinkedSeriesPanel.svelte';
 import NetflixPanel from './NetflixPanel.svelte';
 import NewsPanel from './NewsPanel.svelte';
+import OptionChainPanel from './OptionChainPanel.svelte';
+import OptionPositioningPanel from './OptionPositioningPanel.svelte';
+import OptionQuotePanel from './OptionQuotePanel.svelte';
+import OptionVolPanel from './OptionVolPanel.svelte';
 import QuotePanel from './QuotePanel.svelte';
 import RtPanel from './RtPanel.svelte';
 import RtSearchPanel from './RtSearchPanel.svelte';
@@ -61,6 +65,10 @@ export const PANEL_COMPONENTS: Record<PanelKind, AnyPanel> = {
   'linked-series': LinkedSeriesPanel,
   compare: ComparePanel,
   news: NewsPanel,
+  'option-chain': OptionChainPanel,
+  'option-quote': OptionQuotePanel,
+  'option-vol': OptionVolPanel,
+  'option-positioning': OptionPositioningPanel,
   'data-series': DataSeriesPanel,
   'data-search': DataSearchPanel,
   sources: SourcesPanel,

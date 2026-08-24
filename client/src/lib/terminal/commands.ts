@@ -276,6 +276,76 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    verb: 'OPT',
+    aliases: ['CHAIN'],
+    group: 'markets',
+    summary: 'The option chain for one expiry, both legs against one ladder',
+    usage: 'OPT <symbol> [expiry]',
+    // The expiry accepts a date, a horizon or an index into the strip, because
+    // nobody remembers which Friday a board lists.
+    examples: ['OPT BTC', 'OPT AAPL', 'OPT SPY 30d', 'OPT BTC 2026-12-25', 'OPT NVDA 2'],
+    handler(command, { panels }) {
+      const symbol = requireArg(command, 0, 'symbol').toUpperCase();
+      const expiry = command.args[1];
+      panels.open({
+        id: panelId.optionChain(symbol, expiry),
+        kind: 'option-chain',
+        props: { symbol, ...(expiry ? { expiry } : {}) },
+      });
+    },
+  },
+  {
+    verb: 'OPD',
+    group: 'markets',
+    summary: 'One option contract, its pair leg and its Greeks',
+    // Routed on the shape of the identifier rather than an asset class, so an
+    // OCC symbol and a Deribit instrument name can both be pasted straight in.
+    usage: 'OPD <contract>',
+    examples: ['OPD BTC-25DEC26-104000-C', 'OPD AAPL260918C00300000'],
+    handler(command, { panels }) {
+      const contract = requireArg(command, 0, 'contract').toUpperCase();
+      panels.open({
+        id: panelId.optionQuote(contract),
+        kind: 'option-quote',
+        props: { contract },
+      });
+    },
+  },
+  {
+    verb: 'VOL',
+    aliases: ['SMILE'],
+    group: 'markets',
+    summary: 'The volatility smile for one expiry, and the term structure behind it',
+    usage: 'VOL <symbol> [expiry]',
+    examples: ['VOL BTC', 'VOL SPY', 'VOL AAPL 60d'],
+    handler(command, { panels }) {
+      const symbol = requireArg(command, 0, 'symbol').toUpperCase();
+      const expiry = command.args[1];
+      panels.open({
+        id: panelId.optionVol(symbol, expiry),
+        kind: 'option-vol',
+        props: { symbol, ...(expiry ? { expiry } : {}) },
+      });
+    },
+  },
+  {
+    verb: 'OI',
+    aliases: ['PAIN'],
+    group: 'markets',
+    summary: 'Open interest by strike, and the max-pain curve',
+    usage: 'OI <symbol> [expiry]',
+    examples: ['OI BTC', 'OI SPY', 'OI TSLA 30d'],
+    handler(command, { panels }) {
+      const symbol = requireArg(command, 0, 'symbol').toUpperCase();
+      const expiry = command.args[1];
+      panels.open({
+        id: panelId.optionPositioning(symbol, expiry),
+        kind: 'option-positioning',
+        props: { symbol, ...(expiry ? { expiry } : {}) },
+      });
+    },
+  },
+  {
     verb: 'ECO',
     // `FRED <id>` predates the other eleven publishers, and every habit,
     // example and README line in this terminal says it. It stays, and reaches

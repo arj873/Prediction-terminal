@@ -463,6 +463,18 @@ export const panelId = {
   spot: (symbol: string): string => `spot:${symbol.toUpperCase()}`,
   news: (symbols: readonly string[]): string => `news:${symbols.join(',').toLowerCase() || 'wire'}`,
   /**
+   * The expiry is part of the identity, because two expiries of one underlying
+   * are two different boards — where the underlying itself is one thing, however
+   * many ways it is looked at.
+   */
+  optionChain: (symbol: string, expiry?: string): string =>
+    `opt:${symbol.toUpperCase()}:${expiry ?? 'front'}`,
+  optionQuote: (contract: string): string => `opd:${contract.toUpperCase()}`,
+  optionVol: (symbol: string, expiry?: string): string =>
+    `vol:${symbol.toUpperCase()}:${expiry ?? 'front'}`,
+  optionPositioning: (symbol: string, expiry?: string): string =>
+    `oi:${symbol.toUpperCase()}:${expiry ?? 'front'}`,
+  /**
    * One panel per reference, so `ECO UNRATE` and `FRED UNRATE` land on the same
    * one rather than tiling two copies of the same chart.
    */

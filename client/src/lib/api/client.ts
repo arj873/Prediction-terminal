@@ -26,6 +26,12 @@ import type {
   DataSearchResponse,
   DataSourcesResponse,
   DataSeriesResponse,
+  OptionChain,
+  OptionExpiriesResponse,
+  OptionPositioning,
+  OptionQuoteResponse,
+  OptionSurface,
+  OptionUnderlyingsResponse,
   HealthResponse,
   ImpliedCandidatesResponse,
   ImpliedMethod,
@@ -261,6 +267,45 @@ export const data = {
     ),
 
   sources: (signal?: AbortSignal): Promise<DataSourcesResponse> => request('/data/sources', signal),
+};
+
+/* ----------------------------------------------------------------- options */
+
+/**
+ * Four views over one option board.
+ *
+ * The symbol decides the venue rather than the caller: an underlying either has
+ * a Deribit board or it does not, and `OPT BTC` should not have to be spelled
+ * differently from `OPT AAPL`. A contract lookup is routed on the *shape* of
+ * the identifier instead, so an OCC symbol and a Deribit instrument name can
+ * both be pasted straight in.
+ */
+export const options = {
+  underlyings: (signal?: AbortSignal): Promise<OptionUnderlyingsResponse> =>
+    request('/options/underlyings', signal),
+
+  expiries: (symbol: string, signal?: AbortSignal): Promise<OptionExpiriesResponse> =>
+    request(`/options/${encodeURIComponent(symbol)}/expiries`, signal),
+
+  chain: (symbol: string, expiry?: string, signal?: AbortSignal): Promise<OptionChain> =>
+    request(`/options/${encodeURIComponent(symbol)}/chain${query({ expiry })}`, signal),
+
+  surface: (symbol: string, expiry?: string, signal?: AbortSignal): Promise<OptionSurface> =>
+    request(`/options/${encodeURIComponent(symbol)}/surface${query({ expiry })}`, signal),
+
+  positioning: (
+    symbol: string,
+    expiry?: string,
+    signal?: AbortSignal,
+  ): Promise<OptionPositioning> =>
+    request(`/options/${encodeURIComponent(symbol)}/positioning${query({ expiry })}`, signal),
+
+  contract: (
+    contract: string,
+    interval?: number,
+    signal?: AbortSignal,
+  ): Promise<OptionQuoteResponse> =>
+    request(`/options/contract/${encodeURIComponent(contract)}${query({ interval })}`, signal),
 };
 
 /* -------------------------------------------------------------------- fred */

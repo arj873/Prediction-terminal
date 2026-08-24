@@ -283,6 +283,15 @@ export const MENUS: readonly Menu[] = [
       ]),
       group('Implied price', examplesOf('IMP')),
       group('Stocks and crypto', [...examplesOf('STK'), SEP, ...examplesOf('CRY')]),
+      SEP,
+      group('Options', [
+        item('Option chain…', '>OPT'),
+        item('One contract and its Greeks…', '>OPD'),
+        item('Volatility smile and term structure…', '>VOL'),
+        item('Open interest and max pain…', '>OI'),
+        SEP,
+        ...examplesOf('OPT'),
+      ]),
     ],
   },
   {

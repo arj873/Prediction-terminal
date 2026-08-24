@@ -7,6 +7,7 @@
 //! test and impossible to accidentally couple to a transport.
 
 pub mod dataset;
+pub mod greeks;
 pub mod implied;
 pub mod matching;
 pub mod slug;
