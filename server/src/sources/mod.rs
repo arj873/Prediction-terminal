@@ -13,10 +13,10 @@
 
 use crate::app::AppState;
 
-/// Crawl all three catalogues, then pair their series up, in the background.
+/// Crawl every catalogue, then pair the series up, in the background.
 ///
 /// Fired once at startup and never awaited: the first `SRCH` or `XV` would
-/// otherwise pay a multi-page crawl of three brokers while someone waits at the
+/// otherwise pay a multi-page crawl of six brokers while someone waits at the
 /// prompt. Everything it fills is cached, so a failure here costs nothing more
 /// than a cold first request.
 pub fn warm(state: AppState) {
@@ -34,13 +34,16 @@ pub mod corpus;
 pub mod crossvenue;
 pub mod crypto;
 pub mod entertainment;
+pub mod forecastex;
 pub mod fred;
+pub mod gemini;
 pub mod implied;
 pub mod kalshi;
 pub mod netflix;
 pub mod podcasts;
 pub mod polymarket;
 pub mod polymarketus;
+pub mod predictfun;
 pub mod releases;
 pub mod rottentomatoes;
 pub mod steam;

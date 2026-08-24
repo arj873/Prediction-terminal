@@ -1,0 +1,125 @@
+{
+  "data": {
+    "market": {
+      "id": "927684",
+      "title": "San Antonio Spurs",
+      "question": "Will San Antonio Spurs win the 2027 NBA Finals?",
+      "status": "REGISTERED",
+      "marketType": null,
+      "isTradingEnabled": true,
+      "decimalPrecision": 3,
+      "statistics": {
+        "volumeTotalUsd": 134996.89,
+        "volume24hUsd": 570.68,
+        "liquidity3CAskUsd": 11767.57
+      },
+      "description": "This market will resolve to \"Yes\" if the listed team is determined as the champion of the NBA for the 2026-27 season. Otherwise, it will resolve to \"No\".",
+      "orderbook": {
+        "asks": [
+          [
+            0.207,
+            1936.582463768116
+          ],
+          [
+            0.208,
+            6007.589999999999
+          ],
+          [
+            0.209,
+            7064.3
+          ]
+        ],
+        "bids": [
+          [
+            0.203,
+            775.4353
+          ],
+          [
+            0.202,
+            3341.51
+          ],
+          [
+            0.201,
+            2705.4744549810566
+          ]
+        ],
+        "lastOrderSettled": {
+          "price": "0.20",
+          "side": "Ask",
+          "outcome": "No",
+          "kind": "LIMIT"
+        }
+      },
+      "resolution": null,
+      "category": {
+        "id": "nba-2027-champion",
+        "slug": "nba-2027-champion",
+        "title": "NBA: 2027 Champion",
+        "description": "This market will resolve to \"Yes\" if the listed team is determined as the champion of the NBA for the 2026-27 season. Otherwise, it will resolve to \"No\".",
+        "status": "OPEN",
+        "marketVariant": "DEFAULT",
+        "isNegRisk": true,
+        "decimalPrecision": 3,
+        "startsAt": "2026-05-13T20:07:53.605Z",
+        "endsAt": "2027-07-01T00:00:00.000Z",
+        "tags": {
+          "edges": [
+            {
+              "node": {
+                "id": "4",
+                "name": "Sports"
+              }
+            },
+            {
+              "node": {
+                "id": "78",
+                "name": "NBA"
+              }
+            },
+            {
+              "node": {
+                "id": "114",
+                "name": "Basketball"
+              }
+            }
+          ]
+        },
+        "statistics": {
+          "volumeTotalUsd": 3245410.053761026,
+          "volume24hUsd": 662504.6140263429,
+          "liquidity3CAskUsd": 86688.97
+        }
+      },
+      "outcomes": {
+        "edges": [
+          {
+            "node": {
+              "id": "1849192",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.203,
+              "askPriceInCurrency": 0.207,
+              "statistics": {
+                "sharesCount": 14721.642526545089
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "1849193",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.793,
+              "askPriceInCurrency": 0.797,
+              "statistics": {
+                "sharesCount": 14721.723524731966
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

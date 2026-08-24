@@ -24,6 +24,7 @@ use std::time::Duration;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
+use terminal_core::slug::strip_dates;
 use terminal_core::types::{
     BookLevel, CandleInterval, CandlesResponse, Market, MarketStatus, OrderBook, SeriesInfo,
     TradesResponse, Venue, VenueEvent,
@@ -315,94 +316,6 @@ pub fn series_from_event(raw: &RawUsEvent) -> String {
     } else {
         stripped
     }
-}
-
-/// A slug segment naming a month.
-fn is_month_segment(part: &str) -> bool {
-    matches!(
-        part,
-        "jan"
-            | "january"
-            | "feb"
-            | "february"
-            | "mar"
-            | "march"
-            | "apr"
-            | "april"
-            | "may"
-            | "jun"
-            | "june"
-            | "jul"
-            | "july"
-            | "aug"
-            | "august"
-            | "sep"
-            | "sept"
-            | "september"
-            | "oct"
-            | "october"
-            | "nov"
-            | "november"
-            | "dec"
-            | "december"
-    )
-}
-
-fn is_year(part: &str) -> bool {
-    part.len() == 4
-        && (part.starts_with("19") || part.starts_with("20"))
-        && part.bytes().all(|b| b.is_ascii_digit())
-}
-
-fn is_day_or_month(part: &str) -> bool {
-    (1..=2).contains(&part.len()) && part.bytes().all(|b| b.is_ascii_digit())
-}
-
-/// Drop the segments of a slug that name an occasion rather than a question.
-///
-/// Dates are removed as whole groups, never as loose numbers, because a slug's
-/// other numbers carry meaning: `ushr-tx-15-2026-11-03` is the Texas 15th
-/// district on 3 November 2026, and stripping every short number would file all
-/// 38 Texas districts under one series. A year anchors the group — the two
-/// segments after it if they are a month and day (`2026-11-03`), otherwise the
-/// two before it (`03-14-2027`), otherwise nothing.
-pub fn strip_dates(slug: &str) -> String {
-    let parts: Vec<&str> = slug.split('-').collect();
-    let mut drop = vec![false; parts.len()];
-
-    let at = |index: isize| -> &str {
-        if index < 0 {
-            return "";
-        }
-        parts.get(index as usize).copied().unwrap_or("")
-    };
-
-    for i in 0..parts.len() {
-        if is_month_segment(parts[i]) {
-            drop[i] = true;
-        }
-        if !is_year(parts[i]) {
-            continue;
-        }
-
-        drop[i] = true;
-        let i = i as isize;
-        if is_day_or_month(at(i + 1)) && is_day_or_month(at(i + 2)) {
-            drop[(i + 1) as usize] = true;
-            drop[(i + 2) as usize] = true;
-        } else if is_day_or_month(at(i - 1)) && is_day_or_month(at(i - 2)) {
-            drop[(i - 1) as usize] = true;
-            drop[(i - 2) as usize] = true;
-        }
-    }
-
-    parts
-        .iter()
-        .enumerate()
-        .filter(|(i, part)| !part.is_empty() && !drop[*i])
-        .map(|(_, part)| *part)
-        .collect::<Vec<_>>()
-        .join("-")
 }
 
 pub fn normalise_event(raw: &RawUsEvent) -> VenueEvent {
@@ -1168,44 +1081,6 @@ mod tests {
             series_from_event(&event_of(json!({ "slug": "jerpowgov" }))),
             "jerpowgov"
         );
-    }
-
-    #[test]
-    fn strip_dates_removes_a_trailing_iso_date() {
-        assert_eq!(strip_dates("usse-nc-2026-11-03"), "usse-nc");
-        assert_eq!(strip_dates("mlb-nlchamp-2026-09-27"), "mlb-nlchamp");
-    }
-
-    #[test]
-    fn strip_dates_removes_a_date_that_is_not_at_the_end() {
-        assert_eq!(strip_dates("oscars-03-14-2027-bestpic"), "oscars-bestpic");
-        assert_eq!(
-            strip_dates("oscars-nom-2027-01-31-bestpic"),
-            "oscars-nom-bestpic"
-        );
-        assert_eq!(strip_dates("usgubp-ok-2026-06-16-rep"), "usgubp-ok-rep");
-    }
-
-    #[test]
-    fn strip_dates_removes_a_month_named_in_words_wherever_it_sits() {
-        // Without this each month of CPI is its own one-event series, and none
-        // of them can pair with the monthly CPI market at either other broker.
-        assert_eq!(strip_dates("uscpi-august-yoy"), "uscpi-yoy");
-        assert_eq!(strip_dates("uscpi-september-yoy"), "uscpi-yoy");
-    }
-
-    #[test]
-    fn strip_dates_keeps_a_number_that_is_not_part_of_a_date() {
-        // The district is the question. Stripping loose numbers would file all
-        // 38 Texas House races under one series.
-        assert_eq!(strip_dates("ushr-tx-15-2026-11-03"), "ushr-tx-15");
-        assert_eq!(strip_dates("ushr-tx-28-2026-11-03"), "ushr-tx-28");
-        assert_eq!(strip_dates("bbus-s28-winner"), "bbus-s28-winner");
-    }
-
-    #[test]
-    fn strip_dates_removes_a_bare_trailing_season_year() {
-        assert_eq!(strip_dates("nfl-2026"), "nfl");
     }
 
     #[test]

@@ -4,7 +4,7 @@ import type { Venue } from "./Venue";
 /**
  * A venue that did not answer, and why.
  *
- * A board covering two of three brokers has to say which one is missing, or a
+ * A board covering four of six brokers has to say which two are missing, or a
  * "no match" reads as "no such market".
  */
 export type VenueUnavailable = { venue: Venue, error: string, };

@@ -1,12 +1,13 @@
-//! One interface over the three brokers.
+//! One interface over the six brokers.
 //!
 //! Every venue module already exports the same handful of verbs; this states
 //! that as one function per verb, each taking the [`Venue`] and handing the call
 //! to the module that serves it, so the routes and the cross-venue code are
-//! written once instead of three times.
+//! written once instead of once per broker.
 //!
 //! The interface is deliberately the union of what the venues *can* answer, not
-//! the intersection — Polymarket US has no public candles or tape, and asking
+//! the intersection — Polymarket US has no public candles or tape, ForecastEx
+//! has no book at all, and asking
 //! for one fails with a described `unsupported` error rather than the surface
 //! pretending the verb is absent. A terminal that silently omitted a chart would
 //! be worse than one that says why there isn't one.
@@ -31,7 +32,7 @@ use terminal_core::venue::{
 use crate::app::AppState;
 use crate::error::{Result, UpstreamError};
 use crate::sources::corpus::{Corpus, SearchResponse};
-use crate::sources::{kalshi, polymarket, polymarketus};
+use crate::sources::{forecastex, gemini, kalshi, polymarket, polymarketus, predictfun};
 
 /* ------------------------------------------------------- declared refusals */
 
@@ -101,20 +102,36 @@ pub async fn get_market(state: &AppState, venue: Venue, id: &str) -> Result<Mark
         Venue::Kalshi => kalshi::get_market(state, id).await,
         Venue::Polymarket => polymarket::get_market(state, id).await,
         Venue::PolymarketUs => polymarketus::get_market(state, id).await,
+        Venue::Gemini => gemini::get_market(state, id).await,
+        Venue::PredictFun => predictfun::get_market(state, id).await,
+        Venue::ForecastEx => forecastex::get_market(state, id).await,
     }
 }
 
 /// The resting book, `depth` levels a side.
+///
+/// ForecastEx has a live market and no book: it matches by pairing a YES buyer
+/// with a NO buyer, so a print is the whole of what exists and there is no bid,
+/// no ask and no ladder anywhere in its public API. Refusing here rather than
+/// dressing the last print up as a one-level ladder is the difference between
+/// the panel saying how the exchange works and the panel inventing a quote.
 pub async fn get_order_book(
     state: &AppState,
     venue: Venue,
     id: &str,
     depth: usize,
 ) -> Result<OrderBook> {
+    if !supports(venue, Capability::Book) {
+        return Err(declined(venue, "an order book", &serving(Capability::Book)));
+    }
+
     match venue {
         Venue::Kalshi => kalshi::get_order_book(state, id, depth).await,
         Venue::Polymarket => polymarket::get_order_book(state, id, depth).await,
         Venue::PolymarketUs => polymarketus::get_order_book(state, id, depth).await,
+        Venue::Gemini => gemini::get_order_book(state, id, depth).await,
+        Venue::PredictFun => predictfun::get_order_book(state, id, depth).await,
+        Venue::ForecastEx => forecastex::get_order_book(state, id, depth).await,
     }
 }
 
@@ -141,6 +158,9 @@ pub async fn get_trades(
         Venue::Kalshi => kalshi::get_trades(state, id, limit, None).await,
         Venue::Polymarket => polymarket::get_trades(state, id, limit).await,
         Venue::PolymarketUs => polymarketus::get_trades(state, id, limit).await,
+        Venue::Gemini => gemini::get_trades(state, id, limit).await,
+        Venue::PredictFun => predictfun::get_trades(state, id, limit).await,
+        Venue::ForecastEx => forecastex::get_trades(state, id, limit).await,
     }
 }
 
@@ -163,6 +183,9 @@ pub async fn get_candles(
         Venue::PolymarketUs => {
             polymarketus::get_candles(state, id, interval, start_ts, end_ts).await
         }
+        Venue::Gemini => gemini::get_candles(state, id, interval, start_ts, end_ts).await,
+        Venue::PredictFun => predictfun::get_candles(state, id, interval, start_ts, end_ts).await,
+        Venue::ForecastEx => forecastex::get_candles(state, id, interval, start_ts, end_ts).await,
     }
 }
 
@@ -172,6 +195,9 @@ pub async fn get_event(state: &AppState, venue: Venue, id: &str) -> Result<Venue
         Venue::Kalshi => kalshi::get_event(state, id).await,
         Venue::Polymarket => polymarket::get_event(state, id).await,
         Venue::PolymarketUs => polymarketus::get_event(state, id).await,
+        Venue::Gemini => gemini::get_event(state, id).await,
+        Venue::PredictFun => predictfun::get_event(state, id).await,
+        Venue::ForecastEx => forecastex::get_event(state, id).await,
     }
 }
 
@@ -193,6 +219,9 @@ pub async fn list_series(
         Venue::Kalshi => kalshi::list_series(state, category).await,
         Venue::Polymarket => polymarket::list_series(state).await,
         Venue::PolymarketUs => polymarketus::list_series(state).await,
+        Venue::Gemini => gemini::list_series(state, category).await,
+        Venue::PredictFun => predictfun::list_series(state, category).await,
+        Venue::ForecastEx => forecastex::list_series(state, category).await,
     }
 }
 
@@ -207,6 +236,9 @@ pub async fn search(
         Venue::Kalshi => kalshi::search(state, query, limit).await,
         Venue::Polymarket => polymarket::search(state, query, limit).await,
         Venue::PolymarketUs => polymarketus::search(state, query, limit).await,
+        Venue::Gemini => gemini::search(state, query, limit).await,
+        Venue::PredictFun => predictfun::search(state, query, limit).await,
+        Venue::ForecastEx => forecastex::search(state, query, limit).await,
     }
 }
 
@@ -233,6 +265,9 @@ pub async fn top_markets(
         Venue::Kalshi => kalshi::top_markets(state, sort, limit).await,
         Venue::Polymarket => polymarket::top_markets(state, sort, limit).await,
         Venue::PolymarketUs => polymarketus::top_markets(state, sort, limit).await,
+        Venue::Gemini => gemini::top_markets(state, sort, limit).await,
+        Venue::PredictFun => predictfun::top_markets(state, sort, limit).await,
+        Venue::ForecastEx => forecastex::top_markets(state, sort, limit).await,
     }
 }
 
@@ -243,6 +278,9 @@ pub async fn corpus_snapshot(state: &AppState, venue: Venue) -> Result<Arc<Corpu
         Venue::Kalshi => kalshi::corpus_snapshot(state).await,
         Venue::Polymarket => polymarket::corpus_snapshot(state).await,
         Venue::PolymarketUs => polymarketus::corpus_snapshot(state).await,
+        Venue::Gemini => gemini::corpus_snapshot(state).await,
+        Venue::PredictFun => predictfun::corpus_snapshot(state).await,
+        Venue::ForecastEx => forecastex::corpus_snapshot(state).await,
     }
 }
 
@@ -252,6 +290,9 @@ pub fn warm_corpus(state: &AppState, venue: Venue) {
         Venue::Kalshi => kalshi::warm_corpus(state),
         Venue::Polymarket => polymarket::warm_corpus(state),
         Venue::PolymarketUs => polymarketus::warm_corpus(state),
+        Venue::Gemini => gemini::warm_corpus(state),
+        Venue::PredictFun => predictfun::warm_corpus(state),
+        Venue::ForecastEx => forecastex::warm_corpus(state),
     }
 }
 
@@ -260,12 +301,12 @@ pub fn warm_corpus(state: &AppState, venue: Venue) {
 ///
 /// Awaited rather than spawned per venue, because what runs after it —
 /// [`crate::sources::crossvenue::warm_indexes`] — reads these same snapshots,
-/// and would otherwise start three crawls of its own alongside these.
+/// and would otherwise start a crawl of its own per venue alongside these.
 ///
 /// A venue that is down is logged and skipped. This runs at startup with nobody
 /// to report to, and one broker refusing a datacentre IP must not cost the
-/// other two their warm catalogue: the failure is not cached, so the next
-/// reader retries it anyway.
+/// others their warm catalogue: the failure is not cached, so the next reader
+/// retries it anyway.
 pub async fn warm_all(state: &AppState) {
     let crawls = venue_ids()
         .into_iter()
@@ -289,7 +330,7 @@ mod tests {
     //! Dispatch tests.
     //!
     //! Every venue's base points at its own fixture server, and each verb is
-    //! asked for all three venues at once: routing to the wrong module reaches a
+    //! asked for every venue at once: routing to the wrong module reaches a
     //! server with no matching mount, and the `venue` field on what comes back
     //! says which module normalised it. The refusal tests assert the fixture
     //! server was never dialled at all, which is the difference between failing
@@ -303,13 +344,26 @@ mod tests {
     use crate::config::Config;
     use crate::error::codes;
 
-    /// The four fixture servers the three venues read between them.
+    /// The fixture servers the six venues read between them.
+    ///
+    /// One per host rather than one per venue, because a venue can speak to
+    /// several: Polymarket International reads a catalogue, a book and a tape
+    /// from three, Gemini reads its catalogue from the web host and everything
+    /// tradable from the exchange host, and ForecastEx reads its live catalogue
+    /// from its own API and its end-of-session figures from a bucket. Routing to
+    /// the wrong module therefore reaches a server with no matching mount, which
+    /// is what makes these tests about dispatch rather than about parsing.
     struct Venues {
         kalshi: MockServer,
         gamma: MockServer,
         clob: MockServer,
         data: MockServer,
         us: MockServer,
+        gemini_catalogue: MockServer,
+        gemini_api: MockServer,
+        predictfun: MockServer,
+        forecastex: MockServer,
+        forecastex_archive: MockServer,
     }
 
     impl Venues {
@@ -320,6 +374,11 @@ mod tests {
                 clob: MockServer::start().await,
                 data: MockServer::start().await,
                 us: MockServer::start().await,
+                gemini_catalogue: MockServer::start().await,
+                gemini_api: MockServer::start().await,
+                predictfun: MockServer::start().await,
+                forecastex: MockServer::start().await,
+                forecastex_archive: MockServer::start().await,
             }
         }
 
@@ -330,14 +389,34 @@ mod tests {
                 polymarket_clob_base: self.clob.uri(),
                 polymarket_data_base: self.data.uri(),
                 polymarket_us_api_base: self.us.uri(),
+                gemini_catalogue_base: self.gemini_catalogue.uri(),
+                gemini_api_base: self.gemini_api.uri(),
+                predictfun_graphql_base: format!("{}/graphql", self.predictfun.uri()),
+                forecastex_api_base: self.forecastex.uri(),
+                forecastex_archive_base: self.forecastex_archive.uri(),
                 ..Config::default()
             })
         }
 
-        /// Every request any of the five servers saw.
+        fn all(&self) -> [&MockServer; 10] {
+            [
+                &self.kalshi,
+                &self.gamma,
+                &self.clob,
+                &self.data,
+                &self.us,
+                &self.gemini_catalogue,
+                &self.gemini_api,
+                &self.predictfun,
+                &self.forecastex,
+                &self.forecastex_archive,
+            ]
+        }
+
+        /// Every request any of the fixture servers saw.
         async fn requests(&self) -> usize {
             let mut total = 0;
-            for server in [&self.kalshi, &self.gamma, &self.clob, &self.data, &self.us] {
+            for server in self.all() {
                 total += seen(server).await;
             }
             total
@@ -357,8 +436,41 @@ mod tests {
             .await;
     }
 
+    /// Matches a GraphQL request by what it asks for.
+    ///
+    /// predict.fun serves its whole surface from one path, so a mount keyed on
+    /// the path alone answers every question with the same body. The operation
+    /// name travels in the `query` parameter, which is enough to tell a
+    /// catalogue crawl from a tag-tree read.
+    fn asks_for(operation: &'static str) -> impl wiremock::Match {
+        struct Asks(&'static str);
+        impl wiremock::Match for Asks {
+            fn matches(&self, request: &wiremock::Request) -> bool {
+                request
+                    .url
+                    .query_pairs()
+                    .any(|(key, value)| key == "query" && value.contains(self.0))
+            }
+        }
+        Asks(operation)
+    }
+
     const KALSHI_ID: &str = "KXFED-26SEP-T3.75";
     const SLUG: &str = "fed-decision-september";
+
+    /// The three newer venues answer their catalogue in shapes too particular to
+    /// hand-write here — a double-wrapped envelope, a GraphQL connection, a
+    /// paginated event tree — so each one's own captured response stands in.
+    /// Every one of them lists a Fed decision, which is what lets a single query
+    /// find something at all six.
+    const GEMINI_CATALOGUE: &str = include_str!("fixtures/gemini_catalogue.json");
+    const PREDICTFUN_CRAWL: &str = include_str!("fixtures/predictfun_crawl.json");
+    const FORECASTEX_CONTRACTS: &str = include_str!("fixtures/forecastex_contracts.json");
+    const FORECASTEX_PRODUCTS: &str = include_str!("fixtures/forecastex_products.json");
+
+    fn captured(raw: &str) -> Value {
+        serde_json::from_str(raw).expect("a captured fixture parses")
+    }
 
     /// One open event per venue, as each venue's catalogue crawl sees it. All
     /// three are titled the same so a single query matches whichever was asked.
@@ -403,6 +515,53 @@ mod tests {
             }),
         )
         .await;
+
+        mount(
+            &venues.gemini_catalogue,
+            "/prediction-markets",
+            captured(GEMINI_CATALOGUE),
+        )
+        .await;
+
+        // The tag tree is a different question to the same host, and a mount
+        // keyed on the path alone would answer it with a catalogue — which
+        // parses, and yields no series at all.
+        Mock::given(method("GET"))
+            .and(path("/graphql"))
+            .and(asks_for("categoryTags"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "data": { "categoryTags": { "edges": [{ "node": {
+                    "id": "macro",
+                    "name": "Macro",
+                    "open": 3,
+                    "parent": { "id": "economics", "name": "Economics" },
+                    "children": [{ "id": "fed", "name": "Fed" }],
+                } }] } }
+            })))
+            .mount(&venues.predictfun)
+            .await;
+        // Everything else it is asked — the catalogue crawl above all — reads
+        // only its own field of the envelope, so one crawl body serves them.
+        mount(&venues.predictfun, "/graphql", captured(PREDICTFUN_CRAWL)).await;
+
+        mount(
+            &venues.forecastex,
+            "/api/contracts",
+            captured(FORECASTEX_CONTRACTS),
+        )
+        .await;
+        mount(
+            &venues.forecastex,
+            "/api/products",
+            captured(FORECASTEX_PRODUCTS),
+        )
+        .await;
+        // The session archive is the hour after the roll: no file published yet,
+        // which is a fact about the clock rather than a failure.
+        Mock::given(method("GET"))
+            .respond_with(ResponseTemplate::new(404).set_body_string("NoSuchKey"))
+            .mount(&venues.forecastex_archive)
+            .await;
     }
 
     /* --------------------------------------------------------- routing */
@@ -628,11 +787,16 @@ mod tests {
             json!({ "series": [{ "slug": "fed-decision" }] }),
         )
         .await;
+        // The three newer venues publish no series endpoint at all: Gemini and
+        // ForecastEx derive the families from their own catalogue, and
+        // predict.fun reads its tag tree off the same GraphQL host. Mounting
+        // their catalogues is what makes a series list possible for them.
+        catalogues(&venues).await;
 
         let state = venues.state();
         for venue in venue_ids() {
             let series = list_series(&state, venue, None).await.expect("a catalogue");
-            assert_eq!(series.first().expect("one series").venue, venue);
+            assert_eq!(series.first().expect("one series").venue, venue, "{venue}");
         }
     }
 
@@ -673,8 +837,10 @@ mod tests {
         let state = venues.state();
         for venue in venue_ids() {
             let snapshot = corpus_snapshot(&state, venue).await.expect("a snapshot");
+            // The snapshot names the venue that built it, which is the whole
+            // claim: a count would be a fact about whichever fixture stands in.
             assert_eq!(snapshot.venue, venue);
-            assert_eq!(snapshot.events.len(), 1);
+            assert!(!snapshot.events.is_empty(), "{venue}");
         }
     }
 
@@ -683,6 +849,13 @@ mod tests {
     #[tokio::test]
     async fn only_the_venue_that_honours_a_category_is_sent_one() {
         let venues = Venues::start().await;
+        // Four venues honour a category and two do not, but only Kalshi honours
+        // it *upstream* — Gemini, predict.fun and ForecastEx each narrow a list
+        // they already hold, so there is no request to inspect for them. What
+        // this pins is the pair that must never be sent one: both Polymarkets
+        // answer the same list to any value of it, and a filter they drop would
+        // report a narrowed catalogue that is not narrowed.
+        catalogues(&venues).await;
         Mock::given(method("GET"))
             .and(path("/series/"))
             .and(query_param("category", "Economics"))
@@ -716,14 +889,19 @@ mod tests {
     }
 
     #[test]
-    fn only_kalshi_declares_a_series_category_filter() {
+    fn only_the_venues_whose_catalogue_can_be_narrowed_declare_the_filter() {
         // Which arms are handed the category is a fact about the registry, not
-        // about this module: the day a venue starts honouring one, this fires
-        // and points at the `list_series` arm that still drops it.
+        // about this module: the day a venue starts honouring one, or stops,
+        // this fires and points at the `list_series` arm that disagrees.
+        //
+        // Both Polymarkets answer the same unfiltered list to any value of it,
+        // so a category handed to either would be a filter that silently did
+        // nothing. Every other venue narrows a real list.
         for venue in venue_ids() {
+            let honoured = !matches!(venue, Venue::Polymarket | Venue::PolymarketUs);
             assert_eq!(
                 venue_info(venue).capabilities.series_category_filter,
-                venue == Venue::Kalshi,
+                honoured,
                 "{venue}"
             );
         }
@@ -843,24 +1021,71 @@ mod tests {
         );
         assert_eq!(
             venue_list(&venue_ids()).as_deref(),
-            Some("Kalshi (kx:), Polymarket International (pm:) and Polymarket US (pmus:)")
+            Some(
+                "Kalshi (kx:), Polymarket International (pm:), Polymarket US (pmus:), \
+                 Gemini (gem:), predict.fun (pf:) and ForecastEx (fx:)"
+            )
         );
     }
 
     #[test]
     fn the_refusals_read_the_same_table_the_client_does() {
+        // Registry order throughout, because that is the order a hint names them
+        // in and the order the client's own table walks.
+        assert_eq!(
+            serving(Capability::Book),
+            [
+                Venue::Kalshi,
+                Venue::Polymarket,
+                Venue::PolymarketUs,
+                Venue::Gemini,
+                Venue::PredictFun,
+            ],
+            "ForecastEx pairs a YES buyer with a NO buyer and publishes no book"
+        );
         assert_eq!(
             serving(Capability::Candles),
-            [Venue::Kalshi, Venue::Polymarket]
+            [
+                Venue::Kalshi,
+                Venue::Polymarket,
+                Venue::Gemini,
+                Venue::PredictFun,
+                Venue::ForecastEx,
+            ]
         );
         assert_eq!(
             serving(Capability::Trades),
-            [Venue::Kalshi, Venue::Polymarket]
+            [
+                Venue::Kalshi,
+                Venue::Polymarket,
+                Venue::Gemini,
+                Venue::PredictFun,
+                Venue::ForecastEx,
+            ]
         );
-        assert_eq!(ranking(MoverSort::OpenInterest), [Venue::Kalshi]);
+        assert_eq!(
+            ranking(MoverSort::OpenInterest),
+            [Venue::Kalshi, Venue::PredictFun, Venue::ForecastEx]
+        );
         assert_eq!(
             ranking(MoverSort::Volume),
-            [Venue::Kalshi, Venue::Polymarket]
+            [
+                Venue::Kalshi,
+                Venue::Polymarket,
+                Venue::PredictFun,
+                Venue::ForecastEx,
+            ],
+            "Gemini states turnover per event, so a contract board would rank on nothing"
+        );
+        assert_eq!(
+            ranking(MoverSort::Gainers),
+            [
+                Venue::Kalshi,
+                Venue::Polymarket,
+                Venue::Gemini,
+                Venue::ForecastEx,
+            ],
+            "predict.fun states a 24h move without a direction"
         );
     }
 
@@ -902,7 +1127,7 @@ mod tests {
         for venue in venue_ids() {
             let snapshot = corpus_snapshot(&state, venue).await.expect("warm");
             assert_eq!(snapshot.venue, venue);
-            assert_eq!(snapshot.events.len(), 1);
+            assert!(!snapshot.events.is_empty(), "{venue}");
         }
     }
 

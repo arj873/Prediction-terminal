@@ -85,10 +85,11 @@ export function requireRef(command: ParsedCommand, index: number, name: string):
  * Pull venue names out of an argument list, leaving the rest untouched.
  *
  * Read in `word` context, so aliases that are also ordinary English — `us`,
- * `intl`, a bare `k` — are not claimed out of a query. `SRCH us election` is a
- * search for two words, not a filtered search for one, and a row click that
- * dispatches `SRCH The Office US` must not quietly change which exchange was
- * searched. The `pmus:` prefix remains the unambiguous way to say it.
+ * `intl`, a bare `k`, `gem`, `fx`, `predict`, `forecast` — are not claimed out
+ * of a query. `SRCH us election` is a search for two words, not a filtered
+ * search for one, and a row click that dispatches `SRCH The Office US` must not
+ * quietly change which exchange was searched. The `pmus:` prefix, and each
+ * venue's unambiguous name, remain the ways to say it.
  *
  * A repeated venue token stays in `rest` rather than vanishing: dropping it
  * from both lists silently ate a word.

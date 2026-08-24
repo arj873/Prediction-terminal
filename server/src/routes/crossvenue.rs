@@ -89,7 +89,7 @@ mod tests {
     use crate::config::Config;
     use crate::error::codes;
 
-    /// The three catalogues the cross-venue index is built from.
+    /// The catalogues the cross-venue index is built from.
     struct Venues {
         kalshi: MockServer,
         gamma: MockServer,
@@ -269,7 +269,7 @@ mod tests {
         assert_eq!(body["error"], "Unknown venue \"nyse\"");
         assert_eq!(
             body["hint"],
-            "Venues are: kalshi, polymarket, polymarket-us."
+            "Venues are: kalshi, polymarket, polymarket-us, gemini, predictfun, forecastex."
         );
         // Refused before any catalogue was crawled.
         assert_eq!(venues.requests().await, 0);

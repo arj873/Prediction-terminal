@@ -5,8 +5,9 @@ import type { Venue } from "./Venue";
 /**
  * One question, with every contract that resolves it.
  *
- * All three venues group markets this way — Kalshi calls it an event, both
- * Polymarkets call it an event too — so it is the unit the terminal compares
- * across brokers.
+ * Every venue groups markets this way — Kalshi, both Polymarkets and Gemini all
+ * call it an event, predict.fun calls it a category and ForecastEx leaves it
+ * implicit in the first two segments of a contract id — so it is the unit the
+ * terminal compares across brokers.
  */
 export type VenueEvent = { venue: Venue, eventTicker: string, seriesTicker: string, title: string, subTitle: string, category: string, mutuallyExclusive: boolean, markets: Array<Market>, };

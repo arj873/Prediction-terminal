@@ -1,0 +1,424 @@
+{
+ "data": {
+  "categories": {
+   "totalCount": 3,
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "edges": [
+    {
+     "node": {
+      "id": "nba-2027-champion",
+      "slug": "nba-2027-champion",
+      "title": "NBA: 2027 Champion",
+      "description": "This market will resolve to \"Yes\" if the listed team is determined as the champion of the NBA for the 2026-27 season. Otherwise, it will resolve to \"No\".",
+      "status": "OPEN",
+      "marketVariant": "DEFAULT",
+      "isNegRisk": true,
+      "decimalPrecision": 3,
+      "startsAt": "2026-05-13T20:07:53.605Z",
+      "endsAt": "2027-07-01T00:00:00.000Z",
+      "tags": {
+       "edges": [
+        {
+         "node": {
+          "id": "4",
+          "name": "Sports"
+         }
+        },
+        {
+         "node": {
+          "id": "78",
+          "name": "NBA"
+         }
+        },
+        {
+         "node": {
+          "id": "114",
+          "name": "Basketball"
+         }
+        }
+       ]
+      },
+      "statistics": {
+       "volumeTotalUsd": 3794017.50380094,
+       "volume24hUsd": 108614.99577585496,
+       "liquidity3CAskUsd": 104946.17
+      },
+      "markets": {
+       "edges": [
+        {
+         "node": {
+          "id": "927684",
+          "title": "San Antonio Spurs",
+          "question": "Will San Antonio Spurs win the 2027 NBA Finals?",
+          "status": "REGISTERED",
+          "marketType": null,
+          "isTradingEnabled": true,
+          "decimalPrecision": 3,
+          "statistics": {
+           "volumeTotalUsd": 136678.44,
+           "volume24hUsd": 561.0,
+           "liquidity3CAskUsd": 17168.97
+          },
+          "resolution": null,
+          "outcomes": {
+           "edges": [
+            {
+             "node": {
+              "id": "1849192",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.204,
+              "askPriceInCurrency": 0.207,
+              "statistics": {
+               "sharesCount": 16488.382227053033
+              }
+             }
+            },
+            {
+             "node": {
+              "id": "1849193",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.793,
+              "askPriceInCurrency": 0.796,
+              "statistics": {
+               "sharesCount": 16488.466397142452
+              }
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "node": {
+          "id": "927680",
+          "title": "Oklahoma City Thunder",
+          "question": "Will Oklahoma City Thunder win the 2027 NBA Finals?",
+          "status": "REGISTERED",
+          "marketType": null,
+          "isTradingEnabled": true,
+          "decimalPrecision": 3,
+          "statistics": {
+           "volumeTotalUsd": 66691.06,
+           "volume24hUsd": 189.11,
+           "liquidity3CAskUsd": 16970.68
+          },
+          "resolution": null,
+          "outcomes": {
+           "edges": [
+            {
+             "node": {
+              "id": "1849184",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.207,
+              "askPriceInCurrency": 0.211,
+              "statistics": {
+               "sharesCount": 62487.35404397005
+              }
+             }
+            },
+            {
+             "node": {
+              "id": "1849185",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.789,
+              "askPriceInCurrency": 0.793,
+              "statistics": {
+               "sharesCount": 62487.467176572376
+              }
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "node": {
+      "id": "big-game-champion-2027",
+      "slug": "big-game-champion-2027",
+      "title": "NFL Champion 2027",
+      "description": "This market will resolve according to the team that wins the 2027 NFL league championship. ",
+      "status": "OPEN",
+      "marketVariant": "DEFAULT",
+      "isNegRisk": true,
+      "decimalPrecision": 2,
+      "startsAt": "2026-06-01T22:30:00.000Z",
+      "endsAt": "2027-02-14T23:55:00.000Z",
+      "tags": {
+       "edges": [
+        {
+         "node": {
+          "id": "4",
+          "name": "Sports"
+         }
+        },
+        {
+         "node": {
+          "id": "45",
+          "name": "NFL"
+         }
+        },
+        {
+         "node": {
+          "id": "95",
+          "name": "Super Bowl"
+         }
+        }
+       ]
+      },
+      "statistics": {
+       "volumeTotalUsd": 2045011.7151379806,
+       "volume24hUsd": 23516.43007369302,
+       "liquidity3CAskUsd": 81004.5
+      },
+      "markets": {
+       "edges": [
+        {
+         "node": {
+          "id": "26952",
+          "title": "Los Angeles Rams",
+          "question": "Will the Los Angeles Rams win the 2027 NFL league championship?",
+          "status": "REGISTERED",
+          "marketType": null,
+          "isTradingEnabled": true,
+          "decimalPrecision": 3,
+          "statistics": {
+           "volumeTotalUsd": 6135.24,
+           "volume24hUsd": 50.86,
+           "liquidity3CAskUsd": 4957.87
+          },
+          "resolution": null,
+          "outcomes": {
+           "edges": [
+            {
+             "node": {
+              "id": "51626",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.133,
+              "askPriceInCurrency": 0.138,
+              "statistics": {
+               "sharesCount": 7675.212101605178
+              }
+             }
+            },
+            {
+             "node": {
+              "id": "51627",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.862,
+              "askPriceInCurrency": 0.867,
+              "statistics": {
+               "sharesCount": 7675.230043939477
+              }
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "node": {
+          "id": "26936",
+          "title": "Buffalo Bills",
+          "question": "Will the Buffalo Bills win the 2027 NFL league championship?",
+          "status": "REGISTERED",
+          "marketType": null,
+          "isTradingEnabled": true,
+          "decimalPrecision": 3,
+          "statistics": {
+           "volumeTotalUsd": 79451.75,
+           "volume24hUsd": 852.6,
+           "liquidity3CAskUsd": 5596.32
+          },
+          "resolution": null,
+          "outcomes": {
+           "edges": [
+            {
+             "node": {
+              "id": "51594",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.08,
+              "askPriceInCurrency": 0.088,
+              "statistics": {
+               "sharesCount": 6722.22398617697
+              }
+             }
+            },
+            {
+             "node": {
+              "id": "51595",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.912,
+              "askPriceInCurrency": 0.92,
+              "statistics": {
+               "sharesCount": 6722.273852344306
+              }
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "node": {
+      "id": "fed-decision-in-september-762",
+      "slug": "fed-decision-in-september-762",
+      "title": "Fed Decision in September?",
+      "description": "The FED interest rates are defined in this market by the upper bound of the target federal funds range. The decisions on the target federal funds range are made by the Federal Open Market Committee (FOMC) meetings.",
+      "status": "OPEN",
+      "marketVariant": "DEFAULT",
+      "isNegRisk": true,
+      "decimalPrecision": 3,
+      "startsAt": "2026-05-13T21:23:09.737Z",
+      "endsAt": "2026-09-16T00:00:00.000Z",
+      "tags": {
+       "edges": [
+        {
+         "node": {
+          "id": "6",
+          "name": "Economy"
+         }
+        },
+        {
+         "node": {
+          "id": "137",
+          "name": "Fed"
+         }
+        }
+       ]
+      },
+      "statistics": {
+       "volumeTotalUsd": 540227.0360142702,
+       "volume24hUsd": 2626.624119317745,
+       "liquidity3CAskUsd": 2700.89
+      },
+      "markets": {
+       "edges": [
+        {
+         "node": {
+          "id": "1054368",
+          "title": "50+ bps decrease",
+          "question": "Will the Fed decrease interest rates by 50+ bps after the September 2026 meeting?",
+          "status": "REGISTERED",
+          "marketType": null,
+          "isTradingEnabled": true,
+          "decimalPrecision": 3,
+          "statistics": {
+           "volumeTotalUsd": 9468.37,
+           "volume24hUsd": 2.0,
+           "liquidity3CAskUsd": 4.95
+          },
+          "resolution": null,
+          "outcomes": {
+           "edges": [
+            {
+             "node": {
+              "id": "2102542",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.004,
+              "askPriceInCurrency": 0.011,
+              "statistics": {
+               "sharesCount": 29734.52827363992
+              }
+             }
+            },
+            {
+             "node": {
+              "id": "2102543",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.989,
+              "askPriceInCurrency": 0.996,
+              "statistics": {
+               "sharesCount": 29734.51146825209
+              }
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "node": {
+          "id": "1054369",
+          "title": "25 bps decrease",
+          "question": "Will the Fed decrease interest rates by 25 bps after the September 2026 meeting?",
+          "status": "REGISTERED",
+          "marketType": null,
+          "isTradingEnabled": true,
+          "decimalPrecision": 3,
+          "statistics": {
+           "volumeTotalUsd": 90368.91,
+           "volume24hUsd": 765.4,
+           "liquidity3CAskUsd": 251.98
+          },
+          "resolution": null,
+          "outcomes": {
+           "edges": [
+            {
+             "node": {
+              "id": "2102544",
+              "index": 1,
+              "name": "Yes",
+              "status": null,
+              "bidPriceInCurrency": 0.013,
+              "askPriceInCurrency": 0.018,
+              "statistics": {
+               "sharesCount": 64753.21300710829
+              }
+             }
+            },
+            {
+             "node": {
+              "id": "2102545",
+              "index": 2,
+              "name": "No",
+              "status": null,
+              "bidPriceInCurrency": 0.982,
+              "askPriceInCurrency": 0.987,
+              "statistics": {
+               "sharesCount": 64753.23111877722
+              }
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

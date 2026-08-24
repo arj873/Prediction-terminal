@@ -1,11 +1,14 @@
 //! Deciding whether two brokers are listing the same question.
 //!
-//! Three exchanges word the same market three ways and name it three more:
+//! Six exchanges word the same market six ways and name it six more:
 //!
 //! ```text
 //!   Kalshi          KXFEDDECISION      "Fed decision in Oct 2026?"
 //!   Polymarket      fomc               "Fed Decision in October?"
 //!   Polymarket US   usfed-fomc         "Fed Decision in October"
+//!   Gemini          FED                "Fed decision in September?"
+//!   predict.fun     fed-decision-in    "Fed Decision in September?"
+//!   ForecastEx      FFDEC              "Fed Decision September 16 2026"
 //! ```
 //!
 //! Nothing in any payload connects those. What connects them is the language,
@@ -53,12 +56,19 @@ static STOPWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     .collect()
 });
 
-/// Terms the three venues use interchangeably, folded onto one word.
+/// Terms the venues use interchangeably, folded onto one word.
 ///
-/// Every entry is a pair actually observed across the three catalogues, not a
+/// Every entry is a pair actually observed across the live catalogues, not a
 /// general-purpose thesaurus: `fomc` and `fed` name one committee, `btc` and
 /// `bitcoin` one asset, `gop` and `republican` one party. Folding anything
 /// looser would start matching questions that merely share a subject.
+///
+/// `maintain` is deliberately not here, though Gemini words the middle FOMC
+/// rung "Fed maintains rate" where every other venue writes "No change". It is
+/// folded by the *phrase* rewrite below instead, because the bare verb also
+/// carries "Republicans maintain Senate majority" and a dozen other markets
+/// where turning it into `nochange` would pair a control race with a rate hold.
+/// A word that is only unambiguous next to its object belongs in a phrase rule.
 static SYNONYMS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     [
         ("fomc", "fed"),
@@ -215,8 +225,9 @@ fn is_month(token: &str) -> bool {
 /// Multi-word phrases the venues use for one idea, folded before tokenising.
 ///
 /// These cannot go in [`SYNONYMS`], which maps single words: Kalshi's `Fed
-/// maintains rate`, Polymarket's `No change` and Polymarket US's `Unchanged` are
-/// the same rung of the same ladder, and no word-for-word mapping connects them.
+/// maintains rate`, Polymarket's `No change`, Polymarket US's `Unchanged` and
+/// ForecastEx's `leave the rate unchanged` are the same rung of the same
+/// ladder, and no word-for-word mapping connects them.
 ///
 /// Every `\b` here is safe as the Unicode-aware boundary the `regex` crate
 /// compiles it to, unlike the ASCII-only one JavaScript uses: these run *after*
@@ -273,6 +284,16 @@ static PHRASES: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
         (r"\bnew hampshire\b", " newhampshire "),
         (r"\bnew mexico\b", " newmexico "),
         (r"\bno change\b", "nochange"),
+        // Before the bare `unchanged` rule below, which would otherwise consume
+        // the last word of this phrase and leave `leave the rate` behind. The
+        // whole clause is one idea and has to fold to one token: ForecastEx
+        // words the middle FOMC rung "Will the Fed leave the rate unchanged in
+        // September 2026?", and with only `unchanged` folded it kept `leave` and
+        // `rate` where Kalshi's "Fed maintains rate" keeps neither — one shared
+        // term out of two against three, which scored 0.22 against a floor of
+        // 0.34. The highest-volume rung of the ladder was the one that did not
+        // pair.
+        (r"\bleaves? (?:the )?rates? unchanged\b", "nochange"),
         (r"\bunchanged\b", "nochange"),
         (r"\bmaintains? (?:the )?(?:rate|rates)\b", "nochange"),
         (r"\bbasis points?\b", "bp"),
@@ -646,7 +667,7 @@ fn shared_count(a: &TokenSet, b: &TokenSet) -> usize {
 /// How much two token sets have in common, allowing for one being terser.
 ///
 /// Dice alone — `2|A∩B| / (|A|+|B|)` — punishes a short title for being short,
-/// and the three venues are wildly asymmetric about length. Kalshi writes
+/// and the venues are wildly asymmetric about length. Kalshi writes
 /// "Bank of Japan rate decision in September" where Polymarket US writes "BoJ
 /// Decision"; Kalshi writes "Emmy Winner: Outstanding Lead Actor in a Comedy
 /// Series" where Polymarket US writes "Lead Actor, Comedy". Both pairs are
@@ -718,7 +739,7 @@ pub struct MatchScore {
 /// coefficient — so presence on exactly one side is scored in its own right.
 ///
 /// Only tokens whose absence is *meaningful* belong here. `high` qualifies
-/// because every temperature market on all three venues states whether it is the
+/// because every temperature market on every venue states whether it is the
 /// day's high or its low, so a title that omits it is not a title about
 /// temperature at all. A word that one venue simply happens to leave implicit
 /// would cause a correct pair to be rejected, and does not belong.
@@ -1579,6 +1600,66 @@ mod tests {
         assert_eq!(map.get("Fed maintains rate"), Some(&"No change"));
         assert_eq!(map.get("Cut >25bps"), Some(&"50+ bps decrease"));
         assert_eq!(map.get("Hike >25bps"), Some(&"50+ bps increase"));
+    }
+
+    /// ForecastEx words every rung as a whole question, so the shared clause is
+    /// stripped before pairing and what is left is a verb phrase rather than a
+    /// noun one. These are the five it leaves, verbatim, on `FFDEC_091626`.
+    const FORECASTEX_LADDER: &[&str] = &[
+        "lower the rate 50bps or more",
+        "lower the rate 25bps",
+        "leave the rate unchanged",
+        "raise the rate 25bps",
+        "raise the rate 50bps or more",
+    ];
+
+    #[test]
+    fn pair_labels_lines_the_same_ladder_up_against_a_venue_that_words_it_as_a_question() {
+        let paired = pair_labels(KALSHI_LADDER, FORECASTEX_LADDER);
+        let map: HashMap<&str, &str> = paired
+            .iter()
+            .map(|p| (KALSHI_LADDER[p.left], FORECASTEX_LADDER[p.right]))
+            .collect();
+
+        // The middle rung is the one that carries most of the ladder's volume,
+        // and the one that used to fail: `maintains rate` folds its own `rate`
+        // away where `leave the rate unchanged` kept both `leave` and `rate`,
+        // leaving one shared term out of two against three.
+        assert_eq!(
+            map.get("Fed maintains rate"),
+            Some(&"leave the rate unchanged")
+        );
+        assert_eq!(map.get("Cut 25bps"), Some(&"lower the rate 25bps"));
+        assert_eq!(map.get("Hike 25bps"), Some(&"raise the rate 25bps"));
+        assert_eq!(map.get("Cut >25bps"), Some(&"lower the rate 50bps or more"));
+        assert_eq!(
+            map.get("Hike >25bps"),
+            Some(&"raise the rate 50bps or more")
+        );
+        assert_eq!(paired.len(), 5, "every rung pairs, or the board has a hole");
+    }
+
+    #[test]
+    fn the_unchanged_clause_folds_the_same_way_however_the_venue_words_it() {
+        // Four spellings of one rung across five venues. `normalise` is what
+        // every score is computed over, so agreeing here is what makes them
+        // pair; a phrase that folded to different tokens would pair by accident
+        // or not at all.
+        for wording in [
+            "No change",
+            "Unchanged",
+            "Fed maintains rate",
+            "leave the rate unchanged",
+            "leaves rates unchanged",
+        ] {
+            assert!(
+                content_tokens(wording).contains(&"nochange".to_string()),
+                "{wording}"
+            );
+        }
+        // And the clause is folded whole rather than word by word, or `leave`
+        // and `rate` survive to be counted against a venue that states neither.
+        assert_eq!(content_tokens("leave the rate unchanged"), ["nochange"]);
     }
 
     #[test]

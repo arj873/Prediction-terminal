@@ -2,7 +2,7 @@
 //!
 //! The unit tests in `matching.rs` pin down individual rules on titles chosen to
 //! isolate them. This does the opposite: it takes a slice of the live
-//! catalogues — House districts all three venues list under near-identical
+//! catalogues — House districts several venues list under near-identical
 //! wording, Emmy categories that differ by one qualifier, rate ladders that
 //! differ by one number — and asserts the properties that have to hold across
 //! all of them at once.

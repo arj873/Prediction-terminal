@@ -72,6 +72,15 @@
       text: 'Polymarket US — the public gateway. Quote and book only: its trade tape and candles need an API key, and the terminal holds none. Prefix a slug with pmus:.',
     },
     {
+      text: 'Gemini — the catalogue from gemini.com, and the book, tape and candles from the same api.gemini.com the crypto exchange uses. Turnover is stated per event, not per contract. Prefix a ticker with gem:.',
+    },
+    {
+      text: 'predict.fun — the public GraphQL host its own web app reads. Its documented REST API needs an account key on every path and is not used. Volume and depth are in dollars. Prefix a slug with pf:.',
+    },
+    {
+      text: 'ForecastEx — the exchange behind IBKR ForecastTrader. It matches by pairing a YES buyer with a NO buyer, so there is no book to show: DES gives the last prints and the open interest. Turnover and the daily move come from its end-of-session archive. Prefix a contract id with fx:.',
+    },
+    {
       text: 'FRED — scraped from fred.stlouisfed.org. Set FRED_API_KEY for an API fallback if the scrape is blocked.',
     },
     { text: 'Billboard — scraped from billboard.com/charts.' },

@@ -55,7 +55,16 @@
     );
   }
 
-  /** Two columns per venue in the comparison, in the order the server paired them. */
+  /**
+   * The price columns, in the order the server paired the events.
+   *
+   * Two per venue, except where the venue publishes no book: ForecastEx matches
+   * by pairing a YES buyer with a NO buyer, so it has a print and never a quote,
+   * and it gets one LAST column instead of two columns of `--`. Its print still
+   * moves DIVERGE, which is computed from mids, and two empty columns beside a
+   * divergence that plainly used this venue reads as a bug rather than as a fact
+   * about the exchange.
+   */
   function columnsFor(compare: CompareResponse): Column<CompareRow>[] {
     const columns: Column<CompareRow>[] = [
       {
@@ -67,15 +76,25 @@
     ];
 
     for (const event of compare.events) {
-      const code = venueInfo(event.venue).code;
+      const info = venueInfo(event.venue);
       const legOf = (row: CompareRow) => row.legs.find((leg) => leg.venue === event.venue);
+
+      if (!info.capabilities.book) {
+        columns.push({
+          header: `${info.code} LAST`,
+          cell: (row) => cents(legOf(row)?.mid ?? null),
+          class: 'num',
+        });
+        continue;
+      }
+
       columns.push({
-        header: `${code} BID`,
+        header: `${info.code} BID`,
         cell: (row) => cents(legOf(row)?.yesBid ?? null),
         class: 'num price-bid',
       });
       columns.push({
-        header: `${code} ASK`,
+        header: `${info.code} ASK`,
         cell: (row) => cents(legOf(row)?.yesAsk ?? null),
         class: 'num price-ask',
       });

@@ -146,7 +146,7 @@
   onMount(() => {
     workspace.applyTheme();
 
-    log('PREDICTION TERMINAL — three books, one prompt.');
+    log('PREDICTION TERMINAL — six books, one prompt.');
     log('Type a command, or HELP for the list. Esc on an empty line enters NAV mode.');
 
     // Open something rather than presenting an empty grid: whatever the reader

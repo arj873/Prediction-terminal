@@ -51,7 +51,7 @@
   {#if markets.length === 0}
     <EmptyState
       message="Watchlist is empty."
-      hint="Add with `W ADD <ticker>` — prefix `pm:` or `pmus:` for a Polymarket slug."
+      hint="Add with `W ADD <ticker>` — prefix `pm:`, `pmus:`, `gem:`, `pf:` or `fx:` for another venue."
     />
   {:else}
     <table class="data-table">

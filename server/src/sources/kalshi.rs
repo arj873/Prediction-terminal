@@ -765,7 +765,7 @@ pub async fn list_series(state: &AppState, category: Option<&str>) -> Result<Vec
 /// anything that renders a live quote re-fetches the individual market.
 ///
 /// Searching and ranking it is [`search_corpus`]/[`rank_markets`]' job, so all
-/// three venues score a query the same way.
+/// every venue scores a query the same way.
 const CORPUS_KEY: &str = "kalshi:corpus";
 
 /// Pages of 200 to crawl.
