@@ -26,8 +26,8 @@ use fancy_regex::Regex as FancyRegex;
 use regex::Regex;
 use serde::Deserialize;
 use terminal_core::types::{
-    FredObservation, FredSearchResponse, FredSearchResult, FredSeries, FredSeriesResponse,
-    FredSource,
+    DataObservation, DataSearchResponse, DataSearchResult, DataSeries, DataSeriesResponse,
+    DataSource,
 };
 
 use crate::app::AppState;
@@ -90,7 +90,7 @@ fn unquote(field: &str) -> &str {
 /// missing-value marker and becomes `None` — never `0`, which is a real
 /// reading for several series.
 #[must_use]
-pub fn parse_fred_csv(csv: &str) -> Vec<FredObservation> {
+pub fn parse_fred_csv(csv: &str) -> Vec<DataObservation> {
     let mut out = Vec::new();
 
     for line in csv.lines() {
@@ -112,7 +112,7 @@ pub fn parse_fred_csv(csv: &str) -> Vec<FredObservation> {
         }
 
         if raw_value == "." || raw_value.is_empty() {
-            out.push(FredObservation {
+            out.push(DataObservation {
                 date: date.to_owned(),
                 value: None,
             });
@@ -126,7 +126,7 @@ pub fn parse_fred_csv(csv: &str) -> Vec<FredObservation> {
             .parse::<f64>()
             .ok()
             .filter(|value| value.is_finite());
-        out.push(FredObservation {
+        out.push(DataObservation {
             date: date.to_owned(),
             value,
         });
@@ -140,7 +140,7 @@ async fn scrape_observations(
     id: &str,
     start: Option<&str>,
     end: Option<&str>,
-) -> Result<Vec<FredObservation>> {
+) -> Result<Vec<DataObservation>> {
     let base = &state.config().fred_web_base;
 
     let mut params: Vec<(&str, &str)> = vec![("id", id)];
@@ -186,8 +186,7 @@ async fn scrape_observations(
 
 /* --------------------------------------------------------------- metadata */
 
-/// Everything [`FredSeries`] carries except which arm produced it — the
-/// TypeScript's `Omit<FredSeries, 'source'>`.
+/// Everything [`DataSeries`] carries except which arm produced it.
 ///
 /// The parser has no idea whether it is the source of record or the fallback,
 /// and the provider chain that does know is the one that stamps it.
@@ -207,10 +206,15 @@ pub struct SeriesMeta {
 
 impl SeriesMeta {
     /// Attribute this metadata to the arm that produced it.
+    ///
+    /// `source` is `"scrape"` or `"api"` here, and the publisher's own word for
+    /// whichever arm answered at the other eleven — the shared type carries a
+    /// string because "which arm" means something different at each of them.
     #[must_use]
-    pub fn into_series(self, source: FredSource) -> FredSeries {
-        FredSeries {
-            id: self.id,
+    pub fn into_series(self, source: &str) -> DataSeries {
+        DataSeries {
+            provider: DataSource::Fred,
+            id: self.id.clone(),
             title: self.title,
             units: self.units,
             units_short: self.units_short,
@@ -220,7 +224,8 @@ impl SeriesMeta {
             observation_start: self.observation_start,
             observation_end: self.observation_end,
             notes: self.notes,
-            source,
+            source: source.to_owned(),
+            source_url: format!("https://fred.stlouisfed.org/series/{}", self.id),
         }
     }
 }
@@ -465,7 +470,7 @@ async fn scrape_series(
     id: &str,
     start: Option<&str>,
     end: Option<&str>,
-) -> Result<FredSeriesResponse> {
+) -> Result<DataSeriesResponse> {
     let (observations, meta) = futures::join!(
         scrape_observations(state, id, start, end),
         scrape_series_meta(state, id)
@@ -475,7 +480,7 @@ async fn scrape_series(
     // Losing the "Units:" line must never cost you the data, so a metadata
     // failure is logged and the series is assembled from the observations.
     let mut series = match meta {
-        Ok(meta) => meta.into_series(FredSource::Scrape),
+        Ok(meta) => meta.into_series("scrape"),
         Err(err) => {
             tracing::warn!("[fred] metadata scrape failed for {id}: {err}");
             SeriesMeta {
@@ -485,7 +490,7 @@ async fn scrape_series(
                 observation_end: last_date(&observations),
                 ..SeriesMeta::default()
             }
-            .into_series(FredSource::Scrape)
+            .into_series("scrape")
         }
     };
 
@@ -496,20 +501,20 @@ async fn scrape_series(
         series.observation_end = last_date(&observations);
     }
 
-    Ok(FredSeriesResponse {
+    Ok(DataSeriesResponse {
         series,
         observations,
     })
 }
 
-fn first_date(observations: &[FredObservation]) -> String {
+fn first_date(observations: &[DataObservation]) -> String {
     observations
         .first()
         .map(|observation| observation.date.clone())
         .unwrap_or_default()
 }
 
-fn last_date(observations: &[FredObservation]) -> String {
+fn last_date(observations: &[DataObservation]) -> String {
     observations
         .last()
         .map(|observation| observation.date.clone())
@@ -613,7 +618,7 @@ async fn api_series(
     id: &str,
     start: Option<&str>,
     end: Option<&str>,
-) -> Result<FredSeriesResponse> {
+) -> Result<DataSeriesResponse> {
     let meta_url = api_url(state, "/series", &[("series_id", Some(id))])?;
     let observations_url = api_url(
         state,
@@ -640,13 +645,13 @@ async fn api_series(
         )));
     };
 
-    Ok(FredSeriesResponse {
-        series: from_api_series(series).into_series(FredSource::Api),
+    Ok(DataSeriesResponse {
+        series: from_api_series(series).into_series("api"),
         observations: observations
             .observations
             .unwrap_or_default()
             .into_iter()
-            .map(|observation| FredObservation {
+            .map(|observation| DataObservation {
                 value: if observation.value == "." || observation.value.is_empty() {
                     None
                 } else {
@@ -673,10 +678,10 @@ static SERIES_HREF: LazyLock<Regex> = LazyLock::new(|| {
 /// href is exactly `/series/<ID>` — the one thing a search result page is
 /// guaranteed to contain — and reads the title from the link text.
 #[must_use]
-pub fn parse_search_page(html: &str) -> Vec<FredSearchResult> {
+pub fn parse_search_page(html: &str) -> Vec<DataSearchResult> {
     let doc = scrape::parse_document(html);
     let mut seen: HashSet<String> = HashSet::new();
-    let mut results: Vec<FredSearchResult> = Vec::new();
+    let mut results: Vec<DataSearchResult> = Vec::new();
 
     for link in scrape::select_all(&doc, css!("a[href*=\"/series/\"]")) {
         let href = scrape::attr(link, "href").unwrap_or_default();
@@ -708,10 +713,17 @@ pub fn parse_search_page(html: &str) -> Vec<FredSearchResult> {
             .map(scrape::text_of)
             .unwrap_or_default();
 
-        let mut entry = FredSearchResult {
+        // Named rather than defaulted: `provider` decides which publisher a
+        // row is opened against, and a default one would open the wrong series
+        // silently. `DataSearchResult` deliberately has no `Default`.
+        let mut entry = DataSearchResult {
+            provider: DataSource::Fred,
             id,
             title,
-            ..FredSearchResult::default()
+            units: None,
+            frequency: None,
+            seasonal_adjustment: None,
+            observation_range: None,
         };
         if !meta.is_empty() {
             let parts: Vec<&str> = meta.split(',').map(str::trim).collect();
@@ -734,7 +746,7 @@ fn part(parts: &[&str], index: usize) -> Option<String> {
         .map(|value| (*value).to_owned())
 }
 
-async fn scrape_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<FredSearchResult>> {
+async fn scrape_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<DataSearchResult>> {
     let url = with_query(
         &format!("{}/searchresults/", state.config().fred_web_base),
         &[("st", query), ("ob", "sr"), ("od", "desc")], // ob=sr: order by search rank
@@ -748,7 +760,7 @@ async fn scrape_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<
     Ok(results)
 }
 
-async fn api_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<FredSearchResult>> {
+async fn api_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<DataSearchResult>> {
     let limit = limit.to_string();
     let url = api_url(
         state,
@@ -765,7 +777,8 @@ async fn api_search(state: &AppState, query: &str, limit: u32) -> Result<Vec<Fre
         .seriess
         .unwrap_or_default()
         .into_iter()
-        .map(|series| FredSearchResult {
+        .map(|series| DataSearchResult {
+            provider: DataSource::Fred,
             id: series.id,
             title: series.title,
             units: Some(if series.units_short.is_empty() {
@@ -827,7 +840,7 @@ pub async fn get_series(
     raw_id: &str,
     start: Option<&str>,
     end: Option<&str>,
-) -> Result<Arc<FredSeriesResponse>> {
+) -> Result<Arc<DataSeriesResponse>> {
     let id = assert_series_id(raw_id)?;
     let key = format!(
         "fred:series:{id}:{}:{}",
@@ -859,7 +872,7 @@ pub async fn search_series(
     state: &AppState,
     query: &str,
     limit: u32,
-) -> Result<Arc<FredSearchResponse>> {
+) -> Result<Arc<DataSearchResponse>> {
     let query = query.trim();
     if query.is_empty() {
         return Err(UpstreamError::bad_request("Search needs at least one word"));
@@ -879,14 +892,13 @@ pub async fn search_series(
             .first_answer()
             .await?;
 
-            Ok(FredSearchResponse {
+            Ok(DataSearchResponse {
                 query: query.to_owned(),
                 results: answer.value,
-                source: if answer.source == "api" {
-                    FredSource::Api
-                } else {
-                    FredSource::Scrape
-                },
+                // FRED answers alone, so nothing can be missing or skipped —
+                // `ECOS` fills these when it fans the same shape out.
+                unavailable: Vec::new(),
+                skipped: Vec::new(),
             })
         })
         .await
@@ -906,7 +918,7 @@ mod tests {
     use super::*;
 
     /// `(date, value)` pairs, since the wire type carries no `PartialEq`.
-    fn rows(observations: &[FredObservation]) -> Vec<(&str, Option<f64>)> {
+    fn rows(observations: &[DataObservation]) -> Vec<(&str, Option<f64>)> {
         observations
             .iter()
             .map(|observation| (observation.date.as_str(), observation.value))

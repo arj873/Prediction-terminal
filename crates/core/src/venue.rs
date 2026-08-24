@@ -94,11 +94,17 @@ impl fmt::Display for MoverSort {
     }
 }
 
-/// Identifier case. Kalshi, Gemini and ForecastEx shout; the slug venues do not.
+/// Identifier case.
+///
+/// Kalshi, Gemini and ForecastEx shout; the slug venues do not. `Keep` is not
+/// indecision — [`crate::dataset`] shares this enum, and an SDMX key carries
+/// meaningful case *inside* it (`EXR/D.USD.EUR.SP00.A`), so folding either way
+/// 404s the request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IdCase {
     Upper,
     Lower,
+    Keep,
 }
 
 /// What a venue's public API actually offers.
@@ -522,6 +528,10 @@ pub fn normalise_id(venue: Venue, id: &str) -> String {
     match venue_info(venue).case {
         IdCase::Upper => id.to_uppercase(),
         IdCase::Lower => id.to_lowercase(),
+        // No broker declares it; the variant belongs to the publisher table,
+        // which shares this enum. Leaving the identifier alone is the only
+        // reading that could ever be right here.
+        IdCase::Keep => id.to_string(),
     }
 }
 

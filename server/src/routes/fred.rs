@@ -11,7 +11,7 @@ use axum::extract::{Path, RawQuery, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use regex::Regex;
-use terminal_core::types::{FredSearchResponse, FredSeriesResponse};
+use terminal_core::types::{DataSearchResponse, DataSeriesResponse};
 
 use crate::app::AppState;
 use crate::error::{Result, UpstreamError};
@@ -51,7 +51,7 @@ fn date_param(raw: Option<&str>, label: &str) -> Result<Option<String>> {
 async fn search(
     State(state): State<AppState>,
     RawQuery(raw): RawQuery,
-) -> Result<Json<FredSearchResponse>> {
+) -> Result<Json<DataSearchResponse>> {
     let params = QueryParams::parse(raw.as_deref().unwrap_or_default());
 
     let query = params.string("q");
@@ -67,7 +67,7 @@ async fn series(
     State(state): State<AppState>,
     Path(id): Path<String>,
     RawQuery(raw): RawQuery,
-) -> Result<Json<FredSeriesResponse>> {
+) -> Result<Json<DataSeriesResponse>> {
     let params = QueryParams::parse(raw.as_deref().unwrap_or_default());
 
     let start = date_param(params.get("start"), "start")?;

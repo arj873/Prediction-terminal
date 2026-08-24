@@ -7,7 +7,7 @@
   an official one, which is what the SOURCE field is for.
 -->
 <script lang="ts">
-  import type { FredObservation, FredSeriesResponse } from '$gen';
+  import type { DataObservation, DataSeriesResponse } from '$gen';
   import type { MouseEventParams, Time } from 'lightweight-charts';
 
   import PanelFrame from './PanelFrame.svelte';
@@ -36,7 +36,9 @@
   const subtitle = $derived(loaded ? truncate(loaded.series.title, 70) : '');
 
   /** The last two *published* points: FRED's `.` marker is a hole, not a zero. */
-  const withValues = $derived(loaded ? loaded.observations.filter((o) => o.value !== null) : []);
+  const withValues = $derived(
+    loaded ? loaded.observations.filter((o: DataObservation) => o.value !== null) : [],
+  );
   const last = $derived(withValues.at(-1));
   const previous = $derived(withValues.at(-2));
   const change = $derived(last && previous ? last.value! - previous.value! : null);
@@ -55,7 +57,7 @@
       hovered = null;
       return;
     }
-    const point = loaded?.observations.find((o: FredObservation) => o.date === String(param.time));
+    const point = loaded?.observations.find((o: DataObservation) => o.date === String(param.time));
     hovered = { date: point?.date ?? null, value: point?.value ?? null };
   }
 </script>
@@ -76,7 +78,7 @@
   {data}
 >
   {@const cursor = getRowCursor()}
-  {@const payload = data.data as FredSeriesResponse}
+  {@const payload = data.data as DataSeriesResponse}
   {@const series = payload.series}
 
   <div class="headline">

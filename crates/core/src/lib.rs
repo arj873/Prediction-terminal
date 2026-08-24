@@ -6,6 +6,7 @@
 //! broker. It performs no I/O and knows nothing about HTTP, so it stays cheap to
 //! test and impossible to accidentally couple to a transport.
 
+pub mod dataset;
 pub mod implied;
 pub mod matching;
 pub mod slug;

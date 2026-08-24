@@ -1,0 +1,243 @@
+{
+  "about": {
+    "purpose": "Parity cases for the data-source reference grammar, which is implemented twice for the same reason the venue grammar is: the server routes requests with it, and the client needs parseDataRef synchronously at the prompt, before any request exists. Codegen can pin the source identifiers but not the logic, so this file pins the logic. Both implementations read it from their own test suite — client/src/lib/terminal/dataset.test.ts and crates/core/tests/source_contract.rs — so a rule changed on one side fails on the other.",
+    "implementations": [
+      "client/src/lib/terminal/dataset.ts (TypeScript)",
+      "crates/core/src/dataset.rs (Rust)"
+    ],
+    "cases": {
+      "parseRef": "parseDataRef(input, fallback) succeeds and returns exactly { source, id }. `fallback` is the source an unprefixed reference belongs to; it is always stated so no case depends on the default.",
+      "parseRefErrors": "parseDataRef(input, fallback) fails. `error` is the kind — `unknown-prefix` when the text before the first colon names no source, `empty-identifier` when a known prefix is followed by nothing, `missing-reference` when there is no reference at all. Every string in `messageContains` must appear in the rendered message; the surrounding wording is not pinned.",
+      "formatRef": "formatDataRef({ source, id }) === text. The default source prints bare; the others print their prefix.",
+      "normaliseId": "normaliseDataId(source, input) === id. FRED, the BLS, the SEC and Polygon upper-case; Congress and data.gov lower-case; every SDMX agency and the Fed keep what was typed, because case inside a key is meaningful and folding it 404s the request.",
+      "parseSource": "parseDataSource(token, context) === source, where `context` is \"prefix\" (a token before a colon, which accepts every alias) or \"word\" (one token among the words of free text, which declines the aliases that are also ordinary English). A null `source` means the token names no source in that context."
+    },
+    "notes": [
+      "Identifiers here are ASCII on purpose: Rust's to_uppercase and JavaScript's toUpperCase agree on ASCII and need not agree elsewhere.",
+      "Both `input` and `id` are byte-exact. Leading and trailing whitespace in an input is deliberate where present.",
+      "A colon at position 0 is not a prefix, and only the first colon separates — which matters here more than it does for venues, because an SDMX key may contain one."
+    ]
+  },
+
+  "parseRef": [
+    { "input": "UNRATE", "fallback": "fred", "source": "fred", "id": "UNRATE" },
+    { "input": "unrate", "fallback": "fred", "source": "fred", "id": "UNRATE" },
+    { "input": "  unrate  ", "fallback": "fred", "source": "fred", "id": "UNRATE" },
+    { "input": "fred:UNRATE", "fallback": "bls", "source": "fred", "id": "UNRATE" },
+    { "input": "stl:unrate", "fallback": "bls", "source": "fred", "id": "UNRATE" },
+    { "input": ":UNRATE", "fallback": "fred", "source": "fred", "id": ":UNRATE" },
+
+    { "input": "bls:LNS14000000", "fallback": "fred", "source": "bls", "id": "LNS14000000" },
+    { "input": "bls:lns14000000", "fallback": "fred", "source": "bls", "id": "LNS14000000" },
+    { "input": "labor:cuur0000sa0", "fallback": "fred", "source": "bls", "id": "CUUR0000SA0" },
+    { "input": "bls:   lns14000000  ", "fallback": "fred", "source": "bls", "id": "LNS14000000" },
+
+    {
+      "input": "ecb:EXR/D.USD.EUR.SP00.A",
+      "fallback": "fred",
+      "source": "ecb",
+      "id": "EXR/D.USD.EUR.SP00.A"
+    },
+    {
+      "input": "eurozone:ICP/M.U2.N.000000.4.ANR",
+      "fallback": "fred",
+      "source": "ecb",
+      "id": "ICP/M.U2.N.000000.4.ANR"
+    },
+    {
+      "input": "imf:CPI/US.CPI._Z._Z.M",
+      "fallback": "fred",
+      "source": "imf",
+      "id": "CPI/US.CPI._Z._Z.M"
+    },
+    {
+      "input": "oecd:DSD_KEI@DF_KEI/USA.M.PRVM.IX...",
+      "fallback": "fred",
+      "source": "oecd",
+      "id": "DSD_KEI@DF_KEI/USA.M.PRVM.IX..."
+    },
+    {
+      "input": "fed:H15/RIFLGFCY10_N.B",
+      "fallback": "fred",
+      "source": "fed",
+      "id": "H15/RIFLGFCY10_N.B"
+    },
+    { "input": "ddp:H41/H41B1_N.WW", "fallback": "fred", "source": "fed", "id": "H41/H41B1_N.WW" },
+
+    {
+      "input": "eia:petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG",
+      "fallback": "fred",
+      "source": "eia",
+      "id": "petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG"
+    },
+    {
+      "input": "cftc:legacy/GOLD/noncomm_net",
+      "fallback": "fred",
+      "source": "cftc",
+      "id": "legacy/GOLD/noncomm_net"
+    },
+    { "input": "cot:legacy/GOLD", "fallback": "fred", "source": "cftc", "id": "legacy/GOLD" },
+
+    { "input": "congress:119/HR/1", "fallback": "fred", "source": "congress", "id": "119/hr/1" },
+    { "input": "gov:119/hr/1", "fallback": "fred", "source": "congress", "id": "119/hr/1" },
+    { "input": "sec:aapl", "fallback": "fred", "source": "sec", "id": "AAPL" },
+    { "input": "edgar:0000320193", "fallback": "fred", "source": "sec", "id": "0000320193" },
+    {
+      "input": "datagov:Consumer-Price-Index",
+      "fallback": "fred",
+      "source": "datagov",
+      "id": "consumer-price-index"
+    },
+    { "input": "usa:some-dataset", "fallback": "fred", "source": "datagov", "id": "some-dataset" },
+    { "input": "polygon:aapl", "fallback": "fred", "source": "polygon", "id": "AAPL" },
+
+    { "input": "bls:a:b", "fallback": "fred", "source": "bls", "id": "A:B" },
+    {
+      "input": "ecb:EXR/D.USD.EUR.SP00.A?detail=full",
+      "fallback": "fred",
+      "source": "ecb",
+      "id": "EXR/D.USD.EUR.SP00.A?detail=full"
+    }
+  ],
+
+  "parseRefErrors": [
+    {
+      "input": "worldbank:foo",
+      "fallback": "fred",
+      "error": "unknown-prefix",
+      "messageContains": ["Unknown source prefix \"worldbank\"", "fred:", "bls:", "ecb:"]
+    },
+    {
+      "input": "nasdaq:AAPL",
+      "fallback": "fred",
+      "error": "unknown-prefix",
+      "messageContains": ["Unknown source prefix \"nasdaq\""]
+    },
+    {
+      "input": "bls:",
+      "fallback": "fred",
+      "error": "empty-identifier",
+      "messageContains": ["\"bls:\" names a source but no series id"]
+    },
+    {
+      "input": "ecb:   ",
+      "fallback": "fred",
+      "error": "empty-identifier",
+      "messageContains": ["names a source but no SDMX key"]
+    },
+    {
+      "input": "fed:",
+      "fallback": "fred",
+      "error": "empty-identifier",
+      "messageContains": ["names a source but no release/series"]
+    },
+    {
+      "input": "congress:",
+      "fallback": "fred",
+      "error": "empty-identifier",
+      "messageContains": ["names a source but no congress/type/number"]
+    },
+    {
+      "input": "   ",
+      "fallback": "fred",
+      "error": "missing-reference",
+      "messageContains": ["Missing series id"]
+    }
+  ],
+
+  "formatRef": [
+    { "source": "fred", "id": "UNRATE", "text": "UNRATE" },
+    { "source": "bls", "id": "LNS14000000", "text": "bls:LNS14000000" },
+    { "source": "ecb", "id": "EXR/D.USD.EUR.SP00.A", "text": "ecb:EXR/D.USD.EUR.SP00.A" },
+    { "source": "fed", "id": "H15/RIFLGFCY10_N.B", "text": "fed:H15/RIFLGFCY10_N.B" },
+    { "source": "congress", "id": "119/hr/1", "text": "congress:119/hr/1" },
+    { "source": "polygon", "id": "AAPL", "text": "polygon:AAPL" }
+  ],
+
+  "normaliseId": [
+    { "source": "fred", "input": "unrate", "id": "UNRATE" },
+    { "source": "fred", "input": "UNRATE", "id": "UNRATE" },
+    { "source": "bls", "input": "LnS14000000", "id": "LNS14000000" },
+    { "source": "sec", "input": "aapl", "id": "AAPL" },
+    { "source": "polygon", "input": "aapl", "id": "AAPL" },
+    { "source": "congress", "input": "119/HR/1", "id": "119/hr/1" },
+    { "source": "datagov", "input": "Consumer-Price-Index", "id": "consumer-price-index" },
+    { "source": "ecb", "input": "EXR/D.USD.EUR.SP00.A", "id": "EXR/D.USD.EUR.SP00.A" },
+    { "source": "imf", "input": "CPI/US.CPI._Z._Z.M", "id": "CPI/US.CPI._Z._Z.M" },
+    { "source": "oecd", "input": "DSD_KEI@DF_KEI/USA.M.PRVM.IX...", "id": "DSD_KEI@DF_KEI/USA.M.PRVM.IX..." },
+    { "source": "fed", "input": "H15/RIFLGFCY10_N.B", "id": "H15/RIFLGFCY10_N.B" },
+    { "source": "eia", "input": "petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG", "id": "petroleum/pri/gnd/EMM_EPMR_PTE_NUS_DPG" }
+  ],
+
+  "parseSource": [
+    { "token": "fred", "context": "prefix", "source": "fred" },
+    { "token": "stlouisfed", "context": "prefix", "source": "fred" },
+    { "token": "stl", "context": "prefix", "source": "fred" },
+    { "token": "bls", "context": "prefix", "source": "bls" },
+    { "token": "labor", "context": "prefix", "source": "bls" },
+    { "token": "labour", "context": "prefix", "source": "bls" },
+    { "token": "bureauoflaborstatistics", "context": "prefix", "source": "bls" },
+    { "token": "ecb", "context": "prefix", "source": "ecb" },
+    { "token": "europeancentralbank", "context": "prefix", "source": "ecb" },
+    { "token": "eurozone", "context": "prefix", "source": "ecb" },
+    { "token": "imf", "context": "prefix", "source": "imf" },
+    { "token": "fund", "context": "prefix", "source": "imf" },
+    { "token": "oecd", "context": "prefix", "source": "oecd" },
+    { "token": "fed", "context": "prefix", "source": "fed" },
+    { "token": "federalreserve", "context": "prefix", "source": "fed" },
+    { "token": "frb", "context": "prefix", "source": "fed" },
+    { "token": "board", "context": "prefix", "source": "fed" },
+    { "token": "ddp", "context": "prefix", "source": "fed" },
+    { "token": "eia", "context": "prefix", "source": "eia" },
+    { "token": "energy", "context": "prefix", "source": "eia" },
+    { "token": "cftc", "context": "prefix", "source": "cftc" },
+    { "token": "cot", "context": "prefix", "source": "cftc" },
+    { "token": "commitments", "context": "prefix", "source": "cftc" },
+    { "token": "congress", "context": "prefix", "source": "congress" },
+    { "token": "congressgov", "context": "prefix", "source": "congress" },
+    { "token": "bills", "context": "prefix", "source": "congress" },
+    { "token": "gov", "context": "prefix", "source": "congress" },
+    { "token": "sec", "context": "prefix", "source": "sec" },
+    { "token": "edgar", "context": "prefix", "source": "sec" },
+    { "token": "datagov", "context": "prefix", "source": "datagov" },
+    { "token": "data-gov", "context": "prefix", "source": "datagov" },
+    { "token": "usgov", "context": "prefix", "source": "datagov" },
+    { "token": "usa", "context": "prefix", "source": "datagov" },
+    { "token": "polygon", "context": "prefix", "source": "polygon" },
+    { "token": "polygonio", "context": "prefix", "source": "polygon" },
+    { "token": "poly", "context": "prefix", "source": "polygon" },
+
+    { "token": "FRED", "context": "prefix", "source": "fred" },
+    { "token": "  ECB  ", "context": "prefix", "source": "ecb" },
+
+    { "token": "fred", "context": "word", "source": "fred" },
+    { "token": "bls", "context": "word", "source": "bls" },
+    { "token": "ecb", "context": "word", "source": "ecb" },
+    { "token": "imf", "context": "word", "source": "imf" },
+    { "token": "oecd", "context": "word", "source": "oecd" },
+    { "token": "fed", "context": "word", "source": "fed" },
+    { "token": "eia", "context": "word", "source": "eia" },
+    { "token": "cftc", "context": "word", "source": "cftc" },
+    { "token": "cot", "context": "word", "source": "cftc" },
+    { "token": "sec", "context": "word", "source": "sec" },
+    { "token": "edgar", "context": "word", "source": "sec" },
+    { "token": "congress", "context": "word", "source": "congress" },
+    { "token": "datagov", "context": "word", "source": "datagov" },
+    { "token": "polygon", "context": "word", "source": "polygon" },
+
+    { "token": "gov", "context": "word", "source": null },
+    { "token": "GOV", "context": "word", "source": null },
+    { "token": "usa", "context": "word", "source": null },
+    { "token": "energy", "context": "word", "source": null },
+    { "token": "labor", "context": "word", "source": null },
+    { "token": "labour", "context": "word", "source": null },
+    { "token": "fund", "context": "word", "source": null },
+    { "token": "board", "context": "word", "source": null },
+    { "token": "bills", "context": "word", "source": null },
+    { "token": "poly", "context": "word", "source": null },
+
+    { "token": "worldbank", "context": "prefix", "source": null },
+    { "token": "worldbank", "context": "word", "source": null },
+    { "token": "", "context": "prefix", "source": null }
+  ]
+}

@@ -23,8 +23,8 @@ import type {
   EntGenreFilter,
   AwardResult,
   EntResponse,
-  FredSearchResponse,
-  FredSeriesResponse,
+  DataSearchResponse,
+  DataSeriesResponse,
   HealthResponse,
   ImpliedCandidatesResponse,
   ImpliedMethod,
@@ -233,10 +233,10 @@ export const fred = {
     start?: string,
     end?: string,
     signal?: AbortSignal,
-  ): Promise<FredSeriesResponse> =>
+  ): Promise<DataSeriesResponse> =>
     request(`/fred/series/${encodeURIComponent(id)}${query({ start, end })}`, signal),
 
-  search: (q: string, limit = 25, signal?: AbortSignal): Promise<FredSearchResponse> =>
+  search: (q: string, limit = 25, signal?: AbortSignal): Promise<DataSearchResponse> =>
     request(`/fred/search${query({ q, limit })}`, signal),
 };
 
