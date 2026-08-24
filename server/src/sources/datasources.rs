@@ -261,21 +261,6 @@ pub async fn search_series(
 
 /* --------------------------------------------------------------- statuses */
 
-/// Publishers the registry lists that no verb reads yet.
-///
-/// `SRC` exists to say what this deployment can *actually* serve, so a row that
-/// reports READY for a publisher nothing can open is the exact failure the board
-/// was built to prevent — worse than omitting it, because a reader would type
-/// the reference and be told to use a command that does not exist. They stay on
-/// the board with their coverage, because knowing the terminal knows about
-/// EDGAR is worth something, and they say plainly that nothing reads them yet.
-const NOT_YET_SERVED: &[DataSource] = &[
-    DataSource::Congress,
-    DataSource::Sec,
-    DataSource::Datagov,
-    DataSource::Polygon,
-];
-
 /// What each publisher's credential does for this deployment.
 ///
 /// The note is what a reader can act on: which arm will answer, what a key
@@ -286,15 +271,68 @@ fn credential_state(state: &AppState, source: DataSource) -> (bool, String) {
         return (false, blocked);
     }
 
-    if NOT_YET_SERVED.contains(&source) {
+    // Congress.gov and data.gov are both served through api.data.gov, which
+    // means they *degrade* rather than refuse: without a key of our own the
+    // shared `DEMO_KEY` answers real data at a throttled per-IP rate. Verified
+    // live from this container, which holds neither key. Reporting them as
+    // unavailable would be wrong — what a key buys is the throttle going away.
+    if matches!(source, DataSource::Congress | DataSource::Datagov) {
+        let held = state.config().data_source_key(source).is_some();
         let info = data_source_info(source);
         return (
-            false,
-            format!(
-                "No command reads {} yet — it is registered so the reference grammar and the \
-                 credential are in place, but nothing opens it.",
-                info.label
-            ),
+            true,
+            if held {
+                format!("Reading {} with this deployment's own key.", info.label)
+            } else {
+                format!(
+                    "Answering on api.data.gov's shared DEMO_KEY, which is real data at a \
+                     throttled per-IP rate. Set {} to lift the throttle.",
+                    info.key.map_or("the key", |key| key.env)
+                )
+            },
+        );
+    }
+
+    // EDGAR is keyless: its fair-access policy wants a declaring User-Agent, not
+    // a credential — nothing is issued and nothing is checked. Measured from
+    // this container, a request with no User-Agent is refused and one with any
+    // non-empty one is served, so what decides availability is whether a
+    // contact string is set at all.
+    if source == DataSource::Sec {
+        let stated = !state.config().sec_user_agent.trim().is_empty();
+        return (
+            stated,
+            if stated {
+                "No credential. EDGAR's fair-access policy asks callers to identify themselves, \
+                 and SEC_USER_AGENT is what it is told."
+                    .to_owned()
+            } else {
+                "Set SEC_USER_AGENT to a contact string. It is not a credential — nothing is \
+                 issued and nothing is checked — but EDGAR refuses a request that carries none."
+                    .to_owned()
+            },
+        );
+    }
+
+    // Polygon is not a thirteenth thing to browse — no `ECO` reference opens it.
+    // It joins the price chain behind `STK`, `CRY` and the true-price half of
+    // `IMP`, ahead of Yahoo and Nasdaq, whenever a key is set. Saying that is
+    // the difference between a reader setting the key and a reader wondering
+    // what it would buy.
+    if source == DataSource::Polygon {
+        let held = state.config().polygon_api_key.is_some();
+        return (
+            held,
+            if held {
+                "Leading the price chain for STK, CRY and IMP, ahead of Yahoo and Nasdaq. Not \
+                 browsable with ECO — it answers the price questions the terminal already asks."
+                    .to_owned()
+            } else {
+                "Set POLYGON_API_KEY to lead the price chain for STK, CRY and IMP. It is the only \
+                 one of the three that is authenticated rather than IP-reputation based, and the \
+                 only one carrying the cash indices Kalshi's ladders settle on."
+                    .to_owned()
+            },
         );
     }
 
@@ -419,18 +457,23 @@ mod tests {
     }
 
     #[test]
-    fn a_publisher_nothing_reads_is_not_reported_ready() {
-        // `SRC` exists to say what can actually be served. A READY row for a
-        // publisher with no command behind it would send a reader to type a
-        // reference and be told to use a command that does not exist.
-        let board = source_statuses(&state());
-        for source in NOT_YET_SERVED {
-            let row = board
-                .iter()
-                .find(|row| row.id == *source)
-                .expect("every registered publisher has a row");
-            assert!(!row.available, "{source}");
-            assert!(row.note.contains("No command reads"), "{source}");
+    fn every_registered_publisher_has_a_verb_that_reads_it() {
+        // `SRC` exists to say what can actually be served, and for one stage it
+        // had to admit that four registered publishers had no reader — a row
+        // saying "No command reads Congress.gov yet" rather than a READY that
+        // would have sent a reader to type a reference nothing answers.
+        //
+        // That apology is now obsolete: every publisher on the board has a verb
+        // behind it. This is the same guard inverted, and it is the stronger
+        // claim — it fails the moment a publisher is added to the registry
+        // without a command wired to it, which is exactly how the board came to
+        // need the apology in the first place.
+        for row in source_statuses(&state()) {
+            assert!(
+                !row.note.contains("No command reads"),
+                "{} is registered with no verb reading it",
+                row.id
+            );
         }
     }
 

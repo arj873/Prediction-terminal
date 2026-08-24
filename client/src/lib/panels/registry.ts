@@ -20,6 +20,9 @@ import ComparePanel from './ComparePanel.svelte';
 import DepthPanel from './DepthPanel.svelte';
 import EntPanel from './EntPanel.svelte';
 import EventPanel from './EventPanel.svelte';
+import BillsPanel from './BillsPanel.svelte';
+import DatasetsPanel from './DatasetsPanel.svelte';
+import FilingsPanel from './FilingsPanel.svelte';
 import DataSeriesPanel from './DataSeriesPanel.svelte';
 import DataSearchPanel from './DataSearchPanel.svelte';
 import SourcesPanel from './SourcesPanel.svelte';
@@ -69,6 +72,9 @@ export const PANEL_COMPONENTS: Record<PanelKind, AnyPanel> = {
   'option-quote': OptionQuotePanel,
   'option-vol': OptionVolPanel,
   'option-positioning': OptionPositioningPanel,
+  filings: FilingsPanel,
+  bills: BillsPanel,
+  datasets: DatasetsPanel,
   'data-series': DataSeriesPanel,
   'data-search': DataSearchPanel,
   sources: SourcesPanel,

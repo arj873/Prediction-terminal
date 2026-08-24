@@ -27,6 +27,7 @@ use terminal_core::types::{
 use time::{Date, Month, OffsetDateTime};
 
 use crate::app::AppState;
+use crate::sources::polygon;
 use crate::cache::ttl;
 use crate::error::{codes, Result, UpstreamError};
 use crate::http::{FetchOptions, DESKTOP_UA};
@@ -681,12 +682,23 @@ struct CandleSet {
 /// symbol, and it is worth naming: it is the difference between "your symbol is
 /// wrong" and "this host is blocking your network".
 fn price_chain<'a, T>(
+    state: &AppState,
     symbol: &'a str,
+    via_polygon: impl Future<Output = Result<T>> + Send + 'a,
     via_yahoo: impl Future<Output = Result<T>> + Send + 'a,
     via_nasdaq: impl Future<Output = Result<T>> + Send + 'a,
 ) -> Chain<'a, T> {
     Chain::new(format!("a price for {symbol}"))
         .log_prefix("stocks")
+        // Polygon goes first *when a key is set*, because it is the only one of
+        // the three that is authenticated rather than IP-reputation based, and
+        // the only one that carries the cash indices Kalshi's ladders settle on.
+        // Without a key it is skipped rather than failed, so a deployment with
+        // no key has exactly the chain it had before.
+        .provider(
+            Provider::new("polygon", "Polygon.io", via_polygon)
+                .available(polygon::has_credentials(state)),
+        )
         .provider(Provider::new("yahoo", "Yahoo Finance", via_yahoo))
         .provider(Provider::new("nasdaq", "Nasdaq", via_nasdaq))
         .on_exhausted(move |failures| {
@@ -736,7 +748,9 @@ pub async fn get_quote(state: &AppState, symbol: &str) -> Result<SpotQuote> {
         Ok(nasdaq_quote(&body, &plain))
     };
 
-    Ok(price_chain(&upper, via_yahoo, via_nasdaq)
+    let via_polygon = polygon::get_quote(state, &upper, AssetClass::Stock);
+
+    Ok(price_chain(state, &upper, via_polygon, via_yahoo, via_nasdaq)
         .first_answer()
         .await?
         .value)
@@ -767,9 +781,26 @@ pub async fn get_candles(
         })
     };
 
+    let via_polygon = async {
+        let loaded = polygon::get_candles(
+            state,
+            &upper,
+            interval,
+            start_ts,
+            end_ts,
+            AssetClass::Stock,
+        )
+        .await?;
+        Ok(CandleSet {
+            candles: loaded.candles,
+            name: loaded.name,
+            currency: loaded.currency,
+        })
+    };
+
     // `source` comes from whichever provider answered rather than from a literal
     // written beside each branch, so it cannot disagree with what actually ran.
-    let answer = price_chain(&upper, via_yahoo, via_nasdaq)
+    let answer = price_chain(state, &upper, via_polygon, via_yahoo, via_nasdaq)
         .first_answer()
         .await?;
     let source = answer.source;

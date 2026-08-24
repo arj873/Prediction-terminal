@@ -482,6 +482,11 @@ export const panelId = {
   dataSearch: (query: string, sources: readonly DataSource[]): string =>
     `ecos:${[...sources].sort().join(',')}:${query.toLowerCase()}`,
   sources: (): string => 'src',
+  filings: (company: string, form?: string): string =>
+    `sec:${company.toUpperCase()}:${(form ?? 'all').toUpperCase()}`,
+  bills: (query: string, congress?: number): string =>
+    `cong:${congress ?? 'current'}:${query.toLowerCase()}`,
+  datasets: (query: string): string => `dgov:${query.toLowerCase()}`,
   billboard: (chart: string, date?: string): string =>
     `bb:${chart.toLowerCase()}:${date ?? 'latest'}`,
   billboardCharts: 'bb:charts',

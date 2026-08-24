@@ -26,12 +26,17 @@ import type {
   DataSearchResponse,
   DataSourcesResponse,
   DataSeriesResponse,
+  BillDetail,
+  BillSearchResponse,
+  DataGovSearchResponse,
   OptionChain,
   OptionExpiriesResponse,
   OptionPositioning,
   OptionQuoteResponse,
   OptionSurface,
   OptionUnderlyingsResponse,
+  SecConceptResponse,
+  SecFilingsResponse,
   HealthResponse,
   ImpliedCandidatesResponse,
   ImpliedMethod,
@@ -306,6 +311,62 @@ export const options = {
     signal?: AbortSignal,
   ): Promise<OptionQuoteResponse> =>
     request(`/options/contract/${encodeURIComponent(contract)}${query({ interval })}`, signal),
+};
+
+/* ------------------------------------------------------------------ filings */
+
+/**
+ * The three publishers that answer with records rather than observations.
+ *
+ * None is reachable through `ECO`: a bill has no value at a date, and neither
+ * does an 8-K. They get their own routes for the same reason they get their own
+ * panels.
+ */
+export const sec = {
+  filings: (
+    company: string,
+    form?: string,
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<SecFilingsResponse> =>
+    request(`/sec/${encodeURIComponent(company)}/filings${query({ form, limit })}`, signal),
+
+  concept: (
+    company: string,
+    tag: string,
+    taxonomy?: string,
+    signal?: AbortSignal,
+  ): Promise<SecConceptResponse> =>
+    request(
+      `/sec/${encodeURIComponent(company)}/concept/${encodeURIComponent(tag)}${query({ taxonomy })}`,
+      signal,
+    ),
+};
+
+export const congress = {
+  bills: (
+    q: string,
+    congressNumber?: number,
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<BillSearchResponse> =>
+    request(`/congress/bills${query({ q, congress: congressNumber, limit })}`, signal),
+
+  bill: (
+    congressNumber: number,
+    kind: string,
+    number: string,
+    signal?: AbortSignal,
+  ): Promise<BillDetail> =>
+    request(
+      `/congress/bill/${congressNumber}/${encodeURIComponent(kind)}/${encodeURIComponent(number)}`,
+      signal,
+    ),
+};
+
+export const datagov = {
+  search: (q: string, limit = 30, signal?: AbortSignal): Promise<DataGovSearchResponse> =>
+    request(`/datagov/search${query({ q, limit })}`, signal),
 };
 
 /* -------------------------------------------------------------------- fred */

@@ -1,0 +1,420 @@
+{
+ "results": [
+  {
+   "_score": 302.1826,
+   "_sort": [
+    302.1826,
+    0,
+    "1e5b019f-7042-441c-a8f1-215121ef63bf"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "bureauCode": [
+     "012:20"
+    ],
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "Amrit Kohli",
+     "hasEmail": "mailto:kohli.amrit@dol.gov"
+    },
+    "description": "The Consumer Price Index (CPI) is a measure of the average change over time in the prices paid by urban consumers for a market basket of consumer goods and services. Indexes are available for the U.S. and various geographic areas. Average price data for select utility, automotive fuel, and food items are also available. Prices for the goods and services used to calculate the CPI are collected in 75 urban areas throughout the country and from about 23,000 retail and service establishments. Data on rents are collected from about 43,000 landlords or tenants.\r\n\r\nMore information and details about the data provided can be found at http://www.bls.gov/cpi",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://download.bls.gov/pub/time.series/ap/",
+      "description": "CPI Average Price data tab separated files \r\n\r\nThe Bureau of Labor Statistics (BLS) also publishes average retail prices for select utility, automotive fuel, and food items. Although average prices are calculated from the price observations collected for the CPI, they serve a different purpose.  The CPI measures price change while average prices provide estimates of price levels. Specifically, average prices are estimates of the average price paid by the consumer for a good or service.\r\n\r\nAt the U.S. level, the BLS publishes approximately 70 average prices for food items, 6 for utility gas (natural gas) and electricity, and 5 for automotive fuels. If the sample size is sufficient, all average prices are also published at the four major geographic regions--Northeast, Midwest, South, and West.",
+      "title": "Average Price Data"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://download.bls.gov/pub/time.series/cu/",
+      "description": "CPI -- All Urban Consumer data in tab separated files \r\n\r\nThe CPI represents changes in prices of all goods and services purchased for consumption by urban households. User fees (such as water and sewer service) and sales and excise taxes paid by the consumer are also included. Income taxes and investment items (like stocks, bonds, and life insurance) are not included.\r\nThe CPI-U includes expenditures by urban wage earners and clerical workers, professional, managerial, and technical workers, the self-employed, short-term workers, the unemployed, retirees and others not in the labor force.",
+      "title": "CPI - U"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://download.bls.gov/pub/time.series/su/",
+      "description": "The Chained Consumer Price Index for All Urban Consumers, was introduced with the release of July data in August 2002. Designated the C-CPI-U, the index supplements the existing Consumer Price Indexes already produced by the BLS: the CPI for All Urban Consumers (CPI-U) and the CPI for Urban Wage Earners and Clerical Workers (CPI-W). The C-CPI-U employs a Tornqvist formula and utilizes expenditure data in adjacent time periods in order to reflect the effect of any substitution that consumers make across item categories in response to changes in relative prices. The new measure is designed to be a closer approximation to a \"cost-of-living\" index than the present measures. The use of expenditure data for both a base period and the current period in order to average price change across item categories distinguishes the C-CPI-U from the existing CPI measures, which use only a single expenditure base period to compute the price change over time.",
+      "title": "Chained CPI"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://www.bls.gov/cpi/data.htm",
+      "description": "CPI Data sources",
+      "title": "Consumer Price Index Data page"
+     }
+    ],
+    "identifier": "DOL-BLS-104",
+    "issued": "2019-12-11",
+    "keyword": [
+     "CPI",
+     "CPI index",
+     "Consumer Prices",
+     "Inflation"
+    ],
+    "landingPage": "http://www.bls.gov/cpi",
+    "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "modified": "2019",
+    "programCode": [
+     "012:032"
+    ],
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "Bureau of Labor Statistics",
+     "subOrganizationOf": {
+      "@type": "org:Organization",
+      "name": "U.S. Department of Labor"
+     }
+    },
+    "title": "Consumer Price Index (CPI)"
+   },
+   "description": "The Consumer Price Index (CPI) is a measure of the average change over time in the prices paid by urban consumers for a market basket of consumer goods and services. Indexes are available for the U.S. and various geographic areas. Average price data for select utility, automotive fuel, and food items are also available. Prices for the goods and services used to calculate the CPI are collected in 75 urban areas throughout the country and from about 23,000 retail and service establishments. Data on rents are collected from about 43,000 landlords or tenants.\r\n\r\nMore information and details about the data provided can be found at http://www.bls.gov/cpi",
+   "distribution_titles": [
+    "Average Price Data",
+    "CPI - U",
+    "Chained CPI",
+    "Consumer Price Index Data page"
+   ],
+   "harvest_record": "https://catalog.data.gov/harvest_record/3252a480-3df9-43bd-8bdb-adfdcac68c5c",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/3252a480-3df9-43bd-8bdb-adfdcac68c5c/raw",
+   "has_download": false,
+   "has_spatial": false,
+   "identifier": "DOL-BLS-104",
+   "keyword": [
+    "CPI",
+    "CPI index",
+    "Consumer Prices",
+    "Inflation"
+   ],
+   "last_harvested_date": "2025-08-02T13:50:51.526483",
+   "organization": {
+    "aliases": [
+     "dept",
+     "US"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "4af4b741-65f5-4ac6-950d-75e1abc1a7df",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/bls.png",
+    "name": "U.S. Department of Labor Bureau of Labor Statistics",
+    "organization_type": "Federal Government",
+    "slug": "dol-bls"
+   },
+   "popularity": 0,
+   "publisher": "Bureau of Labor Statistics",
+   "slug": "consumer-price-index-cpi",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [],
+   "title": "Consumer Price Index (CPI)",
+   "type": "dataset"
+  },
+  {
+   "_score": 216.14668,
+   "_sort": [
+    216.14668,
+    8,
+    "6b7953d6-17d9-4fc1-bba3-dbdfd195b403"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "MT Oregon DEQ",
+     "hasEmail": "mailto:no-reply@data.oregon.gov"
+    },
+    "description": "DEQ proposes rules to increase Title V operating permit fees by the change in the consumer price index as authorized by federal and state law. The proposed fee increases are necessary for DEQ to provide essential services associated with Oregon\u2019s Title V permitting program.",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.oregon.gov/api/views/p9nk-5yub/columns.json",
+      "describedByType": "application/json",
+      "downloadURL": "https://data.oregon.gov/api/v3/views/p9nk-5yub/query.json?accessType=DOWNLOAD",
+      "mediaType": "application/json"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.oregon.gov/api/views/p9nk-5yub/columns.xml",
+      "describedByType": "application/xml",
+      "downloadURL": "https://data.oregon.gov/api/v3/views/p9nk-5yub/query.xml?accessType=DOWNLOAD",
+      "mediaType": "application/xml"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://data.oregon.gov/api/v3/views/p9nk-5yub/export.csv?accessType=DOWNLOAD",
+      "mediaType": "text/csv"
+     }
+    ],
+    "identifier": "https://data.oregon.gov/api/views/p9nk-5yub",
+    "issued": "2016-01-15",
+    "keyword": [
+     "untagged"
+    ],
+    "landingPage": "https://data.oregon.gov/d/p9nk-5yub",
+    "modified": "2018-04-15",
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "data.oregon.gov"
+    },
+    "title": "Comment on Rulemaking: Title V Consumer Price Index 2016"
+   },
+   "description": "DEQ proposes rules to increase Title V operating permit fees by the change in the consumer price index as authorized by federal and state law. The proposed fee increases are necessary for DEQ to provide essential services associated with Oregon\u2019s Title V permitting program.",
+   "distribution_titles": [],
+   "harvest_record": "https://catalog.data.gov/harvest_record/4292d004-a61e-4e4e-880d-1ac4248b5d99",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/4292d004-a61e-4e4e-880d-1ac4248b5d99/raw",
+   "has_download": true,
+   "has_spatial": false,
+   "identifier": "https://data.oregon.gov/api/views/p9nk-5yub",
+   "keyword": [
+    "untagged"
+   ],
+   "last_harvested_date": "2026-08-18T22:52:24.368772",
+   "organization": {
+    "aliases": [
+     "or"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "0af4eecd-141b-41b3-9367-a5a51ce44b90",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/Oregon-State-Seal-Navy-Gold.png",
+    "name": "State of Oregon",
+    "organization_type": "State Government",
+    "slug": "oregon"
+   },
+   "popularity": 8,
+   "publisher": "data.oregon.gov",
+   "slug": "comment-on-rulemaking-title-v-consumer-price-index-2016",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [],
+   "title": "Comment on Rulemaking: Title V Consumer Price Index 2016",
+   "type": "dataset"
+  },
+  {
+   "_score": 162.03914,
+   "_sort": [
+    162.03914,
+    1,
+    "3eb5e1d1-92fd-49b9-8a4f-fcc137b48711"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "accrualPeriodicity": "R/P1M",
+    "bureauCode": [
+     "021:00"
+    ],
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "Bureau of Transportation Statistics",
+     "hasEmail": "mailto:bts@dot.gov"
+    },
+    "dataQuality": true,
+    "description": "A look at the consumer price index and producer price index for transportation as a measure of transportation inflation.",
+    "identifier": "https://data.transportation.gov/api/views/f9jm-cqwe",
+    "issued": "2022-08-30",
+    "keyword": [
+     "consumer price index",
+     "cpi",
+     "inflation",
+     "inflation and transportation",
+     "transportation inflation"
+    ],
+    "landingPage": "https://data.transportation.gov/d/f9jm-cqwe",
+    "language": [
+     "en-US"
+    ],
+    "license": "https://www.usa.gov/government-works",
+    "modified": "2025-09-10",
+    "programCode": [
+     "021:053"
+    ],
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "Bureau of Transportation Statistics"
+    },
+    "theme": [
+     "Research and Statistics"
+    ],
+    "title": "Transportation and Inflation"
+   },
+   "description": "A look at the consumer price index and producer price index for transportation as a measure of transportation inflation.",
+   "distribution_titles": [],
+   "harvest_record": "https://catalog.data.gov/harvest_record/634a939f-362c-49db-9de2-e8ec5f61a87d",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/634a939f-362c-49db-9de2-e8ec5f61a87d/raw",
+   "has_download": false,
+   "has_spatial": false,
+   "identifier": "https://data.transportation.gov/api/views/f9jm-cqwe",
+   "keyword": [
+    "consumer price index",
+    "cpi",
+    "inflation",
+    "inflation and transportation",
+    "transportation inflation"
+   ],
+   "last_harvested_date": "2026-08-02T23:26:13.953758",
+   "organization": {
+    "aliases": [
+     "dept"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "c549d5ce-2b93-4397-ab76-aa2b31d9983a",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/dot.png",
+    "name": "Department of Transportation",
+    "organization_type": "Federal Government",
+    "slug": "dot"
+   },
+   "popularity": 1,
+   "publisher": "Bureau of Transportation Statistics",
+   "slug": "transportation-and-inflation",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [
+    "Research and Statistics"
+   ],
+   "title": "Transportation and Inflation",
+   "type": "dataset"
+  },
+  {
+   "_score": 153.58054,
+   "_sort": [
+    153.58054,
+    120,
+    "07575937-ad90-4973-9d9f-0e4663582ff0"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "accrualPeriodicity": "R/P1Y",
+    "bureauCode": [
+     "005:13"
+    ],
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "Carolyn Chelius",
+     "hasEmail": "mailto:carolyn.chelius@usda.gov"
+    },
+    "describedBy": "http://www.ers.usda.gov/data-products/food-price-outlook/documentation.aspx",
+    "description": "The Consumer Price Index (CPI) for food is a component of the all-items CPI. The CPI measures the average change over time in the prices paid by urban consumers for a representative market basket of consumer goods and services. While the all-items CPI measures the price changes for all consumer goods and services, including food, the CPI for food measures the changes in the retail prices of food items only.",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "http://www.ers.usda.gov/data-products/food-price-outlook.aspx",
+      "mediaType": "application/vnd.ms-excel",
+      "title": "Web page with links to Excel files"
+     }
+    ],
+    "identifier": "USDA-ERS-26001",
+    "issued": "2020-04-24",
+    "keyword": [
+     "CPI",
+     "Consumer Price Index",
+     "food price inflation",
+     "food price outlook",
+     "food-at-home",
+     "food-away-from-home",
+     "grocery store",
+     "restaurant",
+     "retail food prices",
+     "wholesale food prices"
+    ],
+    "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "modified": "2020-07-24",
+    "programCode": [
+     "005:041"
+    ],
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "Economic Research Service, Department of Agriculture"
+    },
+    "references": [
+     "http://www.ers.usda.gov/data-products/food-price-outlook/summary-findings.aspx"
+    ],
+    "spatial": "United States",
+    "temporal": "2005-01-01/2014-01-01",
+    "title": "Food Price Outlook"
+   },
+   "description": "The Consumer Price Index (CPI) for food is a component of the all-items CPI. The CPI measures the average change over time in the prices paid by urban consumers for a representative market basket of consumer goods and services. While the all-items CPI measures the price changes for all consumer goods and services, including food, the CPI for food measures the changes in the retail prices of food items only.",
+   "distribution_titles": [
+    "Web page with links to Excel files"
+   ],
+   "harvest_record": "https://catalog.data.gov/harvest_record/01dade13-0ee2-48c4-b946-5aab3b3922b1",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/01dade13-0ee2-48c4-b946-5aab3b3922b1/raw",
+   "has_download": true,
+   "has_spatial": true,
+   "identifier": "USDA-ERS-26001",
+   "keyword": [
+    "CPI",
+    "Consumer Price Index",
+    "food price inflation",
+    "food price outlook",
+    "food-at-home",
+    "food-away-from-home",
+    "grocery store",
+    "restaurant",
+    "retail food prices",
+    "wholesale food prices"
+   ],
+   "last_harvested_date": "2026-08-01T05:02:23.202216",
+   "organization": {
+    "aliases": [
+     "dept"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "352b4532-793d-4075-a03f-05b778a3c43a",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/usda.png",
+    "name": "Department of Agriculture",
+    "organization_type": "Federal Government",
+    "slug": "usda"
+   },
+   "popularity": 120,
+   "publisher": "Economic Research Service, Department of Agriculture",
+   "slug": "food-price-outlook",
+   "spatial_centroid": {
+    "lat": 34.4819914,
+    "lon": -101.6218762
+   },
+   "spatial_shape": {
+    "coordinates": [
+     [
+      [
+       [
+        -124.733253,
+        24.544245
+       ],
+       [
+        -124.733253,
+        49.388611
+       ],
+       [
+        -66.954811,
+        49.388611
+       ],
+       [
+        -66.954811,
+        24.544245
+       ],
+       [
+        -124.733253,
+        24.544245
+       ]
+      ]
+     ]
+    ],
+    "type": "MultiPolygon"
+   },
+   "theme": [],
+   "title": "Food Price Outlook",
+   "type": "dataset"
+  }
+ ],
+ "sort": "relevance"
+}

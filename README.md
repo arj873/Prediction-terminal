@@ -201,6 +201,42 @@ rather than zeroes — a zero delta is a real and very different statement.
 | `SRC` | `SRC` | Which of the twelve data publishers this deployment can serve, and what each missing key would add |
 | `ECO` | `ECO [source:]<id> [start] [end]` | A published series, charted, plus units, frequency, vintage and which publisher answered |
 | `ECOS` | `ECOS <words> [publisher…]` | Search every publisher at once for a series id |
+| `SEC` | `SEC <ticker\|CIK\|name> [form]` | What a company has filed with the SEC, newest first |
+| `CONG` | `CONG [words] [congress]` | Bills before Congress, most recently acted on first |
+| `DGOV` | `DGOV <words>` | Search data.gov's dataset catalogue |
+
+Eight of the twelve publishers answer with **observations** — a value at a date —
+and those are the ones `ECO` charts and `ECOS` searches. Three answer with
+**records** instead, and a record has no value at a date, so each gets its own
+verb rather than a reference `ECO` would have to refuse:
+
+```
+> SEC AAPL                 # what Apple has filed, newest first
+> SEC TSLA 8-K             # just the 8-Ks — the form a market usually settles on
+> CONG shutdown            # bills, most recently acted on first
+> CONG appropriations 119  # …in a Congress you name
+> DGOV crop yields         # where an obscure series is *named*
+```
+
+Two of those degrade rather than refusing when this deployment holds no key of
+its own. Congress.gov and data.gov are both served through api.data.gov, whose
+shared `DEMO_KEY` returns real data at a throttled per-IP rate — verified live
+from a container holding neither key. `SRC` says which key answered, and the
+throttle, when it bites, is reported as a rate limit with the sign-up link
+rather than as an outage. The bill search narrows itself accordingly: on the
+shared key it reads one page of 250 recently-updated bills instead of four,
+because four exhausts the throttle outright, and the panel says which it did.
+
+EDGAR needs no credential at all — its fair-access policy asks callers to
+identify themselves, which is what `SEC_USER_AGENT` is. Measured rather than
+assumed: a request with *no* User-Agent is refused with 403, and a request with
+any non-empty one is served.
+
+`SEC` is deliberately two questions behind one verb. The filings list is the
+wire; the XBRL concept history behind `/api/sec/{company}/concept/{tag}` is the
+record, where a restatement appears as an additional value for the same period
+rather than as an edit — so "what did they say, and when did they change it" is
+answerable.
 | `BB` | `BB [chart-slug] [YYYY-MM-DD]` | A Billboard chart as a ranked table |
 | `BB` | `BB CHARTS` | List the chart slugs |
 | `RT` | `RT <title>` · `RT SEARCH <words>` | Tomatometer and Popcornmeter, with review counts |
@@ -440,7 +476,7 @@ which is wrong without ever looking broken.
 ### The menu bar
 
 Memorising a command table and a key map is the cost of admission to a terminal
-like this one, and there was nothing between "type `HELP` and read 44 verbs" and
+like this one, and there was nothing between "type `HELP` and read 47 verbs" and
 knowing them already. So: five menus across the top — MARKETS, PRICES, DATA,
 WORKSPACE, LEARN — with everything the terminal does under one of them.
 
@@ -975,6 +1011,12 @@ Everything else in the terminal keeps working with no key at all.
 | `GET /api/options/{symbol}/surface?expiry=` | The smile, the at-the-money term structure, and the 25-delta skew |
 | `GET /api/options/{symbol}/positioning?expiry=` | Open interest by strike, and the pain curve |
 | `GET /api/options/contract/{contract}?interval=` | One contract, its pair leg and whatever history the venue publishes |
+| `GET /api/sec/{company}/filings?form&limit` | What a filer has filed, newest first |
+| `GET /api/sec/{company}/concept/{tag}?taxonomy` | Every value a filer has reported for one XBRL tag, restatements included |
+| `GET /api/sec/search?q&limit` | Filers whose ticker or name matches |
+| `GET /api/congress/bills?q&congress&limit` | Bills, most recently acted on first |
+| `GET /api/congress/bill/{congress}/{type}/{number}` | One bill with its summary, actions and committees |
+| `GET /api/datagov/search?q&limit` | The dataset catalogue |
 | `GET /api/implied/underlyings` | Symbols with a mapped Kalshi ladder |
 | `GET /api/implied/candidates?symbol=` | Ladders pricing a symbol, each with its live implied price |
 | `GET /api/implied/series?event=&interval=&start=&end=&method=` | Implied price through time for one ladder |
@@ -1056,6 +1098,28 @@ near the money. Each stage is checked against arithmetic, including that an "or
 above" ladder and the equivalent range ladder price to the same level, and the
 historical assembly is covered separately — a rung that stops printing carries
 forward, and no rung is ever priced with a candle it did not yet have.
+
+The option maths in `crates/core/src/greeks.rs` is checked three ways, because
+each catches what the others cannot. **Against arithmetic** — put-call parity,
+the no-arbitrage bounds, and the identities every option price has to satisfy.
+**Against finite differences** — every Greek is re-derived by numerically
+differentiating the price through the *economic* variables `(S, r, q, τ, σ)`,
+rebuilding the forward and the discount factor at each bump, across ninety
+combinations of strike, maturity, volatility and leg. That is what pins the
+units down, and it is not a hypothetical worry: a vega quoted per unit rather
+than per point is wrong by exactly 100, a theta that forgot its `/365` by
+exactly 365, and both still look like plausible numbers in plausible places.
+Deleting either scaling fails the suite. **Against Deribit's own published
+Greeks**, from a captured live response — an exchange's risk system being the
+only external oracle available, and a good one. It is the third check that
+caught the real defect: trusting Deribit's `interest_rate: 0.0` over its own
+quoted forward put every long-dated delta on the board 3.9% away from theirs.
+
+The normal CDF is held to *relative* error against references computed to fifty
+digits, degrading from full double precision through the body to ~1e-8 by
+N(-12), and the wing prices are checked at strikes worth 1e-39 — because that is
+where the textbook approximation stops having any correct digits at all, and
+where a smile is read.
 
 The cross-venue matcher was ported by differential testing rather than by
 reading: both implementations were run over the same corpus and their scores,

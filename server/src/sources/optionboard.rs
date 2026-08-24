@@ -127,6 +127,14 @@ pub fn iso_date_of(seconds: i64) -> String {
 
 /// Howard Hinnant's `civil_from_days`, the inverse of the one in
 /// [`terminal_core::greeks`].
+///
+/// Public because the Congress client needs today's date to work out which
+/// Congress is sitting, and one implementation of the civil calendar is enough.
+#[must_use]
+pub fn civil_from_days_pub(days: i64) -> (i64, u32, u32) {
+    civil_from_days(days)
+}
+
 fn civil_from_days(days: i64) -> (i64, u32, u32) {
     let z = days + 719_468;
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
