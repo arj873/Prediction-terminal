@@ -1,0 +1,11 @@
+{
+ "jsonrpc": "2.0",
+ "result": {
+  "estimated_delivery_price": 77359.23,
+  "index_price": 77359.23
+ },
+ "usIn": 1787540563959946,
+ "usOut": 1787540563960253,
+ "usDiff": 307,
+ "testnet": false
+}

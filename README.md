@@ -133,6 +133,66 @@ question has only one leg, and otherwise tells you to open `EVT`.
 that chart rather than opening a second one, and clicking a chip in the picker
 does exactly what naming its event ticker does.
 
+### Options
+
+| Command | Usage | What it does |
+| --- | --- | --- |
+| `OPT` | `OPT <symbol> [expiry]` | The chain for one expiry, both legs against one strike ladder |
+| `OPD` | `OPD <contract>` | One contract, its pair leg, and its Greeks |
+| `VOL` | `VOL <symbol> [expiry]` | The volatility smile, and the at-the-money term structure behind it |
+| `OI` | `OI <symbol> [expiry]` | Open interest by strike, and the max-pain curve |
+
+```
+> OPT BTC                  # the front expiry, from Deribit
+> OPT AAPL 30d             # a horizon, not a Friday you had to remember
+> OPT SPY 2026-12-18       # …or the date, if you did
+> OPT NVDA 2               # …or an index into the strip
+> VOL BTC                  # the smile, and the term structure under it
+> OI SPY                   # where the open interest actually is
+> OPD BTC-25DEC26-104000-C # a Deribit instrument name
+> OPD AAPL260918C00300000  # …or an OCC symbol; either can be pasted straight in
+```
+
+Crypto boards come from Deribit and equity boards from Yahoo, falling back to
+Nasdaq — which is what actually answers here, because Yahoo's `v7` option host
+refuses shared datacentre addresses more firmly than its price endpoint does.
+
+The model is **Black-76 on the forward**, not Black-Scholes on a supplied rate,
+and that choice is most of the design. A terminal has no business asking its
+user for a risk-free rate and a dividend yield: both are unobservable, and a
+Greek computed from a guessed carry is a guessed Greek. So the forward is taken
+from the market in one of three ways, and every panel says which:
+
+| `FWD SRC` | Where the forward came from |
+| --- | --- |
+| `venue` | The venue publishes one per expiry. Its own marks are struck against that number |
+| `parity` | Regressed out of the near-the-money call-put spread on this very board — `C - P = DF·(F - K)` is linear in the strike, so the slope is the discount factor and the intercept is the forward |
+| `assumed` | Nothing in the market would say. The panel warns, because every Greek beside it rests on a configured rate |
+
+Deribit is the case that makes the point. It publishes `interest_rate: 0.0` on
+every instrument while quoting a June-2027 forward 3.9% above its own index —
+a 4.6% annualised carry. Believe the field and every long-dated delta on the
+board disagrees with Deribit's own by that much; take the discount factor from
+the basis instead and they agree to five decimal places, which is what the
+tests hold it to against a captured live response.
+
+Two conventions differ from Deribit's screen deliberately, and the tests pin
+both so the difference stays a known one. Deribit quotes its Greeks in *forward*
+space: its vega is undiscounted, and its theta is the bare time-decay term with
+no rate or carry in it. The Greeks here are spot-space, because that is the
+space the panel displays — bump the volatility a point and the price shown moves
+by the vega shown, which is not true of the exchange's number against a
+discounted price. Delta and gamma agree either way.
+
+A few smaller things the panels do rather than paper over. No implied volatility
+is read from an equity provider, even where one is published: Yahoo's is struck
+against its own undisclosed carry, and mixing it with a forward fitted here would
+put two disagreeing volatilities on one screen. Each rung of the smile is read
+from its **out-of-the-money** leg, because the in-the-money one is where the
+spread is widest and, on American equity options, where the early-exercise
+premium sits. And a contract with no derivable volatility gets `null` Greeks
+rather than zeroes — a zero delta is a real and very different statement.
+
 ### Data sources
 
 | Command | Usage | What it does |
@@ -380,7 +440,7 @@ which is wrong without ever looking broken.
 ### The menu bar
 
 Memorising a command table and a key map is the cost of admission to a terminal
-like this one, and there was nothing between "type `HELP` and read 39 verbs" and
+like this one, and there was nothing between "type `HELP` and read 44 verbs" and
 knowing them already. So: five menus across the top — MARKETS, PRICES, DATA,
 WORKSPACE, LEARN — with everything the terminal does under one of them.
 
@@ -783,6 +843,8 @@ All optional. Copy `.env.example` to `.env` or export directly.
 | `YAHOO_API_BASE` | Yahoo chart API | Override the equity/index upstream |
 | `NASDAQ_API_BASE` | `https://api.nasdaq.com` | Override the equity fallback |
 | `COINBASE_API_BASE` | `https://api.exchange.coinbase.com` | Override the crypto upstream |
+| `DERIBIT_API_BASE` | `https://www.deribit.com/api/v2` | Override the crypto option upstream |
+| `OPTIONS_RATE` | `0.04` | The carry assumed only when no forward can be observed. Responses derived from it say so |
 | `ALPACA_DATA_BASE` | `https://data.alpaca.markets/v1beta1` | Override the news upstream |
 | `BILLBOARD_BASE` | `https://www.billboard.com` | Override the charts upstream |
 | `BOXOFFICE_BASE` | `https://www.boxofficemojo.com` | Override the box-office upstream |
@@ -907,6 +969,12 @@ Everything else in the terminal keeps working with no key at all.
 | `GET /api/spot/:class/:symbol` | Live quote (`:class` is `stock` or `crypto`) |
 | `GET /api/spot/:class/:symbol/candles?interval=&start=&end=` | Candles on Kalshi's 1/60/1440-minute grid |
 | `GET /api/spot/search?q=&class=` | Symbol search, flagged with whether a ladder prices it |
+| `GET /api/options/underlyings` | The boards that exist, crypto and equity |
+| `GET /api/options/{symbol}/expiries` | The expiry strip, with contract counts and open interest |
+| `GET /api/options/{symbol}/chain?expiry=` | Both legs at every strike, with Greeks and the forward they came from |
+| `GET /api/options/{symbol}/surface?expiry=` | The smile, the at-the-money term structure, and the 25-delta skew |
+| `GET /api/options/{symbol}/positioning?expiry=` | Open interest by strike, and the pain curve |
+| `GET /api/options/contract/{contract}?interval=` | One contract, its pair leg and whatever history the venue publishes |
 | `GET /api/implied/underlyings` | Symbols with a mapped Kalshi ladder |
 | `GET /api/implied/candidates?symbol=` | Ladders pricing a symbol, each with its live implied price |
 | `GET /api/implied/series?event=&interval=&start=&end=&method=` | Implied price through time for one ladder |
@@ -945,7 +1013,8 @@ make check           # what CI runs: fmt, clippy, tests, type-gen drift, build
 
 ```
 crates/core/     terminal-core: the wire contract, the implied-price maths,
-                 the cross-venue matcher, the venue registry. No I/O.
+                 the option pricing and Greeks, the cross-venue matcher, the
+                 venue and publisher registries. No I/O.
 server/          the axum API. sources/ speak to upstreams and normalise;
                  routes/ put HTTP in front of them and know no upstream.
 client/          the SvelteKit terminal.

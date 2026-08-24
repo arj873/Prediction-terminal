@@ -1746,3 +1746,313 @@ mod tests {
         );
     }
 }
+
+/* ----------------------------------------------------------------- options */
+
+/// Which way a contract pays.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub enum OptionType {
+    Call,
+    Put,
+}
+
+impl OptionType {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OptionType::Call => "call",
+            OptionType::Put => "put",
+        }
+    }
+}
+
+/// The Greek set, in the units a trader reads them in.
+///
+/// `None` rather than `0.0` throughout: a contract with no derivable volatility
+/// has *unknown* sensitivities, and a zero delta is a real and very different
+/// statement. See [`crate::greeks`] for the units of each.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionGreeks {
+    /// Per 1 unit of underlying. Spot delta, not forward delta.
+    pub delta: Option<f64>,
+    /// Delta per 1 unit of underlying.
+    pub gamma: Option<f64>,
+    /// Per 1 volatility point — a move from 40% to 41%.
+    pub vega: Option<f64>,
+    /// Per calendar day.
+    pub theta: Option<f64>,
+    /// Per 1 percentage point of interest rate.
+    pub rho: Option<f64>,
+}
+
+/// Where a contract's volatility number came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub enum IvSource {
+    Solved,
+    Venue,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionContract {
+    /// The venue's own instrument id, e.g. `AAPL260918C00300000`,
+    /// `BTC-25DEC26-104000-C`.
+    pub contract: String,
+    #[serde(rename = "type")]
+    pub option_type: OptionType,
+    pub strike: f64,
+    /// Expiry instant, unix seconds.
+    #[ts(type = "number")]
+    pub expiry: i64,
+    pub bid: Option<f64>,
+    pub ask: Option<f64>,
+    /// Book mid, or the venue's mark when the book is one-sided.
+    pub mid: Option<f64>,
+    pub last: Option<f64>,
+    pub change: Option<f64>,
+    /// The venue's own mark price, where it publishes one.
+    pub mark: Option<f64>,
+    pub volume: Option<f64>,
+    pub open_interest: Option<f64>,
+    /// Decimal, so `0.42` is 42%.
+    pub iv: Option<f64>,
+    pub iv_source: Option<IvSource>,
+    pub greeks: OptionGreeks,
+    /// Model value at [`Self::iv`]. Equals [`Self::mid`] when the vol was solved
+    /// from it.
+    pub theo: Option<f64>,
+    pub intrinsic: Option<f64>,
+    /// Premium over intrinsic — what actually decays.
+    pub extrinsic: Option<f64>,
+    /// Underlying price at which this contract returns its premium at expiry.
+    pub breakeven: Option<f64>,
+    pub in_the_money: bool,
+}
+
+/// One expiry on the board, as offered in the picker.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionExpiry {
+    /// Expiry instant, unix seconds.
+    #[ts(type = "number")]
+    pub expiry: i64,
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    /// Act/365.
+    pub years_to_expiry: f64,
+    pub days_to_expiry: f64,
+    pub contracts: usize,
+    pub open_interest: f64,
+    pub volume: f64,
+}
+
+/// How the forward for an expiry was arrived at.
+///
+/// `Parity` and `Venue` are observed; `Assumed` means nothing in the market
+/// would say, and the number came from a configured rate. The panel shows which,
+/// because a Greek is only as trustworthy as its carry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub enum ForwardSource {
+    Parity,
+    Venue,
+    Assumed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionChain {
+    pub symbol: String,
+    pub name: String,
+    pub asset_class: AssetClass,
+    pub currency: String,
+    /// Underlying price now.
+    pub spot: Option<f64>,
+    /// Forward for this expiry.
+    pub forward: Option<f64>,
+    pub forward_source: ForwardSource,
+    /// `e^(-rT)` for this expiry.
+    pub discount_factor: Option<f64>,
+    /// Continuous rate implied by the discount factor.
+    pub rate: Option<f64>,
+    /// Continuous dividend/borrow yield implied by spot against the forward.
+    pub carry: Option<f64>,
+    pub expiry: OptionExpiry,
+    /// Every expiry on the board, for the picker.
+    pub expiries: Vec<OptionExpiry>,
+    pub calls: Vec<OptionContract>,
+    pub puts: Vec<OptionContract>,
+    /// At-the-money volatility for this expiry, decimal.
+    pub atm_iv: Option<f64>,
+    /// Contracts per unit of underlying — 100 for US listed equity options, 1 on
+    /// Deribit.
+    pub contract_size: f64,
+    /// Exchange the quotes came from.
+    pub venue: String,
+    pub source: String,
+    /// Anything the reader needs to know to read the numbers correctly.
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub note: String,
+}
+
+/// One rung of the volatility smile.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionSmilePoint {
+    pub strike: f64,
+    /// `K/S`.
+    pub moneyness: Option<f64>,
+    pub call_iv: Option<f64>,
+    pub put_iv: Option<f64>,
+    /// The rung's headline vol — out-of-the-money side, which is the traded one.
+    pub iv: Option<f64>,
+    pub volume: f64,
+    pub open_interest: f64,
+}
+
+/// One expiry on the at-the-money term structure.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionTermPoint {
+    #[ts(type = "number")]
+    pub expiry: i64,
+    pub date: String,
+    pub days_to_expiry: f64,
+    pub atm_iv: Option<f64>,
+    pub forward: Option<f64>,
+    pub open_interest: f64,
+    pub volume: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionSurface {
+    pub symbol: String,
+    pub name: String,
+    pub asset_class: AssetClass,
+    pub spot: Option<f64>,
+    pub expiry: OptionExpiry,
+    pub forward: Option<f64>,
+    pub atm_iv: Option<f64>,
+    pub smile: Vec<OptionSmilePoint>,
+    pub term: Vec<OptionTermPoint>,
+    /// 25-delta put vol minus 25-delta call vol — the smile's asymmetry.
+    pub skew: Option<f64>,
+    pub venue: String,
+    pub source: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub note: String,
+}
+
+/// Open interest and volume at one strike, both legs.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionStrikeStat {
+    pub strike: f64,
+    pub call_open_interest: f64,
+    pub put_open_interest: f64,
+    pub call_volume: f64,
+    pub put_volume: f64,
+    /// Total writer payout if the underlying settled here.
+    pub pain_payout: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionPositioning {
+    pub symbol: String,
+    pub name: String,
+    pub asset_class: AssetClass,
+    pub spot: Option<f64>,
+    pub expiry: OptionExpiry,
+    pub strikes: Vec<OptionStrikeStat>,
+    /// Strike where the least option value pays out — a positioning read, not a
+    /// forecast.
+    pub max_pain: Option<f64>,
+    pub total_call_open_interest: f64,
+    pub total_put_open_interest: f64,
+    pub total_call_volume: f64,
+    pub total_put_volume: f64,
+    pub put_call_open_interest: Option<f64>,
+    pub put_call_volume: Option<f64>,
+    pub venue: String,
+    pub source: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub note: String,
+}
+
+/// A single contract with its chain context — what `OPD` shows.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionQuoteResponse {
+    pub symbol: String,
+    pub name: String,
+    pub asset_class: AssetClass,
+    pub currency: String,
+    pub spot: Option<f64>,
+    pub forward: Option<f64>,
+    pub forward_source: ForwardSource,
+    pub rate: Option<f64>,
+    pub carry: Option<f64>,
+    pub contract_size: f64,
+    pub contract: OptionContract,
+    /// The other leg at the same strike and expiry, when the venue lists it.
+    pub pair: Option<OptionContract>,
+    /// Price history, where the venue publishes any. Empty otherwise.
+    pub history: Vec<SpotCandle>,
+    /// Why [`Self::history`] is empty, when it is.
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub history_note: String,
+    pub venue: String,
+    pub source: String,
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub note: String,
+}
+
+/// One underlying an option board exists for, as offered in the picker.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionUnderlying {
+    pub symbol: String,
+    pub name: String,
+    pub asset_class: AssetClass,
+    pub venue: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionUnderlyingsResponse {
+    pub underlyings: Vec<OptionUnderlying>,
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct OptionExpiriesResponse {
+    pub symbol: String,
+    pub name: String,
+    pub asset_class: AssetClass,
+    pub spot: Option<f64>,
+    pub expiries: Vec<OptionExpiry>,
+    pub venue: String,
+    pub source: String,
+}

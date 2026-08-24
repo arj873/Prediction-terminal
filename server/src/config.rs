@@ -24,7 +24,7 @@ pub struct AlpacaKeys {
     pub secret_key: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub host: IpAddr,
     pub port: u16,
@@ -74,6 +74,15 @@ pub struct Config {
     pub alpaca_data_base: String,
     pub yahoo_api_base: String,
     pub nasdaq_api_base: String,
+    pub deribit_api_base: String,
+
+    /// The carry used only when nothing in the market will say what it is.
+    ///
+    /// It exists so a chain still renders when parity cannot be fitted — a thin
+    /// name, a one-sided board — and every response derived from it is stamped
+    /// `forwardSource: "assumed"` so the panel can say the Greeks rest on an
+    /// assumption rather than on a quote.
+    pub options_rate: f64,
     pub coinbase_api_base: String,
     pub billboard_base: String,
     pub boxoffice_base: String,
@@ -136,6 +145,8 @@ impl Default for Config {
             alpaca_data_base: defaults::ALPACA_DATA.into(),
             yahoo_api_base: defaults::YAHOO.into(),
             nasdaq_api_base: defaults::NASDAQ.into(),
+            deribit_api_base: defaults::DERIBIT.into(),
+            options_rate: 0.04,
             coinbase_api_base: defaults::COINBASE.into(),
             billboard_base: defaults::BILLBOARD.into(),
             boxoffice_base: defaults::BOXOFFICE.into(),
@@ -224,6 +235,12 @@ impl Config {
             alpaca_data_base: base("ALPACA_DATA_BASE", defaults::ALPACA_DATA),
             yahoo_api_base: base("YAHOO_API_BASE", defaults::YAHOO),
             nasdaq_api_base: base("NASDAQ_API_BASE", defaults::NASDAQ),
+            deribit_api_base: base("DERIBIT_API_BASE", defaults::DERIBIT),
+            options_rate: std::env::var("OPTIONS_RATE")
+                .ok()
+                .and_then(|raw| raw.trim().parse::<f64>().ok())
+                .filter(|rate| rate.is_finite() && (-0.02..=0.25).contains(rate))
+                .unwrap_or(0.04),
             coinbase_api_base: base("COINBASE_API_BASE", defaults::COINBASE),
             billboard_base: base("BILLBOARD_BASE", defaults::BILLBOARD),
             boxoffice_base: base("BOXOFFICE_BASE", defaults::BOXOFFICE),
@@ -341,6 +358,7 @@ pub mod defaults {
     pub const ALPACA_DATA: &str = "https://data.alpaca.markets/v1beta1";
     pub const YAHOO: &str = "https://query1.finance.yahoo.com";
     pub const NASDAQ: &str = "https://api.nasdaq.com";
+    pub const DERIBIT: &str = "https://www.deribit.com/api/v2";
     pub const COINBASE: &str = "https://api.exchange.coinbase.com";
     pub const BILLBOARD: &str = "https://www.billboard.com";
     pub const BOXOFFICE: &str = "https://www.boxofficemojo.com";

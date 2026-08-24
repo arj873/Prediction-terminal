@@ -17,6 +17,7 @@ pub mod helpers;
 pub mod implied;
 pub mod kalshi;
 pub mod news;
+pub mod options;
 pub mod spot;
 pub mod venue;
 
@@ -80,6 +81,7 @@ fn api_routes(state: AppState) -> Router {
         .merge(implied::router())
         .merge(fred::router())
         .merge(data::router())
+        .merge(options::router())
         .merge(billboard::router())
         .merge(entertainment::router())
         .merge(news::router())
