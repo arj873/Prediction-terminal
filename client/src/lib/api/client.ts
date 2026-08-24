@@ -24,6 +24,7 @@ import type {
   AwardResult,
   EntResponse,
   DataSearchResponse,
+  DataSourcesResponse,
   DataSeriesResponse,
   HealthResponse,
   ImpliedCandidatesResponse,
@@ -225,8 +226,50 @@ export const implied = {
     ),
 };
 
+/* ------------------------------------------------------------ data sources */
+
+export const data = {
+  /**
+   * Chart `[source:]id` at whichever publisher the prefix names.
+   *
+   * The reference is *not* URL-encoded as one component: half of these
+   * identifiers contain slashes — an SDMX key is `EXR/D.USD.EUR.SP00.A` and an
+   * EIA id is a route path — and the route takes the rest of the path as the
+   * reference precisely so they survive. Each segment is encoded on its own, so
+   * a `#` or a `?` inside one still cannot end the path early.
+   */
+  series: (
+    reference: string,
+    start?: string,
+    end?: string,
+    signal?: AbortSignal,
+  ): Promise<DataSeriesResponse> =>
+    request(
+      `/data/series/${reference.split('/').map(encodeURIComponent).join('/')}${query({ start, end })}`,
+      signal,
+    ),
+
+  search: (
+    q: string,
+    sources: readonly string[] = [],
+    limit = 40,
+    signal?: AbortSignal,
+  ): Promise<DataSearchResponse> =>
+    request(
+      `/data/search${query({ q, sources: sources.length ? sources.join(',') : undefined, limit })}`,
+      signal,
+    ),
+
+  sources: (signal?: AbortSignal): Promise<DataSourcesResponse> => request('/data/sources', signal),
+};
+
 /* -------------------------------------------------------------------- fred */
 
+/**
+ * FRED's own two endpoints, kept because `FRED <id>` predates the other eleven
+ * publishers and every habit, example and README line in this terminal says it.
+ * `ECO` reaches the same series through `data.series`.
+ */
 export const fred = {
   series: (
     id: string,

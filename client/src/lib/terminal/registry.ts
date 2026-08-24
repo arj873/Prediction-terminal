@@ -37,6 +37,7 @@ import {
 } from './parser';
 import type { KeyScope } from './keys';
 import { VENUE_IDS, parseRef, parseVenue, type VenueRef } from './venue';
+import { formatDataRef, parseDataSource, type DataRef, type DataSource } from './dataset';
 
 /**
  * The genres `ENT` filters by, in the order it lists them.
@@ -94,6 +95,27 @@ export function requireRef(command: ParsedCommand, index: number, name: string):
  * A repeated venue token stays in `rest` rather than vanishing: dropping it
  * from both lists silently ate a word.
  */
+export function takeSources(args: string[]): {
+  sources: readonly DataSource[];
+  rest: string[];
+} {
+  const sources: DataSource[] = [];
+  const rest: string[] = [];
+
+  for (const arg of args) {
+    const source = parseDataSource(arg, 'word');
+    // A repeated name stays in `rest` rather than vanishing: dropping it from
+    // both lists silently ate a word. Same rule as `takeVenues`.
+    if (source && !sources.includes(source)) {
+      sources.push(source);
+    } else {
+      rest.push(arg);
+    }
+  }
+
+  return { sources, rest };
+}
+
 export function takeVenues(args: string[]): { venues: readonly Venue[]; rest: string[] } {
   const venues: Venue[] = [];
   const rest: string[] = [];
@@ -440,8 +462,14 @@ export const panelId = {
   watchlist: 'watchlist',
   spot: (symbol: string): string => `spot:${symbol.toUpperCase()}`,
   news: (symbols: readonly string[]): string => `news:${symbols.join(',').toLowerCase() || 'wire'}`,
-  fred: (seriesId: string): string => `fred:${seriesId.toUpperCase()}`,
-  fredSearch: (query: string): string => `fsrch:${query.toLowerCase()}`,
+  /**
+   * One panel per reference, so `ECO UNRATE` and `FRED UNRATE` land on the same
+   * one rather than tiling two copies of the same chart.
+   */
+  dataSeries: (reference: DataRef): string => `eco:${formatDataRef(reference)}`,
+  dataSearch: (query: string, sources: readonly DataSource[]): string =>
+    `ecos:${[...sources].sort().join(',')}:${query.toLowerCase()}`,
+  sources: (): string => 'src',
   billboard: (chart: string, date?: string): string =>
     `bb:${chart.toLowerCase()}:${date ?? 'latest'}`,
   billboardCharts: 'bb:charts',

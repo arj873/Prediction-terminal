@@ -1472,6 +1472,47 @@ button {
   background: color-mix(in srgb, var(--overlay-6) 12%, transparent);
 }
 
+/* Publisher badges. One hue per family rather than per publisher: twelve
+   distinguishable colours is more than a reader can hold, and what the eye needs
+   here is "which kind of thing is this" — an observation, a document, a price
+   feed — with the code beside it saying which publisher exactly. */
+.source-fred,
+.source-bls,
+.source-fed {
+  color: var(--overlay-1);
+  border-color: color-mix(in srgb, var(--overlay-1) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-1) 12%, transparent);
+}
+
+.source-ecb,
+.source-imf,
+.source-oecd {
+  color: var(--overlay-2);
+  border-color: color-mix(in srgb, var(--overlay-2) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-2) 12%, transparent);
+}
+
+.source-eia,
+.source-cftc {
+  color: var(--overlay-3);
+  border-color: color-mix(in srgb, var(--overlay-3) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-3) 12%, transparent);
+}
+
+.source-congress,
+.source-sec,
+.source-datagov {
+  color: var(--overlay-6);
+  border-color: color-mix(in srgb, var(--overlay-6) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-6) 12%, transparent);
+}
+
+.source-polygon {
+  color: var(--overlay-5);
+  border-color: color-mix(in srgb, var(--overlay-5) 40%, transparent);
+  background: color-mix(in srgb, var(--overlay-5) 12%, transparent);
+}
+
 .venue-cell {
   width: 1%;
   white-space: nowrap;

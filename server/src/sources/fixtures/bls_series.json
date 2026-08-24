@@ -1,0 +1,19 @@
+{
+  "status": "REQUEST_SUCCEEDED",
+  "responseTime": 143,
+  "message": [],
+  "Results": {
+    "series": [
+      {
+        "seriesID": "LNS14000000",
+        "data": [
+          { "year": "2024", "period": "M13", "periodName": "Annual", "value": "4.0", "footnotes": [{}] },
+          { "year": "2024", "period": "M04", "periodName": "April", "value": "-", "latest": "true", "footnotes": [{}] },
+          { "year": "2024", "period": "M03", "periodName": "March", "value": "3.8", "footnotes": [{}] },
+          { "year": "2024", "period": "M02", "periodName": "February", "value": "3.9", "footnotes": [{}] },
+          { "year": "2024", "period": "M01", "periodName": "January", "value": "3.7", "footnotes": [{}] }
+        ]
+      }
+    ]
+  }
+}

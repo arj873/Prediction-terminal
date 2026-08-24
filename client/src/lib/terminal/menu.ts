@@ -220,7 +220,7 @@ export const EXAMPLE_VERBS: readonly string[] = [
   'IMP',
   'STK',
   'NEWS',
-  'FRED',
+  'ECO',
   'BB',
 ];
 
@@ -292,9 +292,10 @@ export const MENUS: readonly Menu[] = [
       item('News wire', 'NEWS'),
       item('News for a symbol…', '>NEWS'),
       SEP,
-      item('FRED economic series…', '>FRED'),
-      item('Search FRED for a series id…', '>FSRCH'),
-      group('FRED examples', examplesOf('FRED')),
+      item('Which publishers this deployment serves', 'SRC'),
+      item('Chart a published series…', '>ECO'),
+      item('Search every publisher at once…', '>ECOS'),
+      group('ECO examples', examplesOf('ECO')),
       SEP,
       group('Charts and box office', [
         item('Billboard Hot 100', 'BB'),
