@@ -10,3 +10,5 @@ target/
 .vite/
 .svelte-kit/
 client/build/
+client/snapshot-build/
+client/snapshot.json

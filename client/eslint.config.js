@@ -31,6 +31,10 @@ export default ts.config(
   {
     ignores: [
       'build/',
+      // Bundled output of the snapshot build, and the API recording it carries;
+      // `make snapshot` owns both.
+      'snapshot-build/',
+      'snapshot.json',
       '.svelte-kit/',
       'node_modules/',
       // Generated from the Rust wire structs; `make gen-types` owns it.

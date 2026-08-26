@@ -1,5 +1,7 @@
 .svelte-kit
 build
+snapshot-build
+snapshot.json
 node_modules
 package-lock.json
 src/lib/api/gen

@@ -200,6 +200,11 @@ button {
 .status-link.error {
   color: var(--down);
 }
+/* A snapshot build: reachable, but reading a recording rather than a venue. */
+.status-link.frozen {
+  color: var(--warn);
+  cursor: help;
+}
 
 /* -------------------------------------------------------------------- tape */
 

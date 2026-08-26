@@ -20,6 +20,7 @@
   import PanelGrid from '$lib/panels/PanelGrid.svelte';
   import { setTerminalContext, type LogLevel } from '$lib/context';
   import { ApiRequestError } from '$lib/api/client';
+  import { snapshotMeta } from '$lib/api/snapshot';
   import { COMMAND_INDEX } from '$lib/terminal/commands';
   import { UsageError, type CommandContext } from '$lib/terminal/command';
   import { KeyRouter, Keymap, type KeyMode } from '$lib/terminal/keys';
@@ -148,6 +149,19 @@
 
     log('PREDICTION TERMINAL — six books, one prompt.');
     log('Type a command, or HELP for the list. Esc on an empty line enters NAV mode.');
+
+    // A snapshot build has only the commands it was recorded with, and the rest
+    // report a miss. Say which those are at the prompt rather than leaving the
+    // reader to find the boundary by typing over it.
+    const recorded = snapshotMeta();
+    if (recorded) {
+      log(
+        `Offline snapshot, recorded ${recorded.recordedAt.replace('T', ' ').slice(0, 16)}Z. ` +
+          'Prices are frozen and only the recorded commands have data:',
+        'warn',
+      );
+      log(recorded.commands.join('  ·  '), 'warn');
+    }
 
     // Open something rather than presenting an empty grid: whatever the reader
     // was watching last session, or the busiest board if they have no list yet.

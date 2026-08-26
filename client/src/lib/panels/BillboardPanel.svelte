@@ -11,6 +11,7 @@
   import type { BillboardChart, BillboardEntry } from '$gen';
 
   import { billboard } from '../api/client';
+  import { asset as snapshotAsset, snapshotAvailable } from '../api/snapshot';
   import { day, rankMove, truncate } from '../format';
   import TablePanel from './TablePanel.svelte';
   import { createPanelData } from './data.svelte';
@@ -37,7 +38,12 @@
    * CDN — same origin, and it works on networks that cannot reach the CDN.
    */
   function artUrl(url: string): string {
-    return `/api/billboard/art?u=${encodeURIComponent(url)}`;
+    const path = `/billboard/art?u=${encodeURIComponent(url)}`;
+    // A snapshot build has no server to proxy through, so the recorded image
+    // stands in. An unrecorded one resolves to the empty string, which fails
+    // the load and collapses to the placeholder below like any other miss.
+    if (snapshotAvailable()) return snapshotAsset(path) ?? '';
+    return `/api${path}`;
   }
 
   /**

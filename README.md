@@ -49,6 +49,36 @@ make start           # serves the built client and the API on :8787
 
 `make` on its own lists every target.
 
+### One file, no server
+
+Some places will not run a process — an object store, a static site, a link
+sent to someone who should not have to install a Rust toolchain to look at the
+thing. For those there is a *snapshot build*: the whole terminal as one HTML
+file, with a recorded API session frozen into it.
+
+```bash
+make dev             # in another shell — the recording needs a live server
+make record-snapshot # drive the app and keep every response it makes
+make snapshot        # → dist/prediction-terminal.html
+```
+
+It is the same client, mounted without SvelteKit's router so the module graph
+bundles flat (`client/snapshot/main.ts` says why). Panels, commands, keys,
+charts and themes all work; the header reads `SNAPSHOT` rather than `LIVE`, and
+the prompt opens by naming the commands the recording covers. Anything outside
+that set answers `snapshot_miss` instead of hanging.
+
+The recording is driven through a browser rather than assembled from a list of
+URLs, because the app decides its own URLs — poll intervals, default depths,
+the second request a picker makes. `tools/record-snapshot.mjs` holds the
+command list and needs Playwright; `tools/pack-single-file.mjs` does the
+inlining. Neither is a dependency of the client.
+
+What a snapshot cannot have is anything the recording machine could not reach.
+`NEWS` needs Alpaca credentials, and `SEC` and the FRED half of `ECO` are
+refused outright from datacentre addresses, so those are left out of the
+recorded set rather than baked in as errors.
+
 ---
 
 ## Commands

@@ -13,6 +13,7 @@
   import { onDestroy } from 'svelte';
 
   import { health } from '../api/client';
+  import { snapshotAvailable, snapshotMeta } from '../api/snapshot';
   import { getTerminalContext } from '../context';
   import { clockEt, clockUtc } from '../format';
   import type { KeyMode } from '../terminal/keys';
@@ -25,6 +26,12 @@
 
   let now = $state(new Date());
   let live = $state<boolean | undefined>(undefined);
+
+  // A snapshot build answers `health()` out of the recorded table, so the dot
+  // would read LIVE off a response that proves nothing is connected. Say what
+  // it actually is instead, and date it — the prices below are that old.
+  const frozen = snapshotAvailable();
+  const recordedAt = snapshotMeta()?.recordedAt;
 
   const clock = setInterval(() => (now = new Date()), 1_000);
 
@@ -56,9 +63,15 @@
     <span class="status-mode" class:is-nav={mode === 'nav'}>{mode === 'nav' ? 'NAV' : 'CMD'}</span>
     <span class="status-count dim">{panels.count} panel{panels.count === 1 ? '' : 's'}</span>
     <span class="status-venues dim">{VENUES.map((v) => v.code).join(' · ')}</span>
-    <span class="status-link" class:ok={live === true} class:failed={live === false}>
-      {live === undefined ? '● …' : live ? '● LIVE' : '● API DOWN'}
-    </span>
+    {#if frozen}
+      <span class="status-link frozen" title="Recorded {recordedAt}. Prices do not update.">
+        ● SNAPSHOT
+      </span>
+    {:else}
+      <span class="status-link" class:ok={live === true} class:failed={live === false}>
+        {live === undefined ? '● …' : live ? '● LIVE' : '● API DOWN'}
+      </span>
+    {/if}
     <span class="status-clock mono">{clockUtc(now)}</span>
     <span class="status-clock mono dim">{clockEt(now)}</span>
   </div>

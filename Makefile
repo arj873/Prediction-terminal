@@ -10,10 +10,16 @@ CLIENT_DIR  ?= $(CURDIR)/client/build
 GEN_DIR     := client/src/lib/api/gen
 NPM         := npm --prefix $(CLIENT)
 
+# The single-file snapshot build. See the `snapshot` target.
+SNAPSHOT_BASE ?= http://127.0.0.1:8787
+SNAPSHOT_FILE ?= $(CLIENT)/snapshot.json
+SNAPSHOT_OUT  ?= dist/prediction-terminal.html
+
 .DEFAULT_GOAL := help
 .PHONY: help dev dev-server dev-client build build-client build-server \
         gen-types gen-drift check check-rust check-client fmt lint test \
-        test-rust test-client start clean install
+        test-rust test-client start clean install \
+        snapshot record-snapshot build-snapshot
 
 help: ## List the available targets.
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -86,9 +92,29 @@ build-server: ## Build the release server binary.
 
 build: build-client build-server ## Build both halves for production.
 
+# --------------------------------------------------------------- snapshot --
+#
+# One HTML file of the whole terminal, with a recorded API session frozen into
+# it. For a host that will not run a process — an object store, a static site,
+# a link sent to someone who should not have to install a Rust toolchain to
+# look at it. The prices in it are as old as the recording; nothing in it is
+# live, and the header says SNAPSHOT rather than LIVE for that reason.
+
+record-snapshot: ## Record an API session. Needs a server on :8787 and Playwright.
+	node tools/record-snapshot.mjs --base $(SNAPSHOT_BASE) --out $(SNAPSHOT_FILE)
+
+build-snapshot: ## Bundle the client flat for a snapshot build.
+	$(NPM) run build:snapshot
+
+snapshot: build-snapshot ## Pack the terminal into one self-contained HTML file.
+	node tools/pack-single-file.mjs \
+	  --build $(CLIENT)/snapshot-build \
+	  --snapshot $(SNAPSHOT_FILE) \
+	  --out $(SNAPSHOT_OUT)
+
 start: ## Serve the built client and the API from one process.
 	CLIENT_DIR=$(CLIENT_DIR) ./target/release/terminal-server
 
 clean: ## Remove build output.
 	cargo clean
-	rm -rf $(CLIENT)/build $(CLIENT)/.svelte-kit
+	rm -rf $(CLIENT)/build $(CLIENT)/.svelte-kit $(CLIENT)/snapshot-build dist

@@ -66,6 +66,7 @@ import type {
   VenueEvent,
 } from '$gen';
 import { formatRef, normaliseId, type VenueRef } from '../terminal/venue';
+import { resolve as resolveSnapshot, snapshotAvailable } from './snapshot';
 
 /**
  * The bar sizes the terminal charts.
@@ -91,6 +92,11 @@ export class ApiRequestError extends Error {
 }
 
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+  // A snapshot build has no server to reach: the responses are frozen into the
+  // page and answered from there. Absent one — every ordinary build — this is a
+  // single undefined check and the network path below runs unchanged.
+  if (snapshotAvailable()) return snapshot<T>(path);
+
   let res: Response;
   try {
     res = await fetch(`/api${path}`, { signal, headers: { Accept: 'application/json' } });
@@ -117,6 +123,24 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   }
 
   return body as T;
+}
+
+/**
+ * Answer one request from the recorded table.
+ *
+ * A miss raises the same error shape a 404 raises, so a command the recording
+ * did not cover reports itself as uncovered in the panel rather than hanging on
+ * a promise that will never settle.
+ */
+async function snapshot<T>(path: string): Promise<T> {
+  const hit = resolveSnapshot(path);
+  if (hit.found) return hit.body as T;
+  throw new ApiRequestError(
+    'Not in this snapshot',
+    'snapshot_miss',
+    404,
+    'This is an offline recording of the terminal, so only the commands it was recorded with have data. Run the terminal against a live server for the rest.',
+  );
 }
 
 function query(params: Record<string, string | number | undefined>): string {
