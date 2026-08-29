@@ -109,6 +109,11 @@ export function note(results: readonly VenueResult[]): NoteSegment[] {
     });
   }
 
+  // When nothing answered at all, `emptyBody` states every reason in full and
+  // the note would only say it twice — six venues' worth of message and hint
+  // in a summary strip, directly above the same six lines.
+  if (replied.length === 0) return segments;
+
   // Named with the reason, never merely named: a venue that did not answer
   // cannot be read as a venue that lists nothing matching, and six venues
   // reading `unavailable` cannot be told apart from each other either.

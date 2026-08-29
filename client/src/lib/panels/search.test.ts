@@ -63,12 +63,21 @@ describe('note', () => {
     const reason = 'Cannot reach the terminal API server';
     const advice = 'Is the API server running? `npm run dev` starts both halves.';
     const line = text([
+      answered('forecastex', 10),
       down('kalshi', reason, advice),
       down('polymarket', reason, advice),
       down('gemini', reason, advice),
     ]);
 
     expect(line.split(advice)).toHaveLength(2);
+  });
+
+  it('leaves the reasons to the body when nothing answered at all', () => {
+    // `emptyBody` states all six in full. Saying them again in the summary
+    // strip directly above is six lines of message and hint, twice.
+    const line = text([down('kalshi', 'refused', 'try later'), down('polymarket', 'refused')]);
+
+    expect(line).toBe('0 events · 0 scanned');
   });
 
   it('reports a snapshot age only when something answered', () => {
