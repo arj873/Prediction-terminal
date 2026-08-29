@@ -21,4 +21,18 @@ volume24h: number | null,
 /**
  * Relevance, as whole points accumulated by the corpus scorer.
  */
-score: number, };
+score: number, 
+/**
+ * How many of the query's words this event matched.
+ */
+matchedTerms: number, 
+/**
+ * How many words the query asked for. Stop-words are counted in neither,
+ * so "2 of 3" counts the words that could actually have narrowed it.
+ *
+ * A hit that matched fewer than all of them is a partial, and is shown as
+ * one rather than as an answer: a single stray word should not hide the
+ * event the rest of the query describes, but nor should it be passed off
+ * as what was asked for.
+ */
+totalTerms: number, };

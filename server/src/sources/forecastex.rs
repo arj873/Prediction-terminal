@@ -1915,7 +1915,9 @@ async fn canonical_contract_id(state: &AppState, id: &str) -> Result<String> {
 }
 
 pub async fn corpus_snapshot(state: &AppState) -> Result<Arc<Corpus>> {
-    Ok(Arc::clone(&catalogue(state).await?.corpus))
+    let result = catalogue(state).await.map(|held| Arc::clone(&held.corpus));
+    crate::sources::corpus::record(state, Venue::ForecastEx, &result);
+    result
 }
 
 /// Build the snapshot ahead of the first reader, so a search pays for none of

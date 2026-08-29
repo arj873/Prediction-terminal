@@ -14,6 +14,13 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Before `init_tracing`, which reads `RUST_LOG`, and before anything else
+    // reads the environment. Both `.env.example` and the README tell a reader
+    // to copy the file to `.env`; without this line nothing ever read it, and a
+    // hosted deployment configured that way was configured with nothing. A
+    // variable already exported wins — `dotenvy` does not overwrite.
+    let _ = dotenvy::dotenv();
+
     init_tracing();
 
     let config = Config::from_env();

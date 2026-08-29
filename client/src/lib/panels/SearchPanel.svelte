@@ -6,22 +6,26 @@
   contracts nested underneath. That grouping is why this is not a `TablePanel` —
   the column spec describes one flat table, and this is a table per event.
 
-  Two things the note has to say out loud. A venue that did not answer is named,
-  because "no results" and "that venue is down" are different answers and only
-  one of them means the market does not exist. And a catalogue snapshot that was
-  truncated is named too: a partial universe must not be presented as the whole
-  one, or an absent event reads as an event nobody lists.
+  Three things the panel has to say out loud, and `./search.ts` is where it
+  decides how. A venue that did not answer is named *with its reason*, because
+  "no results" and "that venue is down" are different answers and only one of
+  them means the market does not exist. A search where no venue answered is
+  never reported as a search that matched nothing — nothing was searched. And a
+  catalogue snapshot that was truncated is named too: a partial universe must
+  not be presented as the whole one, or an absent event reads as an event
+  nobody lists.
 -->
 <script lang="ts">
-  import type { EventSearchHit, SearchResponse, Venue } from '$gen';
+  import type { Venue } from '$gen';
 
   import MarketTable from './MarketTable.svelte';
   import PanelFrame from './PanelFrame.svelte';
   import PanelNote from './PanelNote.svelte';
-  import type { NoteSegment } from './table';
+  import EmptyState from './EmptyState.svelte';
+  import { emptyBody, note, partial, rank, type VenueResult } from './search';
   import { createPanelData } from './data.svelte';
   import { navigable } from '../actions/navigable';
-  import { venue } from '../api/client';
+  import { ApiRequestError, venue } from '../api/client';
   import { getRowCursor, getTerminalContext } from '../context';
   import { compact, truncate } from '../format';
   import { VENUE_IDS, formatRef, venueInfo } from '../terminal/venue';
@@ -29,13 +33,6 @@
   const { id, query, venues }: { id: string; query: string; venues: readonly Venue[] } = $props();
 
   const { run } = getTerminalContext();
-
-  /** One venue's answer, or the reason it did not give one. */
-  interface VenueResult {
-    venue: Venue;
-    response: SearchResponse | null;
-    error: string | null;
-  }
 
   const data = createPanelData({
     load: async (signal) => {
@@ -46,13 +43,21 @@
 
       return venues.map((v, index): VenueResult => {
         const result = settled[index];
-        return result?.status === 'fulfilled'
-          ? { venue: v, response: result.value, error: null }
-          : {
-              venue: v,
-              response: null,
-              error: result?.reason instanceof Error ? result.reason.message : 'unavailable',
-            };
+        if (result?.status === 'fulfilled') {
+          return { venue: v, response: result.value, error: null };
+        }
+        // Everything the server said, kept. `code` names the class of fault and
+        // `hint` is the upstream's own sentence about what to do next; the
+        // panel used to reach this point and print the word "unavailable".
+        const reason: unknown = result?.reason;
+        return {
+          venue: v,
+          response: null,
+          error:
+            reason instanceof ApiRequestError
+              ? { message: reason.message, code: reason.code, hint: reason.hint }
+              : { message: reason instanceof Error ? reason.message : 'did not answer' },
+        };
       });
     },
     refreshMs: 60_000,
@@ -63,56 +68,6 @@
       ? 'all venues'
       : venues.map((v) => venueInfo(v).label).join(' · '),
   );
-
-  /** Interleaved by score, so the best answer is at the top whoever lists it. */
-  function rank(results: readonly VenueResult[]): { venue: Venue; hit: EventSearchHit }[] {
-    return results
-      .flatMap((result) =>
-        (result.response?.hits ?? []).map((hit) => ({ venue: result.venue, hit })),
-      )
-      .sort((a, b) => b.hit.score - a.hit.score || (b.hit.volume24h ?? 0) - (a.hit.volume24h ?? 0));
-  }
-
-  function scannedTotal(results: readonly VenueResult[]): number {
-    return results.reduce((sum, result) => sum + (result.response?.scanned ?? 0), 0);
-  }
-
-  function note(results: readonly VenueResult[]): NoteSegment[] {
-    const answered = results.filter((result) => result.response !== null);
-    const failures = results.filter((result) => result.error !== null);
-    const truncated = answered.filter((result) => result.response!.truncated);
-    const hits = answered.reduce((sum, result) => sum + result.response!.hits.length, 0);
-
-    const counts = answered
-      .map((result) => `${venueInfo(result.venue).code} ${result.response!.hits.length}`)
-      .join(' · ');
-
-    const segments: NoteSegment[] = [
-      { text: `${hits} events${counts ? ` · ${counts}` : ''}` },
-      { text: ` · ${scannedTotal(results).toLocaleString()} scanned`, tone: 'dim' },
-    ];
-
-    // The oldest snapshot in the set, because that is the age of the answer.
-    if (answered.length > 0) {
-      const age = Math.max(...answered.map((result) => result.response!.snapshotAgeSeconds));
-      segments.push({ text: ` · snapshot ${age}s old`, tone: 'dim' });
-    }
-
-    if (truncated.length > 0) {
-      segments.push({
-        text: ` · ${truncated.map((result) => venueInfo(result.venue).code).join(', ')} catalogue truncated — this is not the whole book`,
-        tone: 'down',
-      });
-    }
-
-    // Named, never dropped: a venue that did not answer cannot be read as a
-    // venue that lists nothing matching.
-    for (const failure of failures) {
-      segments.push({ text: ` · ${venueInfo(failure.venue).code} unavailable`, tone: 'down' });
-    }
-
-    return segments;
-  }
 </script>
 
 <PanelFrame {id} kind="SRCH" title={`"${query}"`} {subtitle} {data}>
@@ -123,15 +78,29 @@
   <PanelNote note={note(results)} />
 
   {#if hits.length === 0}
-    <div class="panel-empty">
-      <div>{`Nothing open matches "${query}".`}</div>
-      <div class="panel-empty-hint">
-        {`Searched ${scannedTotal(results).toLocaleString()} open events across ${results.length} venues. Try fewer or broader words.`}
+    {@const body = emptyBody(query, results)}
+    {#if body.kind === 'outage'}
+      <!--
+        Rendered as a failure rather than as an empty result, because it is one.
+        `load` settles every leg, so the frame's own error block never fires for
+        this panel and the outage has to be stated here or not at all.
+      -->
+      <div class="panel-error">
+        <div class="panel-error-title">{body.message}</div>
+        {#each body.reasons as reason (reason)}
+          <div class="panel-error-hint">{reason}</div>
+        {/each}
+        {#if body.hint}
+          <div class="panel-error-hint">{body.hint}</div>
+        {/if}
       </div>
-    </div>
+    {:else}
+      <EmptyState message={body.message} hint={body.hint} />
+    {/if}
   {:else}
     {#each hits.slice(0, 24) as entry, index (index)}
       {@const eventRef = formatRef({ venue: entry.venue, id: entry.hit.event.eventTicker })}
+      {@const short = partial(entry.hit)}
       <div class="group">
         <!--
           A row, not a button element: `.group-header` is a flex strip the width
@@ -156,6 +125,12 @@
           <span class="venue-badge venue-{entry.venue}">{venueInfo(entry.venue).code}</span>
           <span class="group-ticker">{truncate(entry.hit.event.eventTicker, 34)}</span>
           <span class="group-title">{truncate(entry.hit.event.title, 62)}</span>
+          <!-- Said, not implied: this one did not match everything asked. -->
+          {#if short}
+            <span class="group-meta dim" title="This event matched only part of the query">
+              {short}
+            </span>
+          {/if}
           <span class="group-meta">{`${entry.hit.markets.length} contracts`}</span>
           <span class="group-meta">{`24h ${compact(entry.hit.volume24h)}`}</span>
         </div>

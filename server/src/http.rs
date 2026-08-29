@@ -307,7 +307,12 @@ impl Http {
                     if attempt == opts.retries {
                         break;
                     }
-                    tracing::debug!(url, attempt, "retrying after transport failure");
+                    tracing::debug!(
+                        url,
+                        attempt,
+                        error = %error_chain(&err),
+                        "retrying after transport failure"
+                    );
                     continue;
                 }
             };
@@ -349,12 +354,23 @@ impl Http {
             return Err(status_error(status, url));
         }
 
-        Err(last_error.unwrap_or_else(|| {
+        let failure = last_error.unwrap_or_else(|| {
             UpstreamError::new(
                 format!("Request to {} failed", host_of(url)),
                 codes::UPSTREAM_ERROR,
             )
-        }))
+        });
+        // Warned, not debugged. This is the last place the failure is a fact
+        // rather than a rendered sentence, and on a hosted deployment the log
+        // is the only place an operator can see it without a browser.
+        tracing::warn!(
+            url,
+            attempts = opts.retries + 1,
+            code = failure.code,
+            error = failure.message,
+            "upstream fetch failed"
+        );
+        Err(failure)
     }
 }
 
@@ -526,7 +542,8 @@ fn normalise_transport_error(err: &reqwest::Error, url: &str) -> UpstreamError {
     if err.is_timeout() || TIMEOUT_MESSAGE.is_match(&message) {
         return UpstreamError::timeout(format!("{host} did not respond in time")).with_hint(
             format!(
-                "{host} accepted the connection but never replied. It may be throttling this IP."
+                "{host} accepted the connection but never replied. It may be throttling \
+             this IP. The transport said: {message}"
             ),
         );
     }
@@ -534,8 +551,13 @@ fn normalise_transport_error(err: &reqwest::Error, url: &str) -> UpstreamError {
     // ECONNRESET / EPIPE / "socket hang up" from a host that dislikes
     // datacentre egress.
     if err.is_connect() || BLOCKED_MESSAGE.is_match(&message) {
-        return UpstreamError::blocked(format!("{host} refused the connection"))
-            .with_hint(blocked_hint(url));
+        // The chain goes in the hint rather than being dropped. `BLOCKED_MESSAGE`
+        // matches on the word "socket" among others, so a TLS or proxy fault can
+        // land here and be reported as a refusal — and the sentence that would
+        // have said which was thrown away with it.
+        return UpstreamError::blocked(format!("{host} refused the connection")).with_hint(
+            format!("{} The transport said: {message}", blocked_hint(url)),
+        );
     }
 
     UpstreamError::new(

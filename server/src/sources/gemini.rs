@@ -1418,7 +1418,9 @@ async fn snapshot(state: &AppState) -> Result<Arc<GeminiSnapshot>> {
 }
 
 pub async fn corpus_snapshot(state: &AppState) -> Result<Arc<Corpus>> {
-    Ok(Arc::clone(&snapshot(state).await?.corpus))
+    let result = snapshot(state).await.map(|held| Arc::clone(&held.corpus));
+    crate::sources::corpus::record(state, Venue::Gemini, &result);
+    result
 }
 
 /// Build the snapshot ahead of the first reader, so a search pays for none of

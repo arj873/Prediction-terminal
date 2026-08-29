@@ -1193,10 +1193,12 @@ pub async fn build_corpus(state: &AppState) -> Result<Corpus> {
 }
 
 pub async fn corpus_snapshot(state: &AppState) -> Result<Arc<Corpus>> {
-    state
+    let result = state
         .cache()
         .cached(CORPUS_KEY, ttl::CATALOGUE, || build_corpus(state))
-        .await
+        .await;
+    crate::sources::corpus::record(state, Venue::Polymarket, &result);
+    result
 }
 
 pub fn warm_corpus(state: &AppState) {
@@ -1214,8 +1216,8 @@ pub fn warm_corpus(state: &AppState) {
 }
 
 pub async fn search(state: &AppState, query: &str, limit: usize) -> Result<SearchResponse> {
-    let snapshot = corpus_snapshot(state).await?;
     refuse_overlong_query(query)?;
+    let snapshot = corpus_snapshot(state).await?;
     Ok(search_corpus(&snapshot, query, limit))
 }
 
@@ -2151,8 +2153,12 @@ mod tests {
             .expect("the corpus is searchable");
         assert_eq!(found.query, "event 1");
         assert_eq!(found.scanned, 3);
-        assert_eq!(found.hits.len(), 1);
+        // "Event 0" and "Event 2" carry half the query, so they are listed
+        // under the one event that carries all of it rather than dropped.
+        assert_eq!(found.hits.len(), 3);
         assert_eq!(found.hits[0].event.event_ticker, "event-1");
+        assert_eq!(found.hits[0].matched_terms, 2);
+        assert!(found.hits[1..].iter().all(|hit| hit.matched_terms == 1));
 
         let top = top_markets(&state, MoverSort::Volume, DEFAULT_RESULT_LIMIT)
             .await

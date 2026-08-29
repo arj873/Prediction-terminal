@@ -384,6 +384,16 @@ pub struct EventSearchHit {
     pub volume24h: Option<f64>,
     /// Relevance, as whole points accumulated by the corpus scorer.
     pub score: u32,
+    /// How many of the query's words this event matched.
+    pub matched_terms: u32,
+    /// How many words the query asked for. Stop-words are counted in neither,
+    /// so "2 of 3" counts the words that could actually have narrowed it.
+    ///
+    /// A hit that matched fewer than all of them is a partial, and is shown as
+    /// one rather than as an answer: a single stray word should not hide the
+    /// event the rest of the query describes, but nor should it be passed off
+    /// as what was asked for.
+    pub total_terms: u32,
 }
 
 impl From<&VenueEvent> for EventSummary {
@@ -1606,6 +1616,54 @@ pub struct HealthResponse {
     pub fred_api_key: bool,
     pub alpaca_keys: bool,
     pub time: String,
+    /// What each venue's catalogue crawl last did.
+    ///
+    /// Here because `SRCH` returning nothing has two completely different
+    /// causes — no market matches, or no catalogue was ever fetched — and an
+    /// operator on a hosted deployment cannot tell them apart from the outside.
+    /// Every venue is listed every time: one silently absent from the list is
+    /// the ambiguity this exists to remove.
+    pub venues: Vec<VenueCorpusHealth>,
+}
+
+/// Whether a venue's catalogue is loaded, refused, or not yet tried.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub enum CorpusState {
+    Ok,
+    Failed,
+    /// Not a failure. A server still warming has nothing to report yet, and
+    /// reporting that as broken sends an operator chasing a non-outage.
+    Never,
+}
+
+/// One venue's catalogue, as an operator needs to see it.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../../client/src/lib/api/gen/")]
+pub struct VenueCorpusHealth {
+    pub venue: Venue,
+    pub state: CorpusState,
+    pub events: u32,
+    pub markets: u32,
+    /// True when the crawl hit its page cap before the catalogue ran out.
+    pub truncated: bool,
+    /// Age of the snapshot in seconds, when there is one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub age_seconds: Option<f64>,
+    /// What the crawl said when it failed — the upstream's own sentence, which
+    /// is the whole point of the field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub hint: Option<String>,
 }
 
 #[cfg(test)]

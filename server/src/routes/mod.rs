@@ -135,6 +135,7 @@ mod health {
             fred_api_key: state.config().has_fred_key(),
             alpaca_keys: state.config().has_alpaca_keys(),
             time: now_iso8601(),
+            venues: state.venue_corpus_health(),
         })
     }
 
