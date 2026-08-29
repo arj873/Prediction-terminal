@@ -755,12 +755,14 @@ pub async fn build_corpus(state: &AppState) -> Result<Corpus> {
 }
 
 pub async fn corpus_snapshot(state: &AppState) -> Result<Arc<Corpus>> {
-    state
+    let result = state
         .cache()
         .cached(CORPUS_KEY, ttl::CATALOGUE, || async {
             build_corpus(state).await
         })
-        .await
+        .await;
+    crate::sources::corpus::record(state, Venue::PolymarketUs, &result);
+    result
 }
 
 /// Build the snapshot ahead of the first reader, so a search pays for none of
@@ -786,8 +788,8 @@ pub fn warm_corpus(state: &AppState) {
 /// unmentioned. Ranking the snapshot the same way as the other two venues gives
 /// results that are both usable and comparable across brokers.
 pub async fn search(state: &AppState, query: &str, limit: usize) -> Result<SearchResponse> {
-    let snapshot = corpus_snapshot(state).await?;
     refuse_overlong_query(query)?;
+    let snapshot = corpus_snapshot(state).await?;
     Ok(search_corpus(&snapshot, query, limit))
 }
 

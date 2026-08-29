@@ -824,10 +824,12 @@ pub async fn build_corpus(state: &AppState) -> Result<Corpus> {
 }
 
 async fn corpus(state: &AppState) -> Result<Arc<Corpus>> {
-    state
+    let result = state
         .cache()
         .cached(CORPUS_KEY, ttl::CATALOGUE, || build_corpus(state))
-        .await
+        .await;
+    crate::sources::corpus::record(state, Venue::Kalshi, &result);
+    result
 }
 
 /// The open-event snapshot, for callers that slice it differently to [`search`].
@@ -858,8 +860,10 @@ pub fn warm_corpus(state: &AppState) {
 
 /// Rank open Kalshi events against a free-text query.
 pub async fn search(state: &AppState, query: &str, limit: usize) -> Result<SearchResponse> {
-    let snapshot = corpus(state).await?;
+    // Refused before the crawl, not after: an over-long query is turned away
+    // either way, and paying for a multi-page catalogue first is pure cost.
     refuse_overlong_query(query)?;
+    let snapshot = corpus(state).await?;
     Ok(search_corpus(&snapshot, query, limit))
 }
 

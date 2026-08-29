@@ -300,6 +300,39 @@ async fn health_reports_liveness_and_credentials_but_no_internals() {
 }
 
 #[tokio::test]
+async fn health_names_every_venue_and_calls_an_unwarmed_one_never() {
+    let app = app(config());
+
+    let (_, body) = get_json(&app, "/api/health").await;
+    let venues = body["venues"].as_array().expect("a venue per broker");
+
+    // All six, always. A venue missing from the list is the ambiguity this
+    // block exists to remove, so absence must not be a way to report anything.
+    assert_eq!(
+        venues
+            .iter()
+            .map(|entry| entry["venue"].as_str().unwrap_or_default())
+            .collect::<Vec<_>>(),
+        [
+            "kalshi",
+            "polymarket",
+            "polymarket-us",
+            "gemini",
+            "predictfun",
+            "forecastex"
+        ]
+    );
+
+    // Nothing has been crawled yet, and that is not a failure: an operator told
+    // a warming server is broken goes looking for an outage that is not there.
+    for entry in venues {
+        assert_eq!(entry["state"], "never", "{entry}");
+        assert!(entry.get("error").is_none(), "{entry}");
+        assert!(entry.get("ageSeconds").is_none(), "{entry}");
+    }
+}
+
+#[tokio::test]
 async fn health_sees_the_credentials_when_they_are_set() {
     let app = app(Config {
         fred_api_key: Some("key".into()),

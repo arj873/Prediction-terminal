@@ -1770,12 +1770,14 @@ async fn build_corpus(state: &AppState) -> Result<Corpus> {
 
 /// The open universe, crawled once per catalogue TTL and shared by pointer.
 pub async fn corpus_snapshot(state: &AppState) -> Result<Arc<Corpus>> {
-    state
+    let result = state
         .cache()
         .cached(CORPUS_KEY, ttl::CATALOGUE, || async {
             build_corpus(state).await
         })
-        .await
+        .await;
+    crate::sources::corpus::record(state, Venue::PredictFun, &result);
+    result
 }
 
 /// Build the snapshot ahead of the first reader, so a search pays for none of
