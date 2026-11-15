@@ -11,7 +11,7 @@
   everything uses it.
 -->
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
 
   import CommandLine, { type LogLine } from '$lib/components/CommandLine.svelte';
   import MenuBar from '$lib/components/MenuBar.svelte';
@@ -24,6 +24,7 @@
   import { UsageError, type CommandContext } from '$lib/terminal/command';
   import { KeyRouter, Keymap, type KeyMode } from '$lib/terminal/keys';
   import { parse } from '$lib/terminal/parser';
+  import { openLink, reopen, skippedNote, snapshot } from '$lib/terminal/workspaces';
   import { PanelStore } from '$lib/state/panels.svelte';
   import { Workspace } from '$lib/state/workspace.svelte';
 
@@ -67,19 +68,32 @@
 
     log(text, 'echo');
     workspace.pushHistory(text);
+    replay(text);
+  }
 
+  /**
+   * The dispatch itself: `run`, minus the echo and the history entry.
+   *
+   * Separate so `WS` can rebuild a grid through the same parser and the same
+   * handlers without filling the log and the history with lines nobody typed.
+   * It is still the only place a handler is called, and it is where a panel
+   * learns which line opened it.
+   */
+  function replay(text: string): boolean {
     const parsed = parse(text);
     const command = COMMAND_INDEX.get(parsed.verb);
     if (!command) {
       log(`Unknown command "${parsed.verb}". Type HELP for the list.`, 'error');
-      return;
+      return false;
     }
 
     try {
-      const result = command.handler(parsed, context);
+      const result = panels.opening(text, () => command.handler(parsed, context));
       if (result instanceof Promise) result.catch(reportError);
+      return true;
     } catch (err) {
       reportError(err);
+      return false;
     }
   }
 
@@ -104,6 +118,7 @@
 
   const context: CommandContext = {
     run,
+    replay,
     log,
     panels,
     workspace,
@@ -143,16 +158,61 @@
     },
   });
 
+  /**
+   * The grid a reload comes back to.
+   *
+   * Read once, before anything is opened, and written whenever the open panels
+   * change. Two things hold the write back: boot, so the empty grid a page
+   * starts with never overwrites the one it is about to restore, and a `#ws=`
+   * link, because a grid somebody sent is a visit — it must not replace what
+   * the reader had open, and `WS SAVE` is how they keep it if they want it.
+   */
+  const lastSession = [...workspace.session];
+  let booted = false;
+  let visiting = false;
+
+  $effect(() => {
+    const { lines } = snapshot(panels.panels, COMMAND_INDEX);
+    if (booted && !visiting) untrack(() => workspace.setSession(lines));
+  });
+
+  /** Open the grid in the address bar, if it is carrying one. */
+  function followLink(): boolean {
+    visiting = openLink(location.hash, context, COMMAND_INDEX);
+    return visiting;
+  }
+
+  /** Put back what was open before the reload. False when that was nothing. */
+  function restoreSession(): boolean {
+    if (lastSession.length === 0) return false;
+    const { opened, skipped } = reopen(
+      { columns: workspace.columns, panels: lastSession },
+      context,
+      COMMAND_INDEX,
+    );
+    if (opened === 0) return false;
+    log(
+      `Restored the last session: ${opened} panel${opened === 1 ? '' : 's'}.${skippedNote(skipped)}`,
+      skipped.length > 0 ? 'warn' : 'info',
+    );
+    return true;
+  }
+
   onMount(() => {
     workspace.applyTheme();
+    panels.setColumns(workspace.columns);
 
     log('PREDICTION TERMINAL — six books, one prompt.');
     log('Type a command, or HELP for the list. Esc on an empty line enters NAV mode.');
 
-    // Open something rather than presenting an empty grid: whatever the reader
-    // was watching last session, or the busiest board if they have no list yet.
-    run('HELP');
-    run(workspace.watchlist.length > 0 ? 'W' : 'TOP volume');
+    // A link wins, then whatever was open before the reload. Failing both, open
+    // something rather than presenting an empty grid: whatever the reader was
+    // watching last session, or the busiest board if they have no list yet.
+    if (!followLink() && !restoreSession()) {
+      run('HELP');
+      run(workspace.watchlist.length > 0 ? 'W' : 'TOP volume');
+    }
+    booted = true;
   });
 
   onDestroy(() => {
@@ -160,7 +220,7 @@
   });
 </script>
 
-<svelte:window onkeydown={(event) => router.handle(event)} />
+<svelte:window onkeydown={(event) => router.handle(event)} onhashchange={followLink} />
 
 <StatusBar {mode} />
 <MenuBar

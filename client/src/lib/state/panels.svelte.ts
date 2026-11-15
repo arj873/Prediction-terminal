@@ -71,6 +71,14 @@ export interface PanelDesc<P extends Record<string, unknown> = Record<string, un
   id: string;
   kind: PanelKind;
   props: P;
+  /**
+   * The command line that opened this panel, or last re-pointed it.
+   *
+   * Set by the store from the line being dispatched, not by a handler, so no
+   * command has to remember to say it. It is what `WS` saves and what a shared
+   * link carries: a line to type again, rather than props to trust.
+   */
+  command?: string;
 }
 
 /** What a panel exposes to the workspace once it is on screen. */
@@ -99,6 +107,9 @@ export class PanelStore {
 
   /** Live handles, registered by each panel component as it mounts. */
   readonly #handles = new Map<string, PanelHandle>();
+
+  /** The command line being dispatched right now, if one is. */
+  #origin: string | undefined = undefined;
 
   get panels(): readonly PanelDesc[] {
     return this.#panels;
@@ -153,6 +164,25 @@ export class PanelStore {
     return this.handle(this.#focusedId);
   }
 
+  /* ------------------------------------------------------------- origin */
+
+  /**
+   * Run `handler` as the work of one command line.
+   *
+   * Every panel it opens is stamped with that line. Calls nest — a row that
+   * runs a command from inside another command's handler — and each panel
+   * keeps the innermost line, which is the one that would reopen it.
+   */
+  opening<T>(command: string, handler: () => T): T {
+    const outer = this.#origin;
+    this.#origin = command;
+    try {
+      return handler();
+    } finally {
+      this.#origin = outer;
+    }
+  }
+
   /* --------------------------------------------------------- open/close */
 
   /**
@@ -172,8 +202,10 @@ export class PanelStore {
     merge?: (existing: P, incoming: P) => P,
   ): void {
     const existing = this.#panels.find((panel) => panel.id === desc.id);
+    const command = desc.command ?? this.#origin;
 
     if (existing) {
+      if (command !== undefined) existing.command = command;
       existing.props = merge
         ? (merge(existing.props as P, desc.props) as Record<string, unknown>)
         : desc.props;
@@ -182,7 +214,7 @@ export class PanelStore {
       return;
     }
 
-    this.#panels.push(desc as PanelDesc);
+    this.#panels.push((command === undefined ? desc : { ...desc, command }) as PanelDesc);
     this.focus(desc.id);
 
     // Oldest-first eviction keeps a long session from accumulating pollers.

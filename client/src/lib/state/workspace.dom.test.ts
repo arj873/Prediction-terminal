@@ -34,7 +34,8 @@ describe('Workspace in a document', () => {
     workspace.setColumns(4);
 
     expect(localStorage.getItem(STORAGE_KEY)).toBe(
-      '{"watchlist":["KXFED-1"],"history":[],"theme":"amber","columns":4,"keys":{}}',
+      '{"watchlist":["KXFED-1"],"history":[],"theme":"amber","columns":4,"keys":{},' +
+        '"workspaces":{},"session":[]}',
     );
     expect(new Workspace().watchlist).toEqual(['KXFED-1']);
   });

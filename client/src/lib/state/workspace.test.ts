@@ -72,6 +72,8 @@ describe('Workspace defaults', () => {
     expect(workspace.theme).toBe('amber');
     expect(workspace.columns).toBe(2);
     expect(workspace.keybindings).toEqual({});
+    expect(workspace.workspaces).toEqual({});
+    expect(workspace.session).toEqual([]);
   });
 
   it('runs without a real storage at all', () => {
@@ -99,8 +101,12 @@ describe('Workspace persistence', () => {
     first.setTheme('ice');
     first.setColumns(4);
     first.setBinding('panel:j', 'ROW END');
+    first.saveWorkspace('fed', { columns: 3, panels: ['GP KXFED-1', 'W'] });
+    first.setSession(['TOP volume', 'HELP']);
 
     const reloaded = new Workspace(storage);
+    expect(reloaded.workspaces).toEqual({ FED: { columns: 3, panels: ['GP KXFED-1', 'W'] } });
+    expect(reloaded.session).toEqual(['TOP volume', 'HELP']);
     expect(reloaded.watchlist).toEqual(['KXFED-1', 'PM:WILL-IT']);
     expect(reloaded.history).toEqual(['TOP volume']);
     expect(reloaded.theme).toBe('ice');
@@ -120,6 +126,8 @@ describe('Workspace persistence', () => {
       theme: 'amber',
       columns: 2,
       keys: {},
+      workspaces: {},
+      session: [],
     });
   });
 
@@ -310,6 +318,81 @@ describe('Workspace key bindings', () => {
   });
 });
 
+describe('Workspace saved grids', () => {
+  const GRID = { columns: 2, panels: ['GP KXFED-1', 'OB KXFED-1'] };
+
+  it('saves under an upper-cased name, replaces, and deletes', () => {
+    const workspace = new Workspace(fakeStorage());
+
+    expect(workspace.saveWorkspace('fed', GRID)).toBe(true);
+    expect(workspace.workspace('FED')).toEqual(GRID);
+    expect(workspace.workspace('Fed')).toEqual(GRID);
+
+    expect(workspace.saveWorkspace('FED', { columns: 1, panels: ['W'] })).toBe(true);
+    expect(workspace.workspaces).toEqual({ FED: { columns: 1, panels: ['W'] } });
+
+    expect(workspace.deleteWorkspace('fed')).toBe(true);
+    expect(workspace.deleteWorkspace('fed')).toBe(false);
+    expect(workspace.workspaces).toEqual({});
+  });
+
+  it('refuses a name that is not one token, and a grid with nothing in it', () => {
+    const workspace = new Workspace(fakeStorage());
+
+    for (const name of ['', 'two words', '-fed', 'fed!', 'x'.repeat(25), '__proto__']) {
+      expect(workspace.saveWorkspace(name, GRID), name).toBe(false);
+    }
+    expect(workspace.saveWorkspace('EMPTY', { columns: 2, panels: [] })).toBe(false);
+    expect(workspace.workspaces).toEqual({});
+  });
+
+  it('does not find a workspace in what every object inherits', () => {
+    // `WS CONSTRUCTOR` is a well-formed name, and a bare lookup would hand back
+    // a function for it.
+    const workspace = new Workspace(fakeStorage());
+    expect(workspace.workspace('constructor')).toBeUndefined();
+    expect(workspace.workspace('toString')).toBeUndefined();
+    expect(workspace.deleteWorkspace('constructor')).toBe(false);
+  });
+
+  it('stops at twenty-four but still replaces the ones it has', () => {
+    const workspace = new Workspace(fakeStorage());
+    for (let i = 0; i < 24; i++) expect(workspace.saveWorkspace(`G${i}`, GRID)).toBe(true);
+
+    expect(workspace.saveWorkspace('ONE-MORE', GRID)).toBe(false);
+    expect(Object.keys(workspace.workspaces)).toHaveLength(24);
+
+    expect(workspace.saveWorkspace('G3', { columns: 4, panels: ['W'] })).toBe(true);
+    expect(workspace.workspace('G3')).toEqual({ columns: 4, panels: ['W'] });
+  });
+
+  it('clamps what it is handed the way it clamps what it reads', () => {
+    const workspace = new Workspace(fakeStorage());
+    const lines = Array.from({ length: 20 }, (_, i) => `GP X${i}`);
+
+    workspace.saveWorkspace('BIG', { columns: 9, panels: [...lines, 'x'.repeat(201)] });
+    expect(workspace.workspace('BIG')).toEqual({ columns: 2, panels: lines.slice(0, 12) });
+  });
+
+  it('remembers the open grid, and stays quiet when it has not changed', () => {
+    const storage = fakeStorage();
+    const workspace = new Workspace(storage);
+    let commits = 0;
+    workspace.subscribe(() => {
+      commits += 1;
+    });
+
+    workspace.setSession(['GP KXFED-1', 'W']);
+    workspace.setSession(['GP KXFED-1', 'W']);
+    expect(commits).toBe(1);
+    expect(persisted(storage)['session']).toEqual(['GP KXFED-1', 'W']);
+
+    workspace.setSession([]);
+    expect(commits).toBe(2);
+    expect(workspace.session).toEqual([]);
+  });
+});
+
 describe('Workspace theme and layout', () => {
   it('takes the three themes', () => {
     const workspace = new Workspace(fakeStorage());
@@ -392,6 +475,51 @@ describe('Workspace malformed storage', () => {
     expect(withField('keys', ['panel:j']).keybindings).toEqual({});
   });
 
+  it('degrades bad saved grids rather than throwing', () => {
+    for (const bad of ['FED', null, 7, ['FED'], { FED: 'GP X' }, { FED: null }, { FED: [] }]) {
+      expect(withField('workspaces', bad).workspaces).toEqual({});
+    }
+    // Panels that are not an array of lines leave nothing worth keeping.
+    expect(withField('workspaces', { FED: { columns: 2, panels: 'GP X' } }).workspaces).toEqual({});
+    expect(withField('workspaces', { FED: { columns: 2, panels: [] } }).workspaces).toEqual({});
+  });
+
+  it('keeps the good saved grids when one is bad', () => {
+    const workspace = withField('workspaces', {
+      FED: { columns: 3, panels: ['GP KXFED-1', 7, null, '', 'W', 'x'.repeat(201)] },
+      'two words': { columns: 2, panels: ['W'] },
+      lower: { columns: 2, panels: ['W'] },
+      WIDE: { columns: 40, panels: ['TOP'] },
+      // Props, the shape a link must never be trusted to carry.
+      PROPS: { columns: 2, panels: [{ id: 'gp:kalshi:X', kind: 'chart', props: {} }] },
+    });
+
+    expect(workspace.workspaces).toEqual({
+      FED: { columns: 3, panels: ['GP KXFED-1', 'W'] },
+      WIDE: { columns: 2, panels: ['TOP'] },
+    });
+  });
+
+  it('trims stored grids to what the grid can hold', () => {
+    const lines = Array.from({ length: 30 }, (_, i) => `GP X${i}`);
+    expect(withField('session', lines).session).toEqual(lines.slice(0, 12));
+    expect(
+      withField('workspaces', { BIG: { columns: 2, panels: lines } }).workspaces['BIG']?.panels,
+    ).toEqual(lines.slice(0, 12));
+
+    const many = Object.fromEntries(
+      Array.from({ length: 40 }, (_, i) => [`G${i}`, { columns: 2, panels: ['W'] }]),
+    );
+    expect(Object.keys(withField('workspaces', many).workspaces)).toHaveLength(24);
+  });
+
+  it('degrades a bad session rather than throwing', () => {
+    expect(withField('session', 'GP X').session).toEqual([]);
+    expect(withField('session', { 0: 'GP X' }).session).toEqual([]);
+    expect(withField('session', null).session).toEqual([]);
+    expect(withField('session', ['GP X', 3, undefined, '  ', 'W']).session).toEqual(['GP X', 'W']);
+  });
+
   it('keeps the good fields when one is bad', () => {
     const workspace = withField('theme', 'chartreuse');
     expect(workspace.watchlist).toEqual(['KXFED-1']);
@@ -445,6 +573,9 @@ describe('Workspace upgrade', () => {
       'panel:g w': 'W',
       'global:ctrl+l': '',
     });
+    // The two fields that blob predates: absent is empty, not an error.
+    expect(workspace.workspaces).toEqual({});
+    expect(workspace.session).toEqual([]);
   });
 
   it('writes it back in the same shape it read it', () => {
@@ -455,7 +586,15 @@ describe('Workspace upgrade', () => {
     workspace.pushHistory('W');
 
     const blob = persisted(storage);
-    expect(Object.keys(blob).sort()).toEqual(['columns', 'history', 'keys', 'theme', 'watchlist']);
+    expect(Object.keys(blob).sort()).toEqual([
+      'columns',
+      'history',
+      'keys',
+      'session',
+      'theme',
+      'watchlist',
+      'workspaces',
+    ]);
     expect(blob['watchlist']).toEqual(JSON.parse(LEGACY_BLOB)['watchlist']);
     expect(blob['keys']).toEqual(JSON.parse(LEGACY_BLOB)['keys']);
     expect(blob['theme']).toBe('green');

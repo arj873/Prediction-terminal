@@ -1,6 +1,6 @@
 /**
  * Session state that outlives a reload: watchlist, theme, layout, key bindings,
- * and the command history.
+ * the command history, the grid that was open, and the grids saved by name.
  *
  * Everything is stored under one localStorage key and validated on read —
  * a corrupted or hand-edited blob degrades to defaults instead of throwing on
@@ -19,6 +19,31 @@ const MAX_HISTORY = 200;
 const MAX_WATCHLIST = 40;
 const MAX_KEYBINDINGS = 200;
 const MAX_COMMAND_LENGTH = 200;
+const MAX_WORKSPACES = 24;
+
+/** The most panels a stored grid may name — the most the grid will hold. */
+export const MAX_GRID_PANELS = 12;
+
+/**
+ * A grid, as it is stored: a column count and one command line per panel.
+ *
+ * Lines rather than panel props, on purpose. A line is replayed through the
+ * same dispatch a typed one takes, so a stored grid — which is a text box
+ * anyone can edit, or a link somebody else wrote — can open nothing a reader
+ * could not have typed, and a panel whose props change shape in a later version
+ * is rebuilt by the parser that knows the new shape.
+ */
+export interface SavedGrid {
+  columns: number;
+  panels: string[];
+}
+
+/** A workspace name: one token, folded to upper case like a verb. */
+const WORKSPACE_NAME = /^[A-Z0-9][A-Z0-9_-]{0,23}$/;
+
+export function isWorkspaceName(name: string): boolean {
+  return WORKSPACE_NAME.test(name);
+}
 
 export type ThemeName = 'amber' | 'green' | 'ice';
 
@@ -38,6 +63,10 @@ interface PersistedState {
    * a later version reach someone who has already customised three keys.
    */
   keys: Record<string, string>;
+  /** Grids saved by name with `WS SAVE`. */
+  workspaces: Record<string, SavedGrid>;
+  /** The grid that was open last, one command line per panel, for the next boot. */
+  session: string[];
 }
 
 const DEFAULTS: PersistedState = {
@@ -46,6 +75,8 @@ const DEFAULTS: PersistedState = {
   theme: 'amber',
   columns: 2,
   keys: {},
+  workspaces: {},
+  session: [],
 };
 
 /** `scope:chord`, where a chord may be a space-separated sequence. */
@@ -102,6 +133,38 @@ function readBindings(value: unknown): Record<string, string> {
   return bindings;
 }
 
+function readColumns(value: unknown): number {
+  return typeof value === 'number' && value >= 1 && value <= 4 ? Math.trunc(value) : 2;
+}
+
+/** Command lines: short strings, and no more of them than the grid holds. */
+function readLines(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (line): line is string =>
+        typeof line === 'string' && line.trim() !== '' && line.length <= MAX_COMMAND_LENGTH,
+    )
+    .slice(0, MAX_GRID_PANELS);
+}
+
+function readWorkspaces(value: unknown): Record<string, SavedGrid> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+
+  const workspaces: Record<string, SavedGrid> = {};
+  for (const [name, grid] of Object.entries(value as Record<string, unknown>)) {
+    if (!isWorkspaceName(name)) continue;
+    if (typeof grid !== 'object' || grid === null) continue;
+    const candidate = grid as Partial<SavedGrid>;
+    const panels = readLines(candidate.panels);
+    // A workspace with nothing in it is not one: there is nothing to reopen.
+    if (panels.length === 0) continue;
+    workspaces[name] = { columns: readColumns(candidate.columns), panels };
+    if (Object.keys(workspaces).length >= MAX_WORKSPACES) break;
+  }
+  return workspaces;
+}
+
 function readStorage(storage: WorkspaceStorage): PersistedState {
   try {
     const raw = storage.getItem(STORAGE_KEY);
@@ -128,6 +191,8 @@ function readStorage(storage: WorkspaceStorage): PersistedState {
           ? Math.trunc(candidate.columns)
           : 2,
       keys: readBindings(candidate.keys),
+      workspaces: readWorkspaces(candidate.workspaces),
+      session: readLines(candidate.session),
     };
   } catch {
     // Private browsing, quota, or a bad blob. Defaults are always usable.
@@ -234,6 +299,68 @@ export class Workspace {
     this.#state.keys = {};
     this.#commit();
     return count;
+  }
+
+  /* ----------------------------------------------------------- workspaces */
+
+  get workspaces(): Readonly<Record<string, SavedGrid>> {
+    return this.#state.workspaces;
+  }
+
+  /** The grid saved under `name`, in any case. */
+  workspace(name: string): SavedGrid | undefined {
+    const key = name.toUpperCase();
+    // `hasOwn`, not a bare lookup: `WS CONSTRUCTOR` must not find Object's.
+    return Object.hasOwn(this.#state.workspaces, key) ? this.#state.workspaces[key] : undefined;
+  }
+
+  /**
+   * Save a grid under a name, replacing the one already there.
+   *
+   * False when the name is not one, the grid is empty, or the shelf is full —
+   * a full shelf still takes a save over a name it already holds.
+   */
+  saveWorkspace(name: string, grid: SavedGrid): boolean {
+    const key = name.toUpperCase();
+    const panels = readLines(grid.panels);
+    if (!isWorkspaceName(key) || panels.length === 0) return false;
+    if (
+      Object.keys(this.#state.workspaces).length >= MAX_WORKSPACES &&
+      !Object.hasOwn(this.#state.workspaces, key)
+    ) {
+      return false;
+    }
+    this.#state.workspaces = {
+      ...this.#state.workspaces,
+      [key]: { columns: readColumns(grid.columns), panels },
+    };
+    this.#commit();
+    return true;
+  }
+
+  deleteWorkspace(name: string): boolean {
+    const key = name.toUpperCase();
+    if (!Object.hasOwn(this.#state.workspaces, key)) return false;
+    const rest = { ...this.#state.workspaces };
+    delete rest[key];
+    this.#state.workspaces = rest;
+    this.#commit();
+    return true;
+  }
+
+  /* -------------------------------------------------------------- session */
+
+  get session(): readonly string[] {
+    return this.#state.session;
+  }
+
+  /** Remember the open grid for the next boot. Quiet when nothing changed. */
+  setSession(lines: readonly string[]): void {
+    const next = readLines([...lines]);
+    const current = this.#state.session;
+    if (next.length === current.length && next.every((line, i) => line === current[i])) return;
+    this.#state.session = next;
+    this.#commit();
   }
 
   /* ------------------------------------------------------- theme & layout */

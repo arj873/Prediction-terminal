@@ -66,6 +66,12 @@ export interface CommandContext extends TerminalContext {
   setMode(mode: KeyMode): void;
   /** The menu bar, for `MENU`. */
   menu: MenuControl;
+  /**
+   * Dispatch a line without echoing it or adding it to the history — `run`,
+   * minus the two things that record a line as typed. What `WS` rebuilds a grid
+   * through. False when the line named no command or its handler refused it.
+   */
+  replay(line: string): boolean;
 }
 
 export interface Command {

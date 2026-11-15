@@ -463,6 +463,7 @@ which is wrong without ever looking broken.
 | --- | --- |
 | `W` | `W` · `W ADD <ticker>` · `W DEL <ticker>` · `W CLEAR` |
 | `LAY` | `LAY <1-4>` · `LAY +` · `LAY -` — panel columns |
+| `WS` | `WS` · `WS SAVE <name>` · `WS <name>` · `WS DEL <name>` · `WS LINK` — named workspaces |
 | `THEME` | `THEME amber\|green\|ice` |
 | `CLS` | `CLS` · `CLS ALL` |
 | `ZOOM` | Give the focused panel the whole workspace, or restore the grid |
@@ -473,10 +474,36 @@ which is wrong without ever looking broken.
 | `KEYS` | `KEYS` · `KEYS <chord> <command>` · `KEYS DEL <chord>` · `KEYS RESET` |
 | `HELP` | `HELP [command]` |
 
+**The grid survives a reload, and can be kept by name.** Whatever panels were
+open come back when the page does. `WS SAVE fed` keeps the open grid — its
+panels and its column count — under a name, `WS fed` swaps it back in, `WS`
+lists what is saved and `WS DEL fed` forgets one.
+
+`WS LINK` copies a URL that rebuilds the grid on screen for whoever opens it,
+and prints the URL instead where the browser will not hand over the clipboard:
+
+```
+https://your-terminal/#ws=3;GP+KXFEDDECISION-26OCT+1d;OB+pm%3Afed-decision-in-october;W
+```
+
+A grid is stored as the command lines that opened its panels, and a link is
+those lines in plain sight — a column count, then one command per panel. That is
+deliberate. A link is something a stranger wrote, so it is not unpacked into
+panels; it is typed for you, and only the commands that open a panel and do
+nothing else are typed. `W ADD`, `KEYS <chord> …`, `THEME`, `WS SAVE` and the
+rest are left out and named in the message log, so a link cannot touch your
+watchlist, your keys or your saved workspaces. A hash that is too long, names
+more than twelve panels or does not decode opens nothing at all. A linked grid
+is a visit: it is not saved, and it does not replace the session a reload would
+otherwise restore, until you `WS SAVE` it.
+
+What a line cannot carry does not come back — a panel reopens as its command
+opened it, so an overlay ticked by hand on a `STK` chart is not in the link.
+
 ### The menu bar
 
 Memorising a command table and a key map is the cost of admission to a terminal
-like this one, and there was nothing between "type `HELP` and read 47 verbs" and
+like this one, and there was nothing between "type `HELP` and read 48 verbs" and
 knowing them already. So: five menus across the top — MARKETS, PRICES, DATA,
 WORKSPACE, LEARN — with everything the terminal does under one of them.
 
@@ -648,6 +675,12 @@ Panels are descriptions rather than objects — an id, a kind and its arguments 
 rendered through a keyed list. Re-running a command for a panel already on
 screen is therefore a change of arguments, not a teardown, which is what makes
 `GP X` safe to mash.
+
+Each description also remembers the command line that opened it, stamped at the
+dispatch rather than by each handler. That line is what `WS` saves and what a
+`#ws=` link carries, and reopening a grid is running its lines through the same
+`run()` path again — so a saved workspace is rebuilt by the parser that exists
+today rather than from props written by the one that existed then.
 
 ### A few things worth knowing
 
@@ -1182,6 +1215,15 @@ with both price arrays still in bid/ask order. Reading either would silently
 mislabel a bid as an ask on half the book, so the quote comes from
 `bestBidQuote`/`bestAskQuote` alone, and the tests assert the reading does not
 move when those fields do.
+
+The workspace link is tested as the untrusted input it is. `workspaces.test.ts`
+runs the hashes a hostile or broken link would carry — oversized, thirteen
+panels, half-encoded, JSON where the lines should be, and a grid of `W ADD`,
+`KEYS`, `WS DEL` and `THEME` with one real chart at the end — against the real
+command table, panel grid and workspace, and asserts that the stored blob is
+byte-for-byte what it was. The list of verbs a link may run is itself checked:
+each one's examples are run against a context where touching anything but the
+panel grid and the log throws.
 
 ---
 

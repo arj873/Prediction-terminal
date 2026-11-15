@@ -54,6 +54,7 @@ import {
   type SpotProps,
 } from './registry';
 import { formatRef } from './venue';
+import { workspaceCommand } from './workspaces';
 
 /**
  * Open or re-configure the chart for a symbol.
@@ -833,6 +834,17 @@ export const COMMANDS: Command[] = [
       panels.setColumns(value);
       workspace.setColumns(value);
       log(`Layout set to ${panels.columns} column${panels.columns === 1 ? '' : 's'}.`);
+    },
+  },
+  {
+    verb: 'WS',
+    aliases: ['WORKSPACE', 'WORKSPACES'],
+    group: 'workspace',
+    summary: 'Named workspaces: save the open grid, reopen it, or link to it',
+    usage: 'WS | WS SAVE <name> | WS <name> | WS DEL <name> | WS LINK',
+    examples: ['WS', 'WS SAVE fed', 'WS fed', 'WS DEL fed', 'WS LINK'],
+    handler(command, context) {
+      return workspaceCommand(command, context, COMMAND_INDEX);
     },
   },
   {

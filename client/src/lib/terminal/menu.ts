@@ -373,6 +373,12 @@ export const MENUS: readonly Menu[] = [
         'Theme',
         THEMES.map((theme) => item(titleCase(theme), `THEME ${theme}`)),
       ),
+      group('Saved workspaces', [
+        item('List the saved workspaces', 'WS'),
+        item('Save this grid as…', '>WS SAVE'),
+        item('Reopen a saved workspace…', '>WS'),
+        item('Copy a link to this grid', 'WS LINK'),
+      ]),
       SEP,
       group('Panel focus', [
         item('Next panel', 'FOCUS NEXT'),
