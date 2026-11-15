@@ -59,6 +59,9 @@
 
   <div class="result-note">
     <span>{`BID ${cents(book.bestYesBid)}`}</span>
+    <!-- The literal is the separator and its surrounding spaces are significant;
+         written as plain text Svelte would trim them. -->
+    <!-- eslint-disable-next-line svelte/no-useless-mustaches -->
     <span class="dim">{' × '}</span>
     <span>{`ASK ${cents(book.bestYesAsk)}`}</span>
     <span class="dim">{`   ${book.yes.length + book.yesAsks.length} levels`}</span>

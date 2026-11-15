@@ -98,6 +98,9 @@ export class PanelStore {
   #columns = $state(2);
 
   /** Live handles, registered by each panel component as it mounts. */
+  // An imperative registry of component handles, not reactive state — the panel
+  // list itself is the `$state` above, so a plain Map is correct here.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   readonly #handles = new Map<string, PanelHandle>();
 
   get panels(): readonly PanelDesc[] {

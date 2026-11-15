@@ -77,7 +77,10 @@
 
   let container = $state<HTMLDivElement | undefined>(undefined);
   let chart: IChartApi | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // `live` is an imperative registry of chart-series handles, mutated as the
+  // chart is built and read back by identity, never through Svelte reactivity —
+  // so a plain Map is correct, not a SvelteMap.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, svelte/prefer-svelte-reactivity
   const live = new Map<string, { spec: SeriesSpec; api: ISeriesApi<any> }>();
   let lastFitKey: string | number | undefined;
   let observer: ResizeObserver | undefined;

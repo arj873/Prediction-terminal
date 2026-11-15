@@ -6,7 +6,12 @@ import { defineConfig } from 'vitest/config';
  *
  * Most of what is tested here is pure — the command parser, the chord/keymap
  * logic, the formatters — so the default environment is Node. A file that needs
- * a document opts in by naming itself `*.dom.test.ts`.
+ * a document opts in by naming itself `*.dom.test.ts`, which the jsdom project
+ * below picks up; everything else runs under Node.
+ *
+ * The split is expressed with `test.projects` because Vitest removed the older
+ * `environmentMatchGlobs` option: one project per environment, each extending
+ * this file so both inherit the Svelte plugin.
  *
  * The Svelte plugin is here because a `.svelte.ts` module (`state/workspace`)
  * is runes source, not plain TypeScript: without it `$state` is an undefined
@@ -16,8 +21,24 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [svelte()],
   test: {
-    include: ['src/**/*.{test,spec}.{js,ts}'],
-    environment: 'node',
-    environmentMatchGlobs: [['src/**/*.dom.{test,spec}.ts', 'jsdom']],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          include: ['src/**/*.{test,spec}.{js,ts}'],
+          exclude: ['src/**/*.dom.{test,spec}.ts'],
+          environment: 'node',
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          include: ['src/**/*.dom.{test,spec}.ts'],
+          environment: 'jsdom',
+        },
+      },
+    ],
   },
 });

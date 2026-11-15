@@ -226,6 +226,9 @@
    * change would refit the chart to the series still on screen and leave the new
    * ones off to one side.
    */
+  // Imperative bookkeeping of which tickers have been drawn, mutated and read
+  // by `identity()` outside reactivity — a plain Set, not a reactive SvelteSet.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const drawn = new Set<string>();
   let added = 0;
 

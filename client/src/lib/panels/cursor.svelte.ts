@@ -35,6 +35,9 @@ export interface NavigableEntry {
 }
 
 export class RowCursor {
+  // An imperative registry of navigable rows keyed by their DOM node; the caret
+  // repaints itself explicitly, so this is a plain Map, not reactive state.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   readonly #entries = new Map<HTMLElement, NavigableEntry>();
   /** Position in the *ordered* list, kept across re-renders by index. */
   #index = -1;

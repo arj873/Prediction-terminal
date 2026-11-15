@@ -51,6 +51,9 @@
 
   const rungs = $derived.by((): Rung[] => {
     if (!loaded) return [];
+    // A throwaway accumulator local to this derivation; it never outlives the
+    // computation, so a reactive SvelteMap would be wrong here.
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const byStrike = new Map<number, Rung>();
     for (const call of loaded.calls) {
       byStrike.set(call.strike, {

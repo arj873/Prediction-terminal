@@ -65,6 +65,9 @@ export interface WorkspaceStorage {
 
 /** A scratch store for when there is no real one. Lives and dies with the tab. */
 function memoryStorage(): WorkspaceStorage {
+  // A fake-localStorage backing store for Node/SSR/tests — a plain key-value
+  // map with no reactivity, never a SvelteMap.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const entries = new Map<string, string>();
   return {
     getItem: (key) => entries.get(key) ?? null,
@@ -138,6 +141,9 @@ function readStorage(storage: WorkspaceStorage): PersistedState {
 export class Workspace {
   readonly #storage: WorkspaceStorage;
   #state: PersistedState = $state({ ...DEFAULTS });
+  // Subscriber callbacks for the plain-`.ts` modules that runes do not reach; an
+  // imperative observer set, not reactive state.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   #listeners = new Set<() => void>();
 
   constructor(storage: WorkspaceStorage = defaultStorage()) {
