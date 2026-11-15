@@ -19,4 +19,4 @@ history: Array<SpotCandle>,
 /**
  * Why [`Self::history`] is empty, when it is.
  */
-historyNote: string, venue: string, source: string, note: string, };
+historyNote?: string, venue: string, source: string, note?: string, };

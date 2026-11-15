@@ -10,4 +10,4 @@ years: Array<number>, sourceUrl: string,
  * What the panel should say about what it is showing. Empty when nothing
  * needs saying; a ceremony that has not happened is the interesting case.
  */
-note: string, };
+note?: string, };

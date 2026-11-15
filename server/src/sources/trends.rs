@@ -134,7 +134,7 @@ pub fn parse_trends_rss(xml: &str, geo: &str, source_url: &str) -> Result<TrendL
     loop {
         match reader.read_event() {
             Ok(Event::Start(tag)) => {
-                let name = String::from_utf8_lossy(tag.name().as_ref()).to_string();
+                let name = tag.name().as_ref().to_string();
                 match name.as_str() {
                     "item" => {
                         item = Some(Item::default());
@@ -152,7 +152,7 @@ pub fn parse_trends_rss(xml: &str, geo: &str, source_url: &str) -> Result<TrendL
                 path.push(name);
             }
             Ok(Event::End(tag)) => {
-                let name = String::from_utf8_lossy(tag.name().as_ref()).to_string();
+                let name = tag.name().as_ref().to_string();
                 path.pop();
                 if name == "item" {
                     if let Some(done) = item.take() {
@@ -174,13 +174,13 @@ pub fn parse_trends_rss(xml: &str, geo: &str, source_url: &str) -> Result<TrendL
                 }
             }
             Ok(Event::Text(text)) if item.is_some() => {
-                let value = match reader.decoder().decode(text.as_ref()) {
-                    Ok(decoded) => decoded.to_string(),
-                    Err(_) => continue,
-                };
-                let value = quick_xml::escape::unescape(&value)
+                // `Reader::from_str` yields UTF-8, so quick-xml 0.42 hands the
+                // text back already decoded as a `&str` (via `AsRef<str>`);
+                // only entity unescaping is left to do.
+                let raw = text.as_ref();
+                let value = quick_xml::escape::unescape(raw)
                     .map(|v| v.to_string())
-                    .unwrap_or(value);
+                    .unwrap_or_else(|_| raw.to_string());
                 let Some(current) = item.as_mut() else {
                     continue;
                 };

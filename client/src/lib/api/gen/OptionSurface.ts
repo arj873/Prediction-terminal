@@ -8,4 +8,4 @@ export type OptionSurface = { symbol: string, name: string, assetClass: AssetCla
 /**
  * 25-delta put vol minus 25-delta call vol — the smile's asymmetry.
  */
-skew: number | null, venue: string, source: string, note: string, };
+skew: number | null, venue: string, source: string, note?: string, };

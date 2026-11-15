@@ -6,4 +6,4 @@ export type LinkedSeriesResponse = { query: string, series: Array<LinkedSeries>,
 /**
  * Series scanned, per venue.
  */
-scanned: { [key in string]?: number }, unavailable: Array<VenueUnavailable>, snapshotAgeSeconds: number, };
+scanned: { [key in string]: number }, unavailable: Array<VenueUnavailable>, snapshotAgeSeconds: number, };

@@ -8,4 +8,4 @@ export type OptionPositioning = { symbol: string, name: string, assetClass: Asse
  * Strike where the least option value pays out — a positioning read, not a
  * forecast.
  */
-maxPain: number | null, totalCallOpenInterest: number, totalPutOpenInterest: number, totalCallVolume: number, totalPutVolume: number, putCallOpenInterest: number | null, putCallVolume: number | null, venue: string, source: string, note: string, };
+maxPain: number | null, totalCallOpenInterest: number, totalPutOpenInterest: number, totalCallVolume: number, totalPutVolume: number, putCallOpenInterest: number | null, putCallVolume: number | null, venue: string, source: string, note?: string, };

@@ -10,4 +10,4 @@ scanned: number, snapshotAgeSeconds: number,
 /**
  * Per-genre counts, so the panel can show what else is available.
  */
-counts: { [key in string]?: number }, };
+counts: { [key in string]: number }, };

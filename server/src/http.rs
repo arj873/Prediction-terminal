@@ -15,7 +15,6 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use futures::StreamExt;
-use rand::Rng;
 use regex::Regex;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, Response, Url};
@@ -384,7 +383,7 @@ fn is_retryable_status(status: u16) -> bool {
 fn backoff(attempt: u32) -> Duration {
     // Saturating so an absurd `retries` cannot overflow into a panic.
     let base = 400u64.saturating_mul(1u64 << (attempt - 1).min(20));
-    let jitter = rand::thread_rng().gen_range(0..250);
+    let jitter = rand::random_range(0..250);
     Duration::from_millis(base.saturating_add(jitter))
 }
 

@@ -45,4 +45,4 @@ venue: string, source: string,
 /**
  * Anything the reader needs to know to read the numbers correctly.
  */
-note: string, };
+note?: string, };
